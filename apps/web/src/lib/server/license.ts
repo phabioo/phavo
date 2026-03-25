@@ -1,0 +1,74 @@
+interface LicenseValidationResult {
+  valid: boolean;
+  tier: 'free' | 'standard' | 'local';
+  graceUntil?: number;
+}
+
+const GRACE_PERIOD_FREE = 24 * 60 * 60 * 1000; // 24 hours
+const GRACE_PERIOD_STANDARD = 72 * 60 * 60 * 1000; // 72 hours
+
+export async function validateLicense(
+  licenseKey: string,
+  authMode: 'phavio-io' | 'local',
+): Promise<LicenseValidationResult> {
+  // Local tier: validate once on activation, fully offline after
+  if (authMode === 'local') {
+    return {
+      valid: true,
+      tier: 'local',
+    };
+  }
+
+  // phavo.io validation
+  const phavoIoUrl = process.env.PHAVO_IO_URL ?? 'https://phavo.io';
+
+  try {
+    const response = await fetch(`${phavoIoUrl}/api/license/validate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ licenseKey }),
+    });
+
+    if (response.ok) {
+      const data = (await response.json()) as { tier: 'free' | 'standard' };
+      return {
+        valid: true,
+        tier: data.tier,
+      };
+    }
+
+    return { valid: false, tier: 'free' };
+  } catch {
+    // phavo.io unreachable — apply grace period
+    const gracePeriod = licenseKey ? GRACE_PERIOD_STANDARD : GRACE_PERIOD_FREE;
+    const graceUntil = Date.now() + gracePeriod;
+
+    return {
+      valid: true,
+      tier: licenseKey ? 'standard' : 'free',
+      graceUntil,
+    };
+  }
+}
+
+export async function activateLocalLicense(
+  licenseKey: string,
+  instanceIdentifier: string,
+): Promise<LicenseValidationResult> {
+  const phavoIoUrl = process.env.PHAVO_IO_URL ?? 'https://phavo.io';
+
+  const response = await fetch(`${phavoIoUrl}/api/license/activate`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ licenseKey, instanceIdentifier }),
+  });
+
+  if (!response.ok) {
+    return { valid: false, tier: 'local' };
+  }
+
+  return {
+    valid: true,
+    tier: 'local',
+  };
+}

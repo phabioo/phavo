@@ -1,0 +1,286 @@
+{
+  "setup": {
+    "welcome": {
+      "title": "Welcome to Phavo",
+      "subtitle": "Your personal dashboard, beautifully simple."
+    },
+    "quickSetup": "Quick Setup",
+    "fullSetup": "Full Setup",
+    "quickSetupDescription": "Get started in seconds with sensible defaults.",
+    "fullSetupDescription": "Customise every detail from the start.",
+    "steps": {
+      "auth": "Authentication",
+      "location": "Weather Location",
+      "done": "All Set",
+      "tierSelect": "Select Your Plan",
+      "dashboardName": "Name Your Dashboard",
+      "tabBuilder": "Navigation Tabs",
+      "widgetSelect": "Choose Widgets",
+      "widgetAssign": "Assign Widgets to Tabs",
+      "widgetConfig": "Configure Widgets"
+    },
+    "auth": {
+      "phavoIo": "Sign in with phavo.io",
+      "localAccount": "Create local account",
+      "enterLicenseKey": "Enter licence key",
+      "username": "Username",
+      "password": "Password",
+      "confirmPassword": "Confirm password",
+      "email": "Email"
+    },
+    "location": {
+      "title": "Set your weather location",
+      "subtitle": "Enter a city name or coordinates to see weather data.",
+      "placeholder": "e.g. Berlin, London, New York",
+      "skip": "Skip for now"
+    },
+    "done": {
+      "title": "You're all set!",
+      "subtitle": "Your dashboard is ready. You can change any setting at any time.",
+      "launch": "Launch Dashboard"
+    },
+    "name": {
+      "title": "Name your dashboard",
+      "placeholder": "My Dashboard"
+    },
+    "tabs": {
+      "title": "Set up your navigation tabs",
+      "addTab": "Add tab",
+      "defaultTabName": "Home"
+    },
+    "widgets": {
+      "title": "Choose your widgets",
+      "subtitle": "Select the widgets you want on your dashboard."
+    },
+    "assign": {
+      "title": "Assign widgets to tabs",
+      "subtitle": "Drag widgets to the tabs where you want them."
+    },
+    "config": {
+      "title": "Configure your widgets",
+      "subtitle": "Set up credentials and preferences for your widgets."
+    }
+  },
+  "dashboard": {
+    "brandName": "Phavo",
+    "poweredBy": "Powered by Phavo",
+    "addWidget": "Add widget",
+    "addWidgets": "Add Widgets",
+    "dragToPlace": "Drag to place or click to add",
+    "addToBoard": "Add",
+    "filterAll": "All",
+    "filterSystem": "System",
+    "filterConsumer": "Consumer",
+    "filterIntegration": "Integration",
+    "removeWidget": "Remove widget",
+    "editLayout": "Edit layout",
+    "saveLayout": "Save layout",
+    "addTab": "Add tab",
+    "renameTab": "Rename",
+    "deleteTab": "Delete",
+    "tabDeleteConfirm": "Delete this tab? Its widgets will move to the first tab.",
+    "removeConfirm": "Remove widget?",
+    "holdToReorder": "Hold to reorder",
+    "widgetDrawerTitle": "Widgets",
+    "categorySystem": "System",
+    "categoryConsumer": "Consumer",
+    "categoryIntegration": "Integration",
+    "categoryUtility": "Utility",
+    "alreadyAdded": "Added",
+    "remove": "Remove",
+    "locked": "Standard",
+    "sizeLabel": "Size"
+  },
+  "widgets": {
+    "cpu": {
+      "name": "CPU",
+      "description": "CPU usage, per-core breakdown, and load average",
+      "usage": "Usage",
+      "cores": "Cores",
+      "loadAverage": "Load Average",
+      "speed": "Speed",
+      "model": "Model"
+    },
+    "memory": {
+      "name": "Memory",
+      "description": "RAM and swap usage",
+      "used": "Used",
+      "total": "Total",
+      "free": "Free",
+      "swap": "Swap"
+    },
+    "disk": {
+      "name": "Disk",
+      "description": "Per-mount disk usage, read/write throughput",
+      "mount": "Mount",
+      "used": "Used",
+      "total": "Total",
+      "readSpeed": "Read",
+      "writeSpeed": "Write"
+    },
+    "network": {
+      "name": "Network",
+      "description": "Upload/download speed and total traffic",
+      "upload": "Upload",
+      "download": "Download",
+      "totalSent": "Total Sent",
+      "totalReceived": "Total Received"
+    },
+    "temperature": {
+      "name": "Temperature",
+      "description": "CPU temperature (where available)",
+      "cpuTemp": "CPU Temperature",
+      "notAvailable": "Not available on this system"
+    },
+    "uptime": {
+      "name": "Uptime",
+      "description": "System uptime, human-readable",
+      "label": "System Uptime"
+    },
+    "weather": {
+      "name": "Weather",
+      "description": "Current conditions and 5-day forecast",
+      "current": "Current",
+      "forecast": "5-Day Forecast",
+      "wind": "Wind",
+      "humidity": "Humidity",
+      "noLocation": "Set your location in settings to see weather data."
+    },
+    "pihole": {
+      "name": "Pi-hole",
+      "description": "DNS filtering stats and controls",
+      "totalQueries": "Total Queries",
+      "blocked": "Blocked",
+      "blocklist": "Blocklist",
+      "status": "Status",
+      "enable": "Enable",
+      "disable": "Disable",
+      "configure": "Configure Pi-hole connection in settings."
+    },
+    "rss": {
+      "name": "RSS Feed",
+      "description": "Your news feeds in one place",
+      "noFeeds": "Add RSS feeds in settings.",
+      "failedFeeds": "Some feeds could not be loaded."
+    },
+    "links": {
+      "name": "Links / Bookmarks",
+      "description": "Your favourite links, organised by category",
+      "noLinks": "Add links in settings.",
+      "addLink": "Add link",
+      "category": "Category",
+      "url": "URL",
+      "label": "Label"
+    }
+  },
+  "auth": {
+    "login": "Sign in",
+    "logout": "Sign out",
+    "loginTitle": "Sign in to Phavo",
+    "loginSubtitle": "Access your personal dashboard.",
+    "emailPlaceholder": "you@example.com",
+    "passwordPlaceholder": "Your password",
+    "forgotPassword": "Forgot password?",
+    "noAccount": "Don't have an account?",
+    "register": "Create account",
+    "invalidCredentials": "Invalid email or password.",
+    "rateLimited": "Too many attempts. Try again in {seconds} seconds.",
+    "sessionExpired": "Your session has expired. Please sign in again."
+  },
+  "upgrade": {
+    "prompt": "Upgrade to Standard to unlock all widgets — €7.99 one-time.",
+    "tabLimit": "Upgrade to Standard for unlimited tabs.",
+    "widgetLocked": "This widget requires Standard or Local tier."
+  },
+  "errors": {
+    "generic": "Something went wrong. Please try again.",
+    "networkError": "Could not connect to the server.",
+    "notFound": "Page not found.",
+    "unauthorized": "You must be signed in to access this page."
+  },
+  "settings": {
+    "title": "Settings",
+    "general": "General",
+    "account": "Account",
+    "security": "Security",
+    "about": "About",
+    "saveChanges": "Save changes",
+    "saved": "Saved",
+    "saveFailed": "Could not save changes.",
+    "dashboardName": "Dashboard Name",
+    "weatherLocation": "Weather Location",
+    "weatherLocationHint": "Search for a city to update the Weather widget location.",
+    "weatherLocationPlaceholder": "e.g. Berlin, London, New York",
+    "locationSuggestionsEmpty": "No matching locations found.",
+    "reRunSetup": "Re-run Setup Assistant",
+    "authMode": "Auth Mode",
+    "authModePhavoIo": "phavo.io",
+    "authModeLocal": "Local",
+    "emailAddress": "Email Address",
+    "changePassword": "Change password",
+    "newPassword": "New password",
+    "confirmPassword": "Confirm password",
+    "passwordsDoNotMatch": "Passwords do not match.",
+    "passwordTooShort": "Password must be at least 8 characters.",
+    "manageAccount": "Manage your account at phavo.io",
+    "currentVersion": "Current Version",
+    "latestVersion": "Latest Version",
+    "upToDate": "Phavo is up to date.",
+    "updateAvailable": "A new version is available.",
+    "checkForUpdates": "Check for updates",
+    "checkingForUpdates": "Checking for updates…",
+    "changelog": "Changelog",
+    "license": "Licence",
+    "tier": "Current Tier",
+    "tierFree": "Free",
+    "tierStandard": "Standard",
+    "tierLocal": "Local",
+    "licenseKey": "Licence Key",
+    "manageLicense": "Manage licence",
+    "noLicense": "No licence activated.",
+    "twoFactorAuth": "Two-Factor Authentication",
+    "twoFactorStatus": "2FA Status",
+    "twoFactorNotConfigured": "Not configured",
+    "enable2FA": "Enable 2FA",
+    "comingSoon": "Coming soon",
+    "sessionTimeout": "Session Timeout",
+    "sessionTimeout1d": "1 day",
+    "sessionTimeout7d": "7 days",
+    "sessionTimeout30d": "30 days",
+    "sessionTimeoutNever": "Never",
+    "activeSessions": "Active Sessions",
+    "currentSession": "Current session",
+    "signedInAt": "Signed in at",
+    "signOutAllSessions": "Sign out all sessions",
+    "documentation": "Documentation",
+    "github": "GitHub",
+    "discord": "Discord"
+  },
+  "common": {
+    "save": "Save",
+    "saved": "Saved",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "add": "Add",
+    "edit": "Edit",
+    "close": "Close",
+    "confirm": "Confirm",
+    "back": "Back",
+    "next": "Next",
+    "skip": "Skip",
+    "loading": "Loading…",
+    "noData": "No data available."
+  },
+  "notifications": {
+    "title": "Notifications",
+    "markAllRead": "Mark all read",
+    "clear": "Clear all",
+    "empty": "No notifications yet",
+    "diskAlmostFull": "Disk almost full",
+    "highCpuTemp": "High CPU temperature",
+    "piholeUnreachable": "Pi-hole unreachable",
+    "piholeUnreachableBody": "Check URL and token in Settings",
+    "updateAvailable": "Phavo {version} available",
+    "updateAvailableBody": "Click to see changelog"
+  }
+}

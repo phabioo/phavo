@@ -1,0 +1,23 @@
+{
+  "name": "@phavo/ui",
+  "version": "0.0.1",
+  "main": "./src/index.ts",
+  "exports": {
+    ".": {
+      "svelte": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./src/theme.css": "./src/theme.css"
+  },
+  "svelte": "./src/index.ts",
+  "peerDependencies": {
+    "svelte": "^5.0.0"
+  },
+  "dependencies": {
+    "@phavo/types": "workspace:*"
+  },
+  "devDependencies": {
+    "svelte": "^5.0.0",
+    "typescript": "^5.4.0"
+  }
+}

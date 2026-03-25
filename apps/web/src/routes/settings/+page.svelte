@@ -1,0 +1,831 @@
+<script lang="ts">
+import { goto } from '$app/navigation';
+import { page } from '$app/state';
+import { Badge, Button, Card, Input, Select, Tabs, Tooltip, icons } from '@phavo/ui';
+import en from '$lib/i18n/en.json';
+import { setConfig, updateConfig } from '$lib/stores/config.svelte';
+
+type TabId = 'general' | 'account' | 'security' | 'about';
+type SaveState = 'idle' | 'saving' | 'saved';
+type GeoResult = {
+  id: number;
+  name: string;
+  country: string;
+  latitude: number;
+  longitude: number;
+};
+type SessionInfo = {
+  userId: string;
+  tier: 'free' | 'standard' | 'local';
+  authMode: 'phavio-io' | 'local';
+  validatedAt: number;
+  email: string | null;
+} | null;
+type AboutInfo = {
+  version: string;
+  tier: 'free' | 'standard' | 'local';
+  licenseKeyMasked: string | null;
+};
+type UpdateInfo = {
+  available: boolean;
+  current: string;
+  latest: string;
+  changelog?: string;
+};
+
+type ConfigResponse = {
+  setupComplete: boolean;
+  dashboardName: string;
+  tier: 'free' | 'standard' | 'local';
+  tabs: Array<{ id: string; label: string; order: number }>;
+  sessionTimeout: '1d' | '7d' | '30d' | 'never';
+  location?: {
+    name: string;
+    latitude: number;
+    longitude: number;
+  };
+};
+
+const settingsTabs = [
+  { id: 'general', label: en.settings.general },
+  { id: 'account', label: en.settings.account },
+  { id: 'security', label: en.settings.security },
+  { id: 'about', label: en.settings.about },
+] satisfies Array<{ id: TabId; label: string }>;
+
+const sessionTimeoutOptions = [
+  { value: '1d', label: en.settings.sessionTimeout1d },
+  { value: '7d', label: en.settings.sessionTimeout7d },
+  { value: '30d', label: en.settings.sessionTimeout30d },
+  { value: 'never', label: en.settings.sessionTimeoutNever },
+];
+
+const DOCS_URL = 'https://docs.phavo.io';
+const GITHUB_URL = 'https://github.com/phabioo/phavo';
+const DISCORD_URL = 'https://discord.gg/phavo';
+const PHAVO_ACCOUNT_URL = 'https://phavo.io/account';
+const PHAVO_LICENSE_URL = 'https://phavo.io/account/license';
+
+let activeTab = $state<TabId>('general');
+let loading = $state(true);
+let loadError = $state('');
+
+let dashboardName = $state('My Dashboard');
+let locationName = $state('');
+let locationLatitude = $state<number | null>(null);
+let locationLongitude = $state<number | null>(null);
+let suggestions = $state<GeoResult[]>([]);
+let showSuggestions = $state(false);
+let geocoding = $state(false);
+let geoTimer: ReturnType<typeof setTimeout> | null = null;
+
+let sessionTimeout = $state<'1d' | '7d' | '30d' | 'never'>('7d');
+let sessionInfo = $state<SessionInfo>(null);
+let aboutInfo = $state<AboutInfo>({ version: '0.0.1', tier: 'free', licenseKeyMasked: null });
+let updateInfo = $state<UpdateInfo | null>(null);
+let checkingUpdates = $state(false);
+
+let newPassword = $state('');
+let confirmPassword = $state('');
+let passwordError = $state('');
+
+let generalInitial = $state({
+  dashboardName: 'My Dashboard',
+  locationName: '',
+  locationLatitude: null as number | null,
+  locationLongitude: null as number | null,
+});
+let securityInitial = $state<'1d' | '7d' | '30d' | 'never'>('7d');
+
+let saveStates = $state<Record<TabId, SaveState>>({
+  general: 'idle',
+  account: 'idle',
+  security: 'idle',
+  about: 'idle',
+});
+let tabErrors = $state<Record<TabId, string>>({
+  general: '',
+  account: '',
+  security: '',
+  about: '',
+});
+
+const generalDirty = $derived(
+  dashboardName.trim() !== generalInitial.dashboardName ||
+    locationName.trim() !== generalInitial.locationName ||
+    locationLatitude !== generalInitial.locationLatitude ||
+    locationLongitude !== generalInitial.locationLongitude,
+);
+const securityDirty = $derived(sessionTimeout !== securityInitial);
+const canChangePassword = $derived(sessionInfo?.tier === 'local');
+const accountDirty = $derived(canChangePassword && (newPassword.length > 0 || confirmPassword.length > 0));
+const accountValid = $derived(
+  !canChangePassword ||
+    (newPassword.length >= 8 && confirmPassword.length >= 8 && newPassword === confirmPassword),
+);
+const canSaveCurrentTab = $derived.by(() => {
+  if (loading) return false;
+  if (activeTab === 'general') return generalDirty;
+  if (activeTab === 'account') return !!accountDirty && !!accountValid;
+  if (activeTab === 'security') return securityDirty;
+  return false;
+});
+const currentSaveLabel = $derived(
+  saveStates[activeTab] === 'saved' ? en.settings.saved : en.settings.saveChanges,
+);
+
+let didLoad = false;
+$effect(() => {
+  if (didLoad) return;
+  didLoad = true;
+  void loadSettings();
+});
+
+$effect(() => {
+  const requested = page.url.searchParams.get('tab');
+  if (requested && settingsTabs.some((tab) => tab.id === requested)) {
+    activeTab = requested as TabId;
+  }
+});
+
+function tierVariant(tier: 'free' | 'standard' | 'local') {
+  if (tier === 'standard') return 'accent';
+  if (tier === 'local') return 'success';
+  return 'default';
+}
+
+function tierLabel(tier: 'free' | 'standard' | 'local') {
+  if (tier === 'standard') return en.settings.tierStandard;
+  if (tier === 'local') return en.settings.tierLocal;
+  return en.settings.tierFree;
+}
+
+function formatTimestamp(value?: number | null) {
+  if (!value) return '—';
+  return new Date(value).toLocaleString();
+}
+
+function setSavedState(tab: TabId) {
+  saveStates = { ...saveStates, [tab]: 'saved' };
+  setTimeout(() => {
+    saveStates = { ...saveStates, [tab]: 'idle' };
+  }, 2000);
+}
+
+async function loadSettings() {
+  loading = true;
+  loadError = '';
+  try {
+    const [configResp, sessionResp, aboutResp] = await Promise.all([
+      fetch('/api/v1/config'),
+      fetch('/api/v1/auth/session'),
+      fetch('/api/v1/about'),
+    ]);
+
+    const configJson = (await configResp.json()) as { ok: boolean; data?: ConfigResponse; error?: string };
+    const sessionJson = (await sessionResp.json()) as { ok: boolean; data?: SessionInfo; error?: string };
+    const aboutJson = (await aboutResp.json()) as { ok: boolean; data?: AboutInfo; error?: string };
+
+    if (!configJson.ok || !configJson.data) {
+      throw new Error(configJson.error ?? en.errors.generic);
+    }
+
+    setConfig(configJson.data);
+    dashboardName = configJson.data.dashboardName;
+    locationName = configJson.data.location?.name ?? '';
+    locationLatitude = configJson.data.location?.latitude ?? null;
+    locationLongitude = configJson.data.location?.longitude ?? null;
+    sessionTimeout = configJson.data.sessionTimeout;
+    generalInitial = {
+      dashboardName: configJson.data.dashboardName,
+      locationName: configJson.data.location?.name ?? '',
+      locationLatitude: configJson.data.location?.latitude ?? null,
+      locationLongitude: configJson.data.location?.longitude ?? null,
+    };
+    securityInitial = configJson.data.sessionTimeout;
+
+    sessionInfo = sessionJson.ok ? (sessionJson.data ?? null) : null;
+    if (aboutJson.ok && aboutJson.data) {
+      aboutInfo = aboutJson.data;
+    }
+  } catch (error) {
+    loadError = error instanceof Error ? error.message : en.errors.generic;
+  } finally {
+    loading = false;
+  }
+}
+
+async function saveGeneral() {
+  saveStates = { ...saveStates, general: 'saving' };
+  tabErrors = { ...tabErrors, general: '' };
+  try {
+    const payload = {
+      dashboardName: dashboardName.trim() || 'My Dashboard',
+      location:
+        locationName.trim() && locationLatitude !== null && locationLongitude !== null
+          ? {
+              name: locationName.trim(),
+              latitude: locationLatitude,
+              longitude: locationLongitude,
+            }
+          : null,
+    };
+    const resp = await fetch('/api/v1/config', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const json = (await resp.json()) as { ok: boolean; data?: ConfigResponse; error?: string };
+    if (!json.ok || !json.data) {
+      throw new Error(json.error ?? en.settings.saveFailed);
+    }
+    updateConfig(json.data);
+    generalInitial = {
+      dashboardName: json.data.dashboardName,
+      locationName: json.data.location?.name ?? '',
+      locationLatitude: json.data.location?.latitude ?? null,
+      locationLongitude: json.data.location?.longitude ?? null,
+    };
+    setSavedState('general');
+  } catch (error) {
+    tabErrors = {
+      ...tabErrors,
+      general: error instanceof Error ? error.message : en.settings.saveFailed,
+    };
+    saveStates = { ...saveStates, general: 'idle' };
+  }
+}
+
+async function saveAccount() {
+  if (!accountValid) {
+    passwordError = newPassword !== confirmPassword ? en.settings.passwordsDoNotMatch : en.settings.passwordTooShort;
+    return;
+  }
+  saveStates = { ...saveStates, account: 'saving' };
+  tabErrors = { ...tabErrors, account: '' };
+  try {
+    const resp = await fetch('/api/v1/auth/password', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ newPassword }),
+    });
+    const json = (await resp.json()) as { ok: boolean; error?: string };
+    if (!json.ok) {
+      throw new Error(json.error ?? en.settings.saveFailed);
+    }
+    newPassword = '';
+    confirmPassword = '';
+    passwordError = '';
+    setSavedState('account');
+  } catch (error) {
+    tabErrors = {
+      ...tabErrors,
+      account: error instanceof Error ? error.message : en.settings.saveFailed,
+    };
+    saveStates = { ...saveStates, account: 'idle' };
+  }
+}
+
+async function saveSecurity() {
+  saveStates = { ...saveStates, security: 'saving' };
+  tabErrors = { ...tabErrors, security: '' };
+  try {
+    const resp = await fetch('/api/v1/config', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sessionTimeout }),
+    });
+    const json = (await resp.json()) as { ok: boolean; data?: ConfigResponse; error?: string };
+    if (!json.ok || !json.data) {
+      throw new Error(json.error ?? en.settings.saveFailed);
+    }
+    updateConfig(json.data);
+    securityInitial = json.data.sessionTimeout;
+    setSavedState('security');
+  } catch (error) {
+    tabErrors = {
+      ...tabErrors,
+      security: error instanceof Error ? error.message : en.settings.saveFailed,
+    };
+    saveStates = { ...saveStates, security: 'idle' };
+  }
+}
+
+async function saveCurrentTab() {
+  if (activeTab === 'general') return saveGeneral();
+  if (activeTab === 'account') return saveAccount();
+  if (activeTab === 'security') return saveSecurity();
+}
+
+async function reRunSetup() {
+  try {
+    const resp = await fetch('/api/v1/config', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ setupComplete: false }),
+    });
+    const json = (await resp.json()) as { ok: boolean };
+    if (json.ok) {
+      goto('/setup');
+    }
+  } catch {
+    tabErrors = { ...tabErrors, general: en.settings.saveFailed };
+  }
+}
+
+function onLocationInput() {
+  locationLatitude = null;
+  locationLongitude = null;
+  if (geoTimer) clearTimeout(geoTimer);
+  if (locationName.trim().length < 2) {
+    suggestions = [];
+    showSuggestions = false;
+    geocoding = false;
+    return;
+  }
+  const query = locationName.trim();
+  geocoding = true;
+  geoTimer = setTimeout(async () => {
+    try {
+      const resp = await fetch(
+        `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(query)}&count=5&language=en&format=json`,
+      );
+      const data = (await resp.json()) as { results?: GeoResult[] };
+      suggestions = data.results ?? [];
+      showSuggestions = true;
+    } catch {
+      suggestions = [];
+      showSuggestions = false;
+    } finally {
+      geocoding = false;
+    }
+  }, 300);
+}
+
+function selectSuggestion(result: GeoResult) {
+  locationName = `${result.name}, ${result.country}`;
+  locationLatitude = result.latitude;
+  locationLongitude = result.longitude;
+  suggestions = [];
+  showSuggestions = false;
+}
+
+async function signOutAllSessions() {
+  const resp = await fetch('/api/v1/auth/logout-all', { method: 'POST' });
+  const json = (await resp.json()) as { ok: boolean; error?: string };
+  if (json.ok) {
+    goto('/auth/login');
+  } else {
+    tabErrors = { ...tabErrors, security: json.error ?? en.settings.saveFailed };
+  }
+}
+
+async function checkForUpdates() {
+  checkingUpdates = true;
+  tabErrors = { ...tabErrors, about: '' };
+  try {
+    const resp = await fetch('/api/v1/update/check');
+    const json = (await resp.json()) as { ok: boolean; data?: UpdateInfo; error?: string };
+    if (!json.ok || !json.data) {
+      throw new Error(json.error ?? en.errors.generic);
+    }
+    updateInfo = json.data;
+  } catch (error) {
+    tabErrors = { ...tabErrors, about: error instanceof Error ? error.message : en.errors.generic };
+  } finally {
+    checkingUpdates = false;
+  }
+}
+</script>
+
+<div class="settings-page">
+  <h1 class="settings-title">{en.settings.title}</h1>
+
+  <Tabs tabs={settingsTabs} bind:activeTab />
+
+  {#if loadError}
+    <p class="settings-error">{loadError}</p>
+  {/if}
+
+  <div class="settings-content">
+    {#if activeTab === 'general'}
+      <Card padding="none">
+        <div class="settings-card-content">
+          <div class="setting-group">
+            <Input label={en.settings.dashboardName} bind:value={dashboardName} />
+          </div>
+
+          <div class="setting-group location-group">
+            <Input
+              label={en.settings.weatherLocation}
+              placeholder={en.settings.weatherLocationPlaceholder}
+              bind:value={locationName}
+              oninput={onLocationInput}
+            />
+            <p class="setting-description">{en.settings.weatherLocationHint}</p>
+            {#if showSuggestions}
+              <ul class="suggestions" role="listbox">
+                {#if suggestions.length === 0 && !geocoding}
+                  <li class="suggestion-empty">{en.settings.locationSuggestionsEmpty}</li>
+                {:else}
+                  {#each suggestions as result (result.id)}
+                    <li role="option" aria-selected="false">
+                      <button class="suggestion-btn" type="button" onclick={() => selectSuggestion(result)}>
+                        {result.name}, {result.country}
+                      </button>
+                    </li>
+                  {/each}
+                {/if}
+              </ul>
+            {/if}
+          </div>
+
+          <div class="setting-group rerun-group">
+            <Button variant="ghost" size="sm" onclick={reRunSetup}>{en.settings.reRunSetup}</Button>
+          </div>
+
+          {#if tabErrors.general}
+            <p class="tab-error">{tabErrors.general}</p>
+          {/if}
+
+          <div class="tab-save-row">
+            <Button onclick={saveCurrentTab} disabled={!canSaveCurrentTab || saveStates.general === 'saving'}>
+              {currentSaveLabel}
+            </Button>
+          </div>
+        </div>
+      </Card>
+
+    {:else if activeTab === 'account'}
+      <Card padding="none">
+        <div class="settings-card-content">
+          <div class="setting-group setting-grid">
+            <div>
+              <span class="setting-label">{en.settings.authMode}</span>
+              <p>
+                {#if sessionInfo}
+                  {sessionInfo.authMode === 'phavio-io' ? en.settings.authModePhavoIo : en.settings.authModeLocal}
+                {:else}
+                  —
+                {/if}
+              </p>
+            </div>
+            <div>
+              <span class="setting-label">{en.settings.emailAddress}</span>
+              <p>{sessionInfo?.email ?? '—'}</p>
+            </div>
+            <div>
+              <span class="setting-label">{en.settings.tier}</span>
+              <Badge variant={tierVariant(sessionInfo?.tier ?? aboutInfo.tier)}>
+                {tierLabel(sessionInfo?.tier ?? aboutInfo.tier)}
+              </Badge>
+            </div>
+          </div>
+
+          {#if sessionInfo?.authMode === 'phavio-io'}
+            <div class="setting-group">
+              <a class="external-link" href={PHAVO_ACCOUNT_URL} target="_blank" rel="noreferrer">
+                <span>{en.settings.manageAccount}</span>
+                <span class="external-icon">{@html icons.external()}</span>
+              </a>
+            </div>
+          {/if}
+
+          {#if canChangePassword}
+            <div class="setting-group">
+              <h3>{en.settings.changePassword}</h3>
+              <div class="stack-sm">
+                <Input label={en.settings.newPassword} type="password" bind:value={newPassword} />
+                <Input label={en.settings.confirmPassword} type="password" bind:value={confirmPassword} />
+              </div>
+              {#if passwordError}
+                <p class="tab-error">{passwordError}</p>
+              {/if}
+            </div>
+          {/if}
+
+          {#if tabErrors.account}
+            <p class="tab-error">{tabErrors.account}</p>
+          {/if}
+
+          <div class="tab-save-row">
+            <Button onclick={saveCurrentTab} disabled={!canSaveCurrentTab || saveStates.account === 'saving'}>
+              {currentSaveLabel}
+            </Button>
+          </div>
+        </div>
+      </Card>
+
+    {:else if activeTab === 'security'}
+      <Card padding="none">
+        <div class="settings-card-content">
+          <div class="setting-group setting-grid security-row">
+            <div>
+              <span class="setting-label">{en.settings.twoFactorStatus}</span>
+              <p>{en.settings.twoFactorNotConfigured}</p>
+            </div>
+            <Tooltip text={en.settings.comingSoon}>
+              <span>
+                <Button variant="secondary" size="sm">{en.settings.enable2FA}</Button>
+              </span>
+            </Tooltip>
+          </div>
+
+          <div class="setting-group">
+            <Select label={en.settings.sessionTimeout} options={sessionTimeoutOptions} bind:value={sessionTimeout} />
+          </div>
+
+          <div class="setting-group">
+            <h3>{en.settings.activeSessions}</h3>
+            <div class="session-item">
+              <div>
+                <p class="session-title">{en.settings.currentSession}</p>
+                <p class="setting-description">{en.settings.signedInAt}: {formatTimestamp(sessionInfo?.validatedAt)}</p>
+              </div>
+              <Button variant="secondary" size="sm" onclick={signOutAllSessions}>{en.settings.signOutAllSessions}</Button>
+            </div>
+          </div>
+
+          {#if tabErrors.security}
+            <p class="tab-error">{tabErrors.security}</p>
+          {/if}
+
+          <div class="tab-save-row">
+            <Button onclick={saveCurrentTab} disabled={!canSaveCurrentTab || saveStates.security === 'saving'}>
+              {currentSaveLabel}
+            </Button>
+          </div>
+        </div>
+      </Card>
+
+    {:else if activeTab === 'about'}
+      <Card padding="none">
+        <div class="settings-card-content">
+          <div class="setting-group setting-grid">
+            <div>
+              <span class="setting-label">{en.settings.currentVersion}</span>
+              <p class="mono">{aboutInfo.version}</p>
+            </div>
+            <div class="update-action">
+              <Button variant="secondary" size="sm" onclick={checkForUpdates} disabled={checkingUpdates}>
+                {checkingUpdates ? en.settings.checkingForUpdates : en.settings.checkForUpdates}
+              </Button>
+            </div>
+          </div>
+
+          <div class="setting-group">
+            {#if updateInfo}
+              {#if updateInfo.available}
+                <p>{en.settings.updateAvailable}</p>
+                <p class="setting-description">{en.settings.latestVersion}: {updateInfo.latest}</p>
+                {#if updateInfo.changelog}
+                  <div class="changelog-panel mono">{updateInfo.changelog}</div>
+                {/if}
+              {:else}
+                <p>{en.settings.upToDate}</p>
+              {/if}
+            {:else}
+              <p>{en.settings.upToDate}</p>
+            {/if}
+          </div>
+
+          <div class="setting-group links-row">
+            <a class="external-link" href={DOCS_URL} target="_blank" rel="noreferrer">
+              <span>{en.settings.documentation}</span>
+              <span class="external-icon">{@html icons.external()}</span>
+            </a>
+            <a class="external-link" href={GITHUB_URL} target="_blank" rel="noreferrer">
+              <span>{en.settings.github}</span>
+              <span class="external-icon">{@html icons.external()}</span>
+            </a>
+            <a class="external-link" href={DISCORD_URL} target="_blank" rel="noreferrer">
+              <span>{en.settings.discord}</span>
+              <span class="external-icon">{@html icons.external()}</span>
+            </a>
+          </div>
+
+          <div class="setting-group setting-grid">
+            <div>
+              <span class="setting-label">{en.settings.tier}</span>
+              <Badge variant={tierVariant(aboutInfo.tier)}>{tierLabel(aboutInfo.tier)}</Badge>
+            </div>
+            <div>
+              <span class="setting-label">{en.settings.licenseKey}</span>
+              <p class="mono">{aboutInfo.licenseKeyMasked ?? en.settings.noLicense}</p>
+            </div>
+            <div>
+              <a class="external-link" href={PHAVO_LICENSE_URL} target="_blank" rel="noreferrer">
+                <span>{en.settings.manageLicense}</span>
+                <span class="external-icon">{@html icons.external()}</span>
+              </a>
+            </div>
+          </div>
+
+          {#if tabErrors.about}
+            <p class="tab-error">{tabErrors.about}</p>
+          {/if}
+
+          <div class="tab-save-row">
+            <Button disabled>{en.settings.saveChanges}</Button>
+          </div>
+        </div>
+      </Card>
+    {/if}
+  </div>
+</div>
+
+<style>
+  .settings-page {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-6);
+    max-width: 860px;
+    margin: 0 auto;
+    padding: var(--space-6);
+    width: 100%;
+  }
+
+  .settings-title {
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--color-text-primary);
+  }
+
+  .settings-content {
+    min-width: 0;
+  }
+
+  .settings-card-content {
+    padding: var(--space-4) var(--space-6);
+  }
+
+  .setting-group {
+    padding: var(--space-4) 0;
+    border-bottom: 1px solid var(--color-border-subtle);
+  }
+
+  .setting-group:first-child {
+    padding-top: 0;
+  }
+
+  .setting-group:last-of-type {
+    border-bottom: none;
+  }
+
+  .setting-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--space-4);
+    align-items: start;
+  }
+
+  .setting-label {
+    display: block;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--color-text-secondary);
+    margin-bottom: var(--space-1);
+  }
+
+  .setting-description {
+    font-size: 13px;
+    color: var(--color-text-secondary);
+    margin-top: var(--space-2);
+  }
+
+  .tab-save-row {
+    display: flex;
+    justify-content: flex-end;
+    padding-top: var(--space-4);
+  }
+
+  .settings-error,
+  .tab-error {
+    color: var(--color-danger);
+    font-size: 13px;
+  }
+
+  .location-group {
+    position: relative;
+  }
+
+  .suggestions {
+    list-style: none;
+    margin: var(--space-2) 0 0;
+    padding: var(--space-1);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    background: var(--color-bg-elevated);
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .suggestion-btn {
+    width: 100%;
+    text-align: left;
+    padding: var(--space-2) var(--space-3);
+    background: transparent;
+    border: none;
+    border-radius: var(--radius-sm);
+    color: var(--color-text-primary);
+    cursor: pointer;
+  }
+
+  .suggestion-btn:hover {
+    background: var(--color-bg-hover);
+  }
+
+  .suggestion-empty {
+    padding: var(--space-2) var(--space-3);
+    color: var(--color-text-secondary);
+    font-size: 13px;
+  }
+
+  .rerun-group {
+    display: flex;
+    justify-content: flex-start;
+  }
+
+  .stack-sm {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+
+  .security-row {
+    align-items: center;
+  }
+
+  .session-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-4);
+  }
+
+  .session-title {
+    font-weight: 600;
+    color: var(--color-text-primary);
+  }
+
+  .update-action {
+    display: flex;
+    justify-content: flex-end;
+    align-items: start;
+  }
+
+  .changelog-panel {
+    margin-top: var(--space-3);
+    padding: var(--space-3);
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--color-border-subtle);
+    background: var(--color-bg-base);
+    white-space: pre-wrap;
+    font-size: 12px;
+    max-height: 240px;
+    overflow: auto;
+  }
+
+  .links-row {
+    display: flex;
+    gap: var(--space-4);
+    flex-wrap: wrap;
+  }
+
+  .external-link {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    color: var(--color-text-primary);
+    text-decoration: none;
+  }
+
+  .external-link:hover {
+    color: var(--color-accent-text);
+  }
+
+  .external-icon {
+    display: inline-flex;
+    color: var(--color-text-secondary);
+  }
+
+  @media (max-width: 768px) {
+    .settings-page {
+      padding: var(--space-4);
+    }
+
+    .settings-card-content {
+      padding: var(--space-4);
+    }
+
+    .setting-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .session-item {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+  }
+</style>

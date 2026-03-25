@@ -1,0 +1,20 @@
+version: '3.8'
+services:
+  phavo:
+    image: phavo/phavo:latest
+    build: .
+    ports:
+      - "3000:3000"
+      - "3443:3443"
+    volumes:
+      - phavo-data:/data
+    environment:
+      - PHAVO_SECRET=${PHAVO_SECRET:-change-me}
+      - PHAVO_TLS_MODE=${PHAVO_TLS_MODE:-self-signed}
+      - PHAVO_DOMAIN=${PHAVO_DOMAIN:-}
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp
+volumes:
+  phavo-data:

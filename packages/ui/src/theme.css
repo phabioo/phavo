@@ -1,0 +1,80 @@
+/* IRON RULE: Every component in @phavo/ui uses ONLY these variables.
+   Zero hardcoded hex values anywhere in component files. */
+
+:root[data-theme="dark"] {
+  /* Backgrounds */
+  --color-bg-base:        #1a1918;
+  --color-bg-surface:     #222120;
+  --color-bg-elevated:    #2a2928;
+  --color-bg-hover:       #2e2d2b;
+
+  /* Borders */
+  --color-border:         #3a3936;
+  --color-border-subtle:  #2e2d2b;
+  --color-border-strong:  #4a4845;
+
+  /* Text */
+  --color-text-primary:   #d4d2c8;
+  --color-text-secondary: #888780;
+  --color-text-muted:     #5f5e5a;
+  --color-text-inverse:   #1a1918;
+
+  /* Accent (teal) */
+  --color-accent:         #0f6e56;
+  --color-accent-subtle:  #085041;
+  --color-accent-hover:   #1a8a6a;
+  --color-accent-text:    #9fe1cb;
+
+  /* Semantic */
+  --color-danger:         #993c1d;
+  --color-danger-subtle:  #4a1b0c;
+  --color-warning:        #854f0b;
+  --color-warning-subtle: #412402;
+  --color-success:        #0f6e56;
+
+  /* Typography */
+  --font-ui:   'Inter', -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+
+  /* Radii */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
+
+  /* Spacing scale */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+
+  /* Shadows — flat design, minimal */
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.4);
+  --shadow-md: 0 2px 8px rgba(0,0,0,0.5);
+
+  /* Sidebar width */
+  --sidebar-width: 220px;
+  --sidebar-collapsed-width: 56px;
+
+  /* Widget grid */
+  --grid-cols: 12;
+  --grid-gap: 12px;
+}
+
+/* Base reset */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: var(--font-ui);
+  background: var(--color-bg-base);
+  color: var(--color-text-primary);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Monospace for all data values */
+.mono, .metric { font-family: var(--font-mono); }

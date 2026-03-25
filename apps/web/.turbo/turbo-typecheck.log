@@ -1,0 +1,36 @@
+$ svelte-check --tsconfig ./tsconfig.json
+Loading svelte-check in workspace: /Users/fabio/local_repos/phavo/apps/web
+Getting Svelte diagnostics...
+
+/Users/fabio/local_repos/phavo/apps/web/../../packages/ui/src/components/Input.svelte:23:5
+Warn: A form label must be associated with a control
+https://svelte.dev/e/a11y_label_has_associated_control (svelte)
+  {#if label}
+    <label class="input-label">{label}</label>
+  {/if}
+
+/Users/fabio/local_repos/phavo/apps/web/../../packages/ui/src/components/Select.svelte:25:5
+Warn: A form label must be associated with a control
+https://svelte.dev/e/a11y_label_has_associated_control (svelte)
+  {#if label}
+    <label class="select-label">{label}</label>
+  {/if}
+
+/Users/fabio/local_repos/phavo/apps/web/../../packages/ui/src/components/Switch.svelte:17:3
+Warn: Buttons and links should either contain text or have an `aria-label`, `aria-labelledby` or `title` attribute
+https://svelte.dev/e/a11y_consider_explicit_label (svelte)
+<label class="switch-wrapper">
+  <button
+    type="button"
+    role="switch"
+    aria-checked={checked}
+    class="switch"
+    class:active={checked}
+    onclick={toggle}
+  >
+    <span class="switch-thumb"></span>
+  </button>
+  {#if label}
+
+====================================
+svelte-check found 0 errors and 3 warnings in 3 files
