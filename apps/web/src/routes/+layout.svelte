@@ -25,6 +25,8 @@ let { children }: Props = $props();
 
 let sidebarCollapsed = $state(false);
 let panelOpen = $state(false);
+let updateAvailable = $state(false);
+let latestUpdateVersion = $state('');
 
 const sidebarItems = [
   { id: 'home', label: 'Dashboard', icon: icons.cpu() },
@@ -72,6 +74,27 @@ $effect(() => {
   }
 });
 
+async function checkForUpdate() {
+  try {
+    const resp = await fetch('/api/v1/update/check');
+    const json = (await resp.json()) as {
+      ok: boolean;
+      data?: { updateAvailable: boolean; latestVersion: string };
+    };
+    if (json.ok && json.data) {
+      updateAvailable = json.data.updateAvailable;
+      if (json.data.latestVersion) latestUpdateVersion = json.data.latestVersion;
+    }
+  } catch { /* ignore, runs silently in the background */ }
+}
+
+$effect(() => {
+  if (!isDashboard) return;
+  void checkForUpdate();
+  const updateInterval = setInterval(checkForUpdate, 60 * 60 * 1000);
+  return () => clearInterval(updateInterval);
+});
+
 $effect(() => {
   if (!isDashboard) return;
   syncFromServer();
@@ -109,6 +132,17 @@ function handleNotificationClick(n: Notification) {
       onnavigate={navigate}
     />
     <main class="main-content" class:sidebar-collapsed={sidebarCollapsed}>
+      {#snippet updateBadge()}
+        {#if updateAvailable}
+          <button
+            class="update-badge"
+            onclick={() => goto('/settings?tab=about')}
+            aria-label="Update available: {latestUpdateVersion}"
+          >
+            Update
+          </button>
+        {/if}
+      {/snippet}
       <Header
         dashboardName={headerTitle}
         brandingLabel={headerBrandingLabel}
@@ -116,6 +150,7 @@ function handleNotificationClick(n: Notification) {
         onBellClick={() => (panelOpen = !panelOpen)}
         onAddWidgetClick={() => setDrawerOpen(!getIsDrawerOpen())}
         addWidgetLabel={en.dashboard.addWidget}
+        {updateBadge}
       />
       {@render children()}
     </main>
@@ -150,6 +185,24 @@ function handleNotificationClick(n: Notification) {
 
   .main-content.sidebar-collapsed {
     margin-left: var(--sidebar-collapsed-width);
+  }
+
+  .update-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px var(--space-2);
+    font-size: 11px;
+    font-weight: 600;
+    background: var(--color-accent);
+    color: var(--color-accent-text);
+    border: none;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: opacity 0.15s;
+  }
+
+  .update-badge:hover {
+    opacity: 0.8;
   }
 
   @media (max-width: 768px) {

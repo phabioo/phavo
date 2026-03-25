@@ -254,7 +254,14 @@
     "signOutAllSessions": "Sign out all sessions",
     "documentation": "Documentation",
     "github": "GitHub",
-    "discord": "Discord"
+    "discord": "Discord",
+    "updateBanner": "Phavo {version} is available",
+    "releasedOn": "Released",
+    "copyUpdateCommand": "Copy update command",
+    "copied": "Copied!",
+    "updateNow": "Update now",
+    "updateStarted": "Update started — Phavo will restart shortly.",
+    "updateRunManually": "Run this command on your host to update:"
   },
   "common": {
     "save": "Save",

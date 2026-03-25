@@ -27,10 +27,12 @@ type AboutInfo = {
   licenseKeyMasked: string | null;
 };
 type UpdateInfo = {
-  available: boolean;
-  current: string;
-  latest: string;
-  changelog?: string;
+  updateAvailable: boolean;
+  currentVersion: string;
+  latestVersion: string;
+  changelog: string;
+  publishedAt: string;
+  updateCommand: string;
 };
 
 type ConfigResponse = {
@@ -84,6 +86,9 @@ let sessionInfo = $state<SessionInfo>(null);
 let aboutInfo = $state<AboutInfo>({ version: '0.0.1', tier: 'free', licenseKeyMasked: null });
 let updateInfo = $state<UpdateInfo | null>(null);
 let checkingUpdates = $state(false);
+let applying = $state(false);
+let applyResult = $state<{ started: boolean; reason?: string } | null>(null);
+let cmdCopied = $state(false);
 
 let newPassword = $state('');
 let confirmPassword = $state('');
@@ -145,6 +150,9 @@ $effect(() => {
   const requested = page.url.searchParams.get('tab');
   if (requested && settingsTabs.some((tab) => tab.id === requested)) {
     activeTab = requested as TabId;
+    if (requested === 'about' && !updateInfo && !checkingUpdates) {
+      void checkForUpdates();
+    }
   }
 });
 
@@ -382,6 +390,7 @@ async function signOutAllSessions() {
 
 async function checkForUpdates() {
   checkingUpdates = true;
+  applyResult = null;
   tabErrors = { ...tabErrors, about: '' };
   try {
     const resp = await fetch('/api/v1/update/check');
@@ -394,6 +403,55 @@ async function checkForUpdates() {
     tabErrors = { ...tabErrors, about: error instanceof Error ? error.message : en.errors.generic };
   } finally {
     checkingUpdates = false;
+  }
+}
+
+async function applyUpdate() {
+  applying = true;
+  applyResult = null;
+  tabErrors = { ...tabErrors, about: '' };
+  try {
+    const resp = await fetch('/api/v1/update/apply', { method: 'POST' });
+    const json = (await resp.json()) as {
+      ok: boolean;
+      data?: { started: boolean; reason?: string };
+      error?: string;
+    };
+    if (!json.ok) throw new Error(json.error ?? en.errors.generic);
+    applyResult = json.data ?? { started: false };
+  } catch (error) {
+    tabErrors = { ...tabErrors, about: error instanceof Error ? error.message : en.errors.generic };
+  } finally {
+    applying = false;
+  }
+}
+
+async function copyUpdateCommand() {
+  const cmd = updateInfo?.updateCommand ?? 'docker compose pull && docker compose up -d';
+  try {
+    await navigator.clipboard.writeText(cmd);
+    cmdCopied = true;
+    setTimeout(() => (cmdCopied = false), 2000);
+  } catch { /* clipboard unavailable */ }
+}
+
+function renderMarkdown(md: string): string {
+  return md
+    .replace(/^## (.+)$/gm, '<strong>$1</strong>')
+    .replace(/^# (.+)$/gm, '<strong>$1</strong>')
+    .replace(/^[-*] (.+)$/gm, '<span class="cl-item">• $1</span>')
+    .replace(/\n/g, '<br>');
+}
+
+function formatReleaseDate(iso: string): string {
+  try {
+    return new Date(iso).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+  } catch {
+    return iso;
   }
 }
 </script>
@@ -561,11 +619,19 @@ async function checkForUpdates() {
     {:else if activeTab === 'about'}
       <Card padding="none">
         <div class="settings-card-content">
+
+          <!-- Version row -->
           <div class="setting-group setting-grid">
             <div>
               <span class="setting-label">{en.settings.currentVersion}</span>
-              <p class="mono">{aboutInfo.version}</p>
+              <p class="mono">v{aboutInfo.version}</p>
             </div>
+            {#if updateInfo?.updateAvailable}
+              <div>
+                <span class="setting-label">{en.settings.latestVersion}</span>
+                <p class="mono">{updateInfo.latestVersion}</p>
+              </div>
+            {/if}
             <div class="update-action">
               <Button variant="secondary" size="sm" onclick={checkForUpdates} disabled={checkingUpdates}>
                 {checkingUpdates ? en.settings.checkingForUpdates : en.settings.checkForUpdates}
@@ -573,22 +639,62 @@ async function checkForUpdates() {
             </div>
           </div>
 
+          <!-- Update status -->
           <div class="setting-group">
-            {#if updateInfo}
-              {#if updateInfo.available}
-                <p>{en.settings.updateAvailable}</p>
-                <p class="setting-description">{en.settings.latestVersion}: {updateInfo.latest}</p>
+            {#if updateInfo !== null}
+              {#if updateInfo.updateAvailable}
+                <!-- Available banner -->
+                <div class="update-banner">
+                  <span class="update-banner-title">
+                    {en.settings.updateBanner.replace('{version}', updateInfo.latestVersion)}
+                  </span>
+                  {#if updateInfo.publishedAt}
+                    <span class="update-banner-date">
+                      {en.settings.releasedOn} {formatReleaseDate(updateInfo.publishedAt)}
+                    </span>
+                  {/if}
+                </div>
+
+                <!-- Changelog -->
                 {#if updateInfo.changelog}
-                  <div class="changelog-panel mono">{updateInfo.changelog}</div>
+                  <div class="changelog-panel">
+                    {@html renderMarkdown(updateInfo.changelog)}
+                  </div>
+                {/if}
+
+                <!-- Actions -->
+                {#if applyResult?.started}
+                  <p class="update-started">{en.settings.updateStarted}</p>
+                {:else if applyResult && !applyResult.started}
+                  <p class="setting-description">{en.settings.updateRunManually}</p>
+                  <div class="command-box">
+                    <code class="mono command-text">{updateInfo.updateCommand}</code>
+                    <Button variant="ghost" size="sm" onclick={copyUpdateCommand}>
+                      {cmdCopied ? en.settings.copied : en.settings.copyUpdateCommand}
+                    </Button>
+                  </div>
+                {:else}
+                  <div class="update-actions-row">
+                    <Button onclick={applyUpdate} disabled={applying}>
+                      {en.settings.updateNow}
+                    </Button>
+                    <Button variant="secondary" onclick={copyUpdateCommand}>
+                      {cmdCopied ? en.settings.copied : en.settings.copyUpdateCommand}
+                    </Button>
+                  </div>
                 {/if}
               {:else}
-                <p>{en.settings.upToDate}</p>
+                <p class="update-ok">
+                  <span class="update-ok-icon">{@html icons.check()}</span>
+                  {en.settings.upToDate}
+                </p>
               {/if}
             {:else}
-              <p>{en.settings.upToDate}</p>
+              <p class="setting-description">{en.settings.upToDate}</p>
             {/if}
           </div>
 
+          <!-- External links -->
           <div class="setting-group links-row">
             <a class="external-link" href={DOCS_URL} target="_blank" rel="noreferrer">
               <span>{en.settings.documentation}</span>
@@ -604,6 +710,7 @@ async function checkForUpdates() {
             </a>
           </div>
 
+          <!-- Tier + licence -->
           <div class="setting-group setting-grid">
             <div>
               <span class="setting-label">{en.settings.tier}</span>
@@ -624,10 +731,6 @@ async function checkForUpdates() {
           {#if tabErrors.about}
             <p class="tab-error">{tabErrors.about}</p>
           {/if}
-
-          <div class="tab-save-row">
-            <Button disabled>{en.settings.saveChanges}</Button>
-          </div>
         </div>
       </Card>
     {/if}
@@ -775,16 +878,115 @@ async function checkForUpdates() {
     align-items: start;
   }
 
+  .update-banner {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    padding: var(--space-3) var(--space-4);
+    border-radius: var(--radius-sm);
+    background: var(--color-accent-subtle);
+    border: 1px solid var(--color-accent-border);
+    margin-bottom: var(--space-3);
+  }
+
+  .update-banner-title {
+    font-weight: 600;
+    color: var(--color-text-primary);
+  }
+
+  .update-banner-date {
+    font-size: 12px;
+    color: var(--color-text-muted);
+  }
+
   .changelog-panel {
-    margin-top: var(--space-3);
+    margin-top: var(--space-1);
+    margin-bottom: var(--space-3);
     padding: var(--space-3);
     border-radius: var(--radius-sm);
     border: 1px solid var(--color-border-subtle);
     background: var(--color-bg-base);
-    white-space: pre-wrap;
-    font-size: 12px;
-    max-height: 240px;
+    font-size: 13px;
+    max-height: 260px;
     overflow: auto;
+  }
+
+  .changelog-panel :global(h1),
+  .changelog-panel :global(h2),
+  .changelog-panel :global(h3) {
+    font-size: 13px;
+    font-weight: 600;
+    margin: var(--space-2) 0 var(--space-1);
+    color: var(--color-text-primary);
+  }
+
+  .changelog-panel :global(ul) {
+    padding-left: var(--space-4);
+    margin: var(--space-1) 0;
+  }
+
+  .changelog-panel :global(li) {
+    margin-bottom: var(--space-1);
+    color: var(--color-text-secondary);
+  }
+
+  .changelog-panel :global(p) {
+    margin: var(--space-1) 0;
+    color: var(--color-text-secondary);
+  }
+
+  .changelog-panel :global(code) {
+    font-family: var(--font-mono, monospace);
+    font-size: 12px;
+    background: var(--color-bg-elevated);
+    padding: 1px 4px;
+    border-radius: 3px;
+  }
+
+  .update-actions-row {
+    display: flex;
+    gap: var(--space-3);
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  .command-box {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-3);
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--color-border-subtle);
+    background: var(--color-bg-base);
+    margin-top: var(--space-2);
+  }
+
+  .command-text {
+    flex: 1;
+    font-size: 12px;
+    color: var(--color-text-secondary);
+    overflow-x: auto;
+  }
+
+  .update-ok {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    color: var(--color-success);
+    font-weight: 500;
+  }
+
+  .update-ok-icon {
+    display: flex;
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+  }
+
+  .update-started {
+    color: var(--color-success);
+    font-weight: 500;
+    margin-top: var(--space-2);
   }
 
   .links-row {

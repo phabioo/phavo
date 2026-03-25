@@ -420,24 +420,49 @@ app.get('/about', async (c) => {
 });
 
 app.get('/update/check', async (c) => {
+  const UPDATE_COMMAND = 'docker compose pull && docker compose up -d';
+  const fallback = {
+    currentVersion: PHAVO_VERSION,
+    latestVersion: PHAVO_VERSION,
+    updateAvailable: false,
+    changelog: '',
+    publishedAt: '',
+    updateCommand: UPDATE_COMMAND,
+  };
   try {
-    const data = await cached('update', 3600000, async () => {
-      const res = await fetch('https://api.github.com/repos/phabioo/phavo/releases/latest');
-      if (!res.ok) return { available: false, current: PHAVO_VERSION, latest: PHAVO_VERSION };
-      const release = (await res.json()) as { tag_name: string; body: string };
-      return {
-        available: release.tag_name !== `v${PHAVO_VERSION}`,
-        current: PHAVO_VERSION,
-        latest: release.tag_name,
-        changelog: release.body,
+    const data = await cached('update-check', 3600000, async () => {
+      const res = await fetch('https://api.github.com/repos/phabioo/phavo/releases/latest', {
+        headers: { 'User-Agent': 'Phavo Dashboard' },
+        signal: AbortSignal.timeout(8000),
+      });
+      if (!res.ok) return fallback;
+      const release = (await res.json()) as {
+        tag_name: string;
+        body: string;
+        published_at: string;
       };
-    }) as { available: boolean; current: string; latest: string; changelog?: string };
+      return {
+        currentVersion: PHAVO_VERSION,
+        latestVersion: release.tag_name,
+        updateAvailable: release.tag_name !== `v${PHAVO_VERSION}`,
+        changelog: release.body ?? '',
+        publishedAt: release.published_at ?? '',
+        updateCommand: UPDATE_COMMAND,
+      };
+    }) as {
+      currentVersion: string;
+      latestVersion: string;
+      updateAvailable: boolean;
+      changelog: string;
+      publishedAt: string;
+      updateCommand: string;
+    };
 
-    if (data.available && data.latest !== _notifiedUpdateVersion) {
-      _notifiedUpdateVersion = data.latest;
+    if (data.updateAvailable && data.latestVersion !== _notifiedUpdateVersion) {
+      _notifiedUpdateVersion = data.latestVersion;
       serverNotify({
         type: 'update',
-        title: `Phavo ${data.latest} available`,
+        title: `Phavo ${data.latestVersion} available`,
         body: 'Click to see changelog',
         settingsTab: 'about',
       });
@@ -445,7 +470,23 @@ app.get('/update/check', async (c) => {
 
     return c.json(ok(data));
   } catch {
-    return c.json(ok({ available: false, current: PHAVO_VERSION, latest: PHAVO_VERSION }));
+    return c.json(ok(fallback));
+  }
+});
+
+app.post('/update/apply', async (c) => {
+  const session = await resolveSessionContext(c.req.raw);
+  if (!session) return c.json(err('Unauthorized'), 401);
+
+  try {
+    const { access } = await import('node:fs/promises');
+    await access('/var/run/docker.sock');
+    const { exec } = await import('node:child_process');
+    // Fire-and-forget: the container will stop mid-request
+    exec('docker compose pull && docker compose up -d');
+    return c.json(ok({ started: true }));
+  } catch {
+    return c.json(ok({ started: false, reason: 'Docker socket not available' }));
   }
 });
 
