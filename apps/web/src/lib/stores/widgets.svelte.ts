@@ -1,9 +1,30 @@
-import type { Tab, WidgetInstance, WidgetSize } from '@phavo/types';
+import type { DiskMetrics, TemperatureMetrics } from '@phavo/agent';
+import {
+  isWidgetDefinition,
+  type Tab,
+  type WidgetDefinition,
+  type WidgetInstance,
+  type WidgetManifestEntry,
+  type WidgetSize,
+} from '@phavo/types';
+import en from '$lib/i18n/en.json';
+import { notify } from '$lib/stores/notifications.svelte';
 
 let currentTabId = $state<string>('');
 let tabs = $state<Tab[]>([]);
 let widgetInstances = $state<WidgetInstance[]>([]);
 let isDrawerOpen = $state(false);
+let widgetManifest = $state<WidgetManifestEntry[]>([]);
+let widgetData = $state<Record<string, unknown>>({});
+let widgetStates = $state<Record<string, WidgetState>>({});
+let widgetErrors = $state<Record<string, string | null>>({});
+let widgetWarnings = $state<Record<string, string | null>>({});
+let widgetLastSuccess = $state<Record<string, number | null>>({});
+let widgetFailureCounts = $state<Record<string, number>>({});
+
+const inflightFetches = new Map<string, Promise<void>>();
+
+export type WidgetState = 'loading' | 'active' | 'unconfigured' | 'error' | 'stale';
 
 // ── Tab state ──────────────────────────────────────────────────────────
 export function getCurrentTabId(): string {
@@ -26,6 +47,256 @@ export function getWidgetInstances(): WidgetInstance[] {
   return widgetInstances;
 }
 
+export function getWidgetManifest(): WidgetManifestEntry[] {
+  return widgetManifest;
+}
+
+export function getWidgetData(widgetId: string): unknown {
+  return widgetData[widgetId];
+}
+
+export function getWidgetState(instanceId: string): WidgetState {
+  return widgetStates[instanceId] ?? 'loading';
+}
+
+export function getWidgetError(instanceId: string): string | null {
+  return widgetErrors[instanceId] ?? null;
+}
+
+export function getWidgetWarning(instanceId: string): string | null {
+  return widgetWarnings[instanceId] ?? null;
+}
+
+export function getWidgetLastSuccess(instanceId: string): number | null {
+  return widgetLastSuccess[instanceId] ?? null;
+}
+
+export async function loadWidgetManifest(): Promise<void> {
+  try {
+    const res = await fetch('/api/v1/widgets');
+    const json = (await res.json()) as { ok: boolean; data: WidgetManifestEntry[] };
+    if (json.ok) widgetManifest = json.data;
+  } catch {
+    // silently fail
+  }
+}
+
+export async function retryWidget(instanceId: string): Promise<void> {
+  const instance = widgetInstances.find((entry) => entry.id === instanceId);
+  if (!instance) return;
+
+  const def = getDefinition(instance.widgetId);
+  if (!def || !canPollInstance(instance, def)) return;
+
+  widgetStates = { ...widgetStates, [instanceId]: 'loading' };
+  widgetErrors = { ...widgetErrors, [instanceId]: null };
+  widgetWarnings = { ...widgetWarnings, [instanceId]: null };
+
+  await fetchWidgetData(def, false);
+}
+
+function getDefinition(widgetId: string): WidgetDefinition | undefined {
+  const entry = widgetManifest.find((widget) => widget.id === widgetId);
+  return entry && isWidgetDefinition(entry) ? entry : undefined;
+}
+
+function canPollInstance(instance: WidgetInstance, def: WidgetDefinition): boolean {
+  return !def.configSchema || instance.configured !== false;
+}
+
+function getPollableInstances(widgetId: string): WidgetInstance[] {
+  const def = getDefinition(widgetId);
+  if (!def) return [];
+  return widgetInstances.filter(
+    (instance) => instance.widgetId === widgetId && canPollInstance(instance, def),
+  );
+}
+
+function buildNextStateForInstance(instance: WidgetInstance): WidgetState {
+  const def = getDefinition(instance.widgetId);
+  if (def?.configSchema && instance.configured === false) return 'unconfigured';
+
+  const previous = widgetStates[instance.id];
+  if (previous === 'active' || previous === 'stale' || previous === 'error') {
+    return previous;
+  }
+
+  if (previous === 'unconfigured') return 'loading';
+  if (widgetData[instance.widgetId] !== undefined) return 'active';
+  return 'loading';
+}
+
+function reconcileWidgetRuntime(): void {
+  const nextStates: Record<string, WidgetState> = {};
+  const nextErrors: Record<string, string | null> = {};
+  const nextWarnings: Record<string, string | null> = {};
+  const nextLastSuccess: Record<string, number | null> = {};
+
+  for (const instance of widgetInstances) {
+    nextStates[instance.id] = buildNextStateForInstance(instance);
+    nextErrors[instance.id] = widgetErrors[instance.id] ?? null;
+    nextWarnings[instance.id] = widgetWarnings[instance.id] ?? null;
+    nextLastSuccess[instance.id] = widgetLastSuccess[instance.id] ?? null;
+
+    if (nextStates[instance.id] === 'unconfigured') {
+      nextErrors[instance.id] = null;
+      nextWarnings[instance.id] = null;
+    }
+  }
+
+  widgetStates = nextStates;
+  widgetErrors = nextErrors;
+  widgetWarnings = nextWarnings;
+  widgetLastSuccess = nextLastSuccess;
+}
+
+function checkThresholds(widgetId: string, data: unknown): void {
+  if (widgetId === 'disk') {
+    for (const disk of data as DiskMetrics[]) {
+      if (disk.usePercent > 90) {
+        const last = diskThrottleMap.get(disk.mount) ?? 0;
+        if (Date.now() - last > 3_600_000) {
+          notify({
+            type: 'widget-warning',
+            title: en.notifications.diskAlmostFull,
+            body: `${disk.mount} at ${Math.round(disk.usePercent)}%`,
+            widgetId: 'disk',
+          });
+          diskThrottleMap.set(disk.mount, Date.now());
+        }
+      }
+    }
+  }
+
+  if (widgetId === 'temperature') {
+    const temp = data as TemperatureMetrics;
+    if (temp.cpuTemp !== null && temp.cpuTemp > 80) {
+      if (Date.now() - tempLastNotified > 1_800_000) {
+        notify({
+          type: 'system-alert',
+          title: en.notifications.highCpuTemp,
+          body: `${temp.cpuTemp}°C detected`,
+          widgetId: 'temperature',
+        });
+        tempLastNotified = Date.now();
+      }
+    }
+  }
+}
+
+function trackPiholeFailure(widgetId: string): void {
+  if (widgetId !== 'pihole') return;
+  piholeFailStreak++;
+  if (piholeFailStreak >= 3) {
+    notify({
+      type: 'widget-error',
+      title: en.notifications.piholeUnreachable,
+      body: en.notifications.piholeUnreachableBody,
+      widgetId: 'pihole',
+      settingsTab: 'general',
+    });
+    piholeFailStreak = 0;
+  }
+}
+
+async function fetchWidgetData(def: WidgetDefinition, silent: boolean): Promise<void> {
+  const activeInstances = getPollableInstances(def.id);
+  if (activeInstances.length === 0) return;
+
+  const existing = inflightFetches.get(def.id);
+  if (existing) {
+    await existing;
+    return;
+  }
+
+  const request = (async () => {
+    try {
+      const res = await fetch(def.dataEndpoint);
+      const json = (await res.json()) as { ok: boolean; data?: unknown; error?: string };
+
+      if (!json.ok) {
+        throw new Error(json.error ?? en.errors.generic);
+      }
+
+      const nextData = json.data;
+      const timestamp = Date.now();
+      widgetData = { ...widgetData, [def.id]: nextData };
+      widgetFailureCounts = { ...widgetFailureCounts, [def.id]: 0 };
+      piholeFailStreak = def.id === 'pihole' ? 0 : piholeFailStreak;
+
+      const nextStates = { ...widgetStates };
+      const nextErrors = { ...widgetErrors };
+      const nextWarnings = { ...widgetWarnings };
+      const nextLastSuccess = { ...widgetLastSuccess };
+
+      for (const instance of activeInstances) {
+        nextStates[instance.id] = 'active';
+        nextErrors[instance.id] = null;
+        nextWarnings[instance.id] = null;
+        nextLastSuccess[instance.id] = timestamp;
+      }
+
+      widgetStates = nextStates;
+      widgetErrors = nextErrors;
+      widgetWarnings = nextWarnings;
+      widgetLastSuccess = nextLastSuccess;
+
+      if (nextData !== undefined) {
+        checkThresholds(def.id, nextData);
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : en.errors.networkError;
+      const previousData = widgetData[def.id];
+      const nextFailureCount = (widgetFailureCounts[def.id] ?? 0) + 1;
+      widgetFailureCounts = { ...widgetFailureCounts, [def.id]: nextFailureCount };
+
+      const nextStates = { ...widgetStates };
+      const nextErrors = { ...widgetErrors };
+      const nextWarnings = { ...widgetWarnings };
+
+      for (const instance of activeInstances) {
+        const previousState = widgetStates[instance.id];
+        const shouldShowStale =
+          previousData !== undefined && (previousState === 'active' || previousState === 'stale');
+
+        if (shouldShowStale && nextFailureCount < 3) {
+          nextStates[instance.id] = 'stale';
+          nextWarnings[instance.id] = message;
+          nextErrors[instance.id] = null;
+          continue;
+        }
+
+        nextStates[instance.id] = 'error';
+        nextErrors[instance.id] = message;
+        nextWarnings[instance.id] = null;
+      }
+
+      if (previousData !== undefined && nextFailureCount >= 3) {
+        const nextData = { ...widgetData };
+        delete nextData[def.id];
+        widgetData = nextData;
+      }
+
+      widgetStates = nextStates;
+      widgetErrors = nextErrors;
+      widgetWarnings = nextWarnings;
+
+      if (!silent || previousData === undefined) {
+        trackPiholeFailure(def.id);
+      }
+    } finally {
+      inflightFetches.delete(def.id);
+    }
+  })();
+
+  inflightFetches.set(def.id, request);
+  await request;
+}
+
+const diskThrottleMap = new Map<string, number>();
+let tempLastNotified = 0;
+let piholeFailStreak = 0;
+
 /** Load all tabs from server and set the first one as active if no tab is active. */
 export async function loadTabs(): Promise<void> {
   try {
@@ -38,15 +309,21 @@ export async function loadTabs(): Promise<void> {
       if (tabs.length === 0) {
         const result = await createTab('Home');
         if (result.ok && tabs.length > 0) {
-          currentTabId = tabs[0].id;
-          await loadWidgetInstances(currentTabId);
-          return;
+          const first = tabs[0];
+          if (first) {
+            currentTabId = first.id;
+            await loadWidgetInstances(currentTabId);
+            return;
+          }
         }
       }
 
       if (tabs.length > 0 && (!currentTabId || !tabs.find((t) => t.id === currentTabId))) {
-        currentTabId = tabs[0].id;
-        await loadWidgetInstances(currentTabId);
+        const first = tabs[0];
+        if (first) {
+          currentTabId = first.id;
+          await loadWidgetInstances(currentTabId);
+        }
       }
     }
   } catch {
@@ -73,14 +350,17 @@ export async function createTab(label: string): Promise<{ ok: boolean; error?: s
       tabs = [...tabs, json.data];
       return { ok: true };
     }
-    return { ok: false, error: json.error };
+    return { ok: false, error: json.error ?? 'Request failed' };
   } catch {
     return { ok: false, error: 'Network error' };
   }
 }
 
 /** Rename or reorder a tab. */
-export async function updateTab(id: string, patch: { label?: string; order?: number }): Promise<void> {
+export async function updateTab(
+  id: string,
+  patch: { label?: string; order?: number },
+): Promise<void> {
   try {
     const res = await fetch(`/api/v1/tabs/${encodeURIComponent(id)}`, {
       method: 'PATCH',
@@ -89,7 +369,8 @@ export async function updateTab(id: string, patch: { label?: string; order?: num
     });
     const json = (await res.json()) as { ok: boolean; data?: Tab };
     if (json.ok && json.data) {
-      tabs = tabs.map((t) => (t.id === id ? json.data! : t));
+      const updatedTab = json.data;
+      tabs = tabs.map((t) => (t.id === id ? updatedTab : t));
     }
   } catch {
     // silently fail
@@ -104,7 +385,8 @@ export async function deleteTab(id: string): Promise<void> {
     if (json.ok) {
       tabs = tabs.filter((t) => t.id !== id);
       if (currentTabId === id && tabs.length > 0) {
-        await setActiveTab(tabs[0].id);
+        const first = tabs[0];
+        if (first) await setActiveTab(first.id);
       }
     }
   } catch {
@@ -119,6 +401,7 @@ async function loadWidgetInstances(tabId: string): Promise<void> {
     const json = (await res.json()) as { ok: boolean; data: WidgetInstance[] };
     if (json.ok) {
       widgetInstances = json.data;
+      reconcileWidgetRuntime();
     }
   } catch {
     // silently fail
@@ -126,7 +409,10 @@ async function loadWidgetInstances(tabId: string): Promise<void> {
 }
 
 /** Add a widget to the current tab (optimistic). */
-export async function addWidget(widgetId: string, size?: WidgetSize): Promise<WidgetInstance | null> {
+export async function addWidget(
+  widgetId: string,
+  size?: WidgetSize,
+): Promise<WidgetInstance | null> {
   if (!currentTabId) return null;
   try {
     const res = await fetch('/api/v1/widget-instances', {
@@ -137,6 +423,7 @@ export async function addWidget(widgetId: string, size?: WidgetSize): Promise<Wi
     const json = (await res.json()) as { ok: boolean; data?: WidgetInstance };
     if (json.ok && json.data) {
       widgetInstances = [...widgetInstances, json.data];
+      reconcileWidgetRuntime();
       return json.data;
     }
   } catch {
@@ -149,14 +436,19 @@ export async function addWidget(widgetId: string, size?: WidgetSize): Promise<Wi
 export async function removeWidget(instanceId: string): Promise<void> {
   const prev = widgetInstances;
   widgetInstances = widgetInstances.filter((w) => w.id !== instanceId);
+  reconcileWidgetRuntime();
   try {
     const res = await fetch(`/api/v1/widget-instances/${encodeURIComponent(instanceId)}`, {
       method: 'DELETE',
     });
     const json = (await res.json()) as { ok: boolean };
-    if (!json.ok) widgetInstances = prev; // revert
+    if (!json.ok) {
+      widgetInstances = prev; // revert
+      reconcileWidgetRuntime();
+    }
   } catch {
     widgetInstances = prev; // revert
+    reconcileWidgetRuntime();
   }
 }
 
@@ -223,3 +515,26 @@ export async function swapWidgets(draggedId: string, targetId: string): Promise<
     // already optimistically updated
   }
 }
+
+$effect(() => {
+  reconcileWidgetRuntime();
+
+  const activeDefinitions = widgetManifest.filter(
+    (entry): entry is WidgetDefinition =>
+      isWidgetDefinition(entry) && getPollableInstances(entry.id).length > 0,
+  );
+
+  if (activeDefinitions.length === 0) return;
+
+  for (const def of activeDefinitions) {
+    void fetchWidgetData(def, false);
+  }
+
+  const intervals = activeDefinitions
+    .filter((def) => def.refreshInterval > 0)
+    .map((def) => setInterval(() => void fetchWidgetData(def, true), def.refreshInterval));
+
+  return () => {
+    for (const interval of intervals) clearInterval(interval);
+  };
+});

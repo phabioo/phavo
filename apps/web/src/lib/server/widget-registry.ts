@@ -1,22 +1,128 @@
-import type { WidgetDefinition } from '@phavo/types';
+import { ensureZodMetaCompat, type WidgetDefinition, type WidgetManifestEntry } from '@phavo/types';
+import { z } from 'zod';
+
+export type RegisteredWidgetDefinition = WidgetDefinition & {
+  configSchema?: z.ZodTypeAny;
+  permissions?: string[];
+  isPlugin?: boolean;
+};
+
+ensureZodMetaCompat();
+
+export const PiholeWidgetConfigSchema = z.object({
+  url: z.string().url().meta({
+    label: 'Pi-hole URL',
+    testEndpoint: '/api/v1/pihole/test',
+  }),
+  token: z.string().min(1).meta({
+    credential: true,
+    label: 'API token',
+  }),
+});
+
+export const RssWidgetConfigSchema = z.object({
+  feeds: z
+    .array(
+      z.object({
+        id: z.string().uuid(),
+        url: z.string().url().meta({ label: 'Feed URL' }),
+        label: z.string().optional().meta({ label: 'Label' }),
+        authType: z
+          .enum(['none', 'basic', 'bearer'])
+          .default('none')
+          .meta({ label: 'Authentication' }),
+        username: z.string().optional().meta({
+          credential: true,
+          label: 'Username',
+        }),
+        password: z.string().optional().meta({
+          credential: true,
+          label: 'Password',
+        }),
+        token: z.string().optional().meta({
+          credential: true,
+          label: 'Bearer token',
+        }),
+      }),
+    )
+    .min(1)
+    .max(20),
+});
+
+const HttpUrlSchema = z
+  .string()
+  .url()
+  .refine((value) => {
+    try {
+      const url = new URL(value);
+      return url.protocol === 'http:' || url.protocol === 'https:';
+    } catch {
+      return false;
+    }
+  }, 'Only http:// and https:// URLs are allowed');
+
+export const LinksWidgetConfigSchema = z.object({
+  groups: z.array(
+    z.object({
+      label: z.string().min(1).meta({ label: 'Group label' }),
+      links: z.array(
+        z.object({
+          title: z.string().min(1).meta({ label: 'Title' }),
+          url: HttpUrlSchema.meta({ label: 'URL' }),
+          icon: z.string().url().optional().meta({ label: 'Icon URL' }),
+        }),
+      ),
+    }),
+  ),
+});
+
+function toManifestDefinition(widget: RegisteredWidgetDefinition): WidgetDefinition {
+  return {
+    id: widget.id,
+    name: widget.name,
+    description: widget.description,
+    category: widget.category,
+    tier: widget.tier,
+    minSize: widget.minSize,
+    defaultSize: widget.defaultSize,
+    sizes: widget.sizes,
+    dataEndpoint: widget.dataEndpoint,
+    refreshInterval: widget.refreshInterval,
+  };
+}
 
 class WidgetRegistry {
-  private widgets = new Map<string, WidgetDefinition>();
+  private widgets = new Map<string, RegisteredWidgetDefinition>();
 
-  register(def: WidgetDefinition): void {
+  register(def: RegisteredWidgetDefinition): void {
     this.widgets.set(def.id, def);
   }
 
-  getManifest(): WidgetDefinition[] {
-    return Array.from(this.widgets.values());
+  getManifest(sessionTier: 'free' | 'standard' | 'local'): WidgetManifestEntry[] {
+    return Array.from(this.widgets.values(), (widget) => {
+      const entitled =
+        sessionTier === 'local' || sessionTier === 'standard' || widget.tier === 'free';
+
+      if (entitled) {
+        return toManifestDefinition(widget);
+      }
+
+      return {
+        id: widget.id,
+        name: widget.name,
+        description: widget.description,
+        tier: widget.tier,
+        locked: true,
+      };
+    });
   }
 
-  getById(id: string): WidgetDefinition | undefined {
+  getById(id: string): RegisteredWidgetDefinition | undefined {
     return this.widgets.get(id);
   }
 
   getByTier(tier: 'free' | 'standard'): WidgetDefinition[] {
-    return this.getManifest().filter((w) => {
+    return Array.from(this.widgets.values()).filter((w) => {
       if (tier === 'standard') return true;
       return w.tier === 'free';
     });
@@ -129,6 +235,7 @@ registry.register({
   minSize: { w: 2, h: 2 },
   dataEndpoint: '/api/v1/pihole',
   refreshInterval: 30000,
+  configSchema: PiholeWidgetConfigSchema,
 });
 
 registry.register({
@@ -142,6 +249,7 @@ registry.register({
   minSize: { w: 4, h: 3 },
   dataEndpoint: '/api/v1/rss',
   refreshInterval: 60000,
+  configSchema: RssWidgetConfigSchema,
 });
 
 registry.register({
@@ -155,4 +263,5 @@ registry.register({
   minSize: { w: 2, h: 2 },
   dataEndpoint: '/api/v1/links',
   refreshInterval: 0,
+  configSchema: LinksWidgetConfigSchema,
 });

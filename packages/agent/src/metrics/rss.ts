@@ -13,9 +13,14 @@ export interface RssFeedItem {
   publishedAt: string;
 }
 
+export interface RssFeedError {
+  feedUrl: string;
+  error: string;
+}
+
 export interface RssFeedResult {
   items: RssFeedItem[];
-  failedFeeds: string[];
+  errors: RssFeedError[];
 }
 
 async function fetchFeed(config: RssFeedConfig): Promise<RssFeedItem[]> {
@@ -104,21 +109,26 @@ function extractTag(xml: string, tag: string): string {
 
 export async function getRss(feeds: RssFeedConfig[]): Promise<RssFeedResult> {
   const items: RssFeedItem[] = [];
-  const failedFeeds: string[] = [];
+  const errors: RssFeedError[] = [];
 
   const results = await Promise.allSettled(feeds.map((feed) => fetchFeed(feed)));
 
   for (let i = 0; i < results.length; i++) {
     const result = results[i];
+    if (!result) continue;
+
     if (result?.status === 'fulfilled') {
       items.push(...result.value);
     } else {
       const feedUrl = feeds[i]?.url ?? `feed-${i}`;
-      failedFeeds.push(feedUrl);
+      errors.push({
+        feedUrl,
+        error: result.reason instanceof Error ? result.reason.message : 'Failed to load RSS feed',
+      });
     }
   }
 
   items.sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime());
 
-  return { items, failedFeeds };
+  return { items, errors };
 }

@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-export const AuthMode = z.enum(['phavio-io', 'local']);
+export const AuthMode = z.enum(['phavo-io', 'local']);
 export type AuthMode = z.infer<typeof AuthMode>;
 
 export const SessionSchema = z.object({

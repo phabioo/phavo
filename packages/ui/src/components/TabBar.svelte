@@ -8,6 +8,7 @@
     canAddTab: boolean;
     onSelectTab: (id: string) => void;
     onAddTab: (label: string) => void;
+    onLockedAddTab?: () => void;
     onRenameTab: (id: string, label: string) => void;
     onDeleteTab: (id: string) => void;
     addTabLabel?: string;
@@ -26,6 +27,7 @@
     canAddTab,
     onSelectTab,
     onAddTab,
+    onLockedAddTab,
     onRenameTab,
     onDeleteTab,
     addTabLabel = '+',
@@ -95,6 +97,11 @@
 
   // ── Inline-create (new tab) ─────────────────────────────────────────
   function startCreate() {
+    if (!canAddTab) {
+      onLockedAddTab?.();
+      return;
+    }
+
     isCreating = true;
     editValue = '';
   }
@@ -182,7 +189,22 @@
       use:autofocus
     />
   {:else if canAddTab}
-    <button class="tab-pill tab-add" onclick={startCreate} aria-label={addTabLabel}>
+    <button
+      class="tab-pill tab-add"
+      class:tab-add-disabled={!canAddTab}
+      onclick={startCreate}
+      aria-label={addTabLabel}
+      aria-disabled={!canAddTab}
+    >
+      {@html icons.plus()}
+    </button>
+  {:else}
+    <button
+      class="tab-pill tab-add tab-add-disabled"
+      onclick={startCreate}
+      aria-label={addTabLabel}
+      aria-disabled="true"
+    >
       {@html icons.plus()}
     </button>
   {/if}
@@ -266,6 +288,15 @@
 
   .tab-add:hover {
     color: var(--color-accent);
+  }
+
+  .tab-add-disabled {
+    color: var(--color-text-muted);
+    opacity: 0.45;
+  }
+
+  .tab-add-disabled:hover {
+    color: var(--color-text-muted);
   }
 
   /* Context menu */

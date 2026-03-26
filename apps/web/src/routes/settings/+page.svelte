@@ -1,11 +1,14 @@
 <script lang="ts">
 import { goto } from '$app/navigation';
-import { page } from '$app/state';
+import { onMount } from 'svelte';
 import { Badge, Button, Card, Input, Select, Tabs, Tooltip, icons } from '@phavo/ui';
 import en from '$lib/i18n/en.json';
+import ImportExportTab from '$lib/components/settings/ImportExportTab.svelte';
+import LicenceTab from '$lib/components/settings/LicenceTab.svelte';
+import WidgetsTab from '$lib/components/settings/WidgetsTab.svelte';
 import { setConfig, updateConfig } from '$lib/stores/config.svelte';
 
-type TabId = 'general' | 'account' | 'security' | 'about';
+type TabId = 'general' | 'account' | 'security' | 'widgets' | 'license' | 'import-export' | 'about';
 type SaveState = 'idle' | 'saving' | 'saved';
 type GeoResult = {
   id: number;
@@ -17,7 +20,7 @@ type GeoResult = {
 type SessionInfo = {
   userId: string;
   tier: 'free' | 'standard' | 'local';
-  authMode: 'phavio-io' | 'local';
+  authMode: 'phavo-io' | 'local';
   validatedAt: number;
   email: string | null;
 } | null;
@@ -52,6 +55,9 @@ const settingsTabs = [
   { id: 'general', label: en.settings.general },
   { id: 'account', label: en.settings.account },
   { id: 'security', label: en.settings.security },
+  { id: 'widgets', label: en.settings.widgetsTab },
+  { id: 'license', label: en.settings.license },
+  { id: 'import-export', label: en.settings.importExport },
   { id: 'about', label: en.settings.about },
 ] satisfies Array<{ id: TabId; label: string }>;
 
@@ -106,12 +112,18 @@ let saveStates = $state<Record<TabId, SaveState>>({
   general: 'idle',
   account: 'idle',
   security: 'idle',
+  widgets: 'idle',
+  license: 'idle',
+  'import-export': 'idle',
   about: 'idle',
 });
 let tabErrors = $state<Record<TabId, string>>({
   general: '',
   account: '',
   security: '',
+  widgets: '',
+  license: '',
+  'import-export': '',
   about: '',
 });
 
@@ -140,21 +152,45 @@ const currentSaveLabel = $derived(
 );
 
 let didLoad = false;
-$effect(() => {
-  if (didLoad) return;
-  didLoad = true;
-  void loadSettings();
+onMount(() => {
+  if (!didLoad) {
+    didLoad = true;
+    void loadSettings();
+  }
+
+  syncTabFromHash();
+  const handleHashChange = () => syncTabFromHash();
+  window.addEventListener('hashchange', handleHashChange);
+
+  return () => {
+    window.removeEventListener('hashchange', handleHashChange);
+  };
 });
 
 $effect(() => {
-  const requested = page.url.searchParams.get('tab');
-  if (requested && settingsTabs.some((tab) => tab.id === requested)) {
-    activeTab = requested as TabId;
-    if (requested === 'about' && !updateInfo && !checkingUpdates) {
+  if (typeof window === 'undefined') return;
+  const nextHash = `#${activeTab}`;
+  if (window.location.hash === nextHash || window.location.hash.startsWith(`${nextHash}/`)) {
+    if (activeTab === 'about' && !updateInfo && !checkingUpdates) {
       void checkForUpdates();
     }
+    return;
+  }
+
+  history.replaceState(history.state, '', `${window.location.pathname}${nextHash}`);
+  if (activeTab === 'about' && !updateInfo && !checkingUpdates) {
+    void checkForUpdates();
   }
 });
+
+function syncTabFromHash(): void {
+  if (typeof window === 'undefined') return;
+  const rawHash = window.location.hash.replace(/^#/, '');
+  const [tabId] = rawHash.split('/');
+  if (tabId && settingsTabs.some((tab) => tab.id === tabId)) {
+    activeTab = tabId as TabId;
+  }
+}
 
 function tierVariant(tier: 'free' | 'standard' | 'local') {
   if (tier === 'standard') return 'accent';
@@ -522,7 +558,7 @@ function formatReleaseDate(iso: string): string {
               <span class="setting-label">{en.settings.authMode}</span>
               <p>
                 {#if sessionInfo}
-                  {sessionInfo.authMode === 'phavio-io' ? en.settings.authModePhavoIo : en.settings.authModeLocal}
+                  {sessionInfo.authMode === 'phavo-io' ? en.settings.authModePhavoIo : en.settings.authModeLocal}
                 {:else}
                   —
                 {/if}
@@ -540,7 +576,7 @@ function formatReleaseDate(iso: string): string {
             </div>
           </div>
 
-          {#if sessionInfo?.authMode === 'phavio-io'}
+          {#if sessionInfo?.authMode === 'phavo-io'}
             <div class="setting-group">
               <a class="external-link" href={PHAVO_ACCOUNT_URL} target="_blank" rel="noreferrer">
                 <span>{en.settings.manageAccount}</span>
@@ -615,6 +651,20 @@ function formatReleaseDate(iso: string): string {
           </div>
         </div>
       </Card>
+
+    {:else if activeTab === 'widgets'}
+      <WidgetsTab />
+
+    {:else if activeTab === 'license'}
+      <LicenceTab
+        tier={sessionInfo?.tier ?? aboutInfo.tier}
+        authMode={sessionInfo?.authMode ?? null}
+        licenseKeyMasked={aboutInfo.licenseKeyMasked}
+        manageUrl={PHAVO_LICENSE_URL}
+      />
+
+    {:else if activeTab === 'import-export'}
+      <ImportExportTab />
 
     {:else if activeTab === 'about'}
       <Card padding="none">
@@ -708,24 +758,6 @@ function formatReleaseDate(iso: string): string {
               <span>{en.settings.discord}</span>
               <span class="external-icon">{@html icons.external()}</span>
             </a>
-          </div>
-
-          <!-- Tier + licence -->
-          <div class="setting-group setting-grid">
-            <div>
-              <span class="setting-label">{en.settings.tier}</span>
-              <Badge variant={tierVariant(aboutInfo.tier)}>{tierLabel(aboutInfo.tier)}</Badge>
-            </div>
-            <div>
-              <span class="setting-label">{en.settings.licenseKey}</span>
-              <p class="mono">{aboutInfo.licenseKeyMasked ?? en.settings.noLicense}</p>
-            </div>
-            <div>
-              <a class="external-link" href={PHAVO_LICENSE_URL} target="_blank" rel="noreferrer">
-                <span>{en.settings.manageLicense}</span>
-                <span class="external-icon">{@html icons.external()}</span>
-              </a>
-            </div>
           </div>
 
           {#if tabErrors.about}

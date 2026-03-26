@@ -1,40 +1,44 @@
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600&family=Geist+Mono:wght@400;500&display=swap');
+
 /* IRON RULE: Every component in @phavo/ui uses ONLY these variables.
    Zero hardcoded hex values anywhere in component files. */
 
+:root,
 :root[data-theme="dark"] {
   /* Backgrounds */
-  --color-bg-base:        #1a1918;
-  --color-bg-surface:     #222120;
-  --color-bg-elevated:    #2a2928;
-  --color-bg-hover:       #2e2d2b;
+  --color-bg-base:        #000000;
+  --color-bg-surface:     #0a0a0a;
+  --color-bg-elevated:    #141414;
+  --color-bg-hover:       #1c1c1e;
 
   /* Borders */
-  --color-border:         #3a3936;
-  --color-border-subtle:  #2e2d2b;
-  --color-border-strong:  #4a4845;
+  --color-border:         #2a2a2a;
+  --color-border-subtle:  #1c1c1c;
+  --color-border-strong:  #3a3a3a;
 
   /* Text */
-  --color-text-primary:   #d4d2c8;
-  --color-text-secondary: #888780;
-  --color-text-muted:     #5f5e5a;
-  --color-text-inverse:   #1a1918;
+  --color-text-primary:   #f5f5f7;
+  --color-text-secondary: #86868b;
+  --color-text-muted:     #48484a;
+  --color-text-inverse:   #000000;
 
-  /* Accent (teal) */
-  --color-accent:         #0f6e56;
-  --color-accent-subtle:  #085041;
-  --color-accent-hover:   #1a8a6a;
-  --color-accent-text:    #9fe1cb;
+  /* Accent */
+  --color-accent:         #d4922a;
+  --color-accent-subtle:  #b07820;
+  --color-accent-hover:   #d4922a;
+  --color-accent-t:       rgba(212,146,42,.10);
+  --color-accent-text:    #d4922a;
 
   /* Semantic */
   --color-danger:         #993c1d;
   --color-danger-subtle:  #4a1b0c;
   --color-warning:        #854f0b;
   --color-warning-subtle: #412402;
-  --color-success:        #0f6e56;
+  --color-success:        #d4922a;
 
   /* Typography */
-  --font-ui:   'Inter', -apple-system, sans-serif;
-  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+  --font-ui:   'Geist', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: 'Geist Mono', 'SF Mono', monospace;
 
   /* Radii */
   --radius-sm: 6px;

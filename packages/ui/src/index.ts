@@ -8,6 +8,7 @@ export { default as Input } from './components/Input.svelte';
 export { default as Modal } from './components/Modal.svelte';
 export { default as NotificationPanel } from './components/NotificationPanel.svelte';
 export { default as ProgressBar } from './components/ProgressBar.svelte';
+export { default as SchemaRenderer } from './components/SchemaRenderer.svelte';
 export { default as Select } from './components/Select.svelte';
 export { default as Sidebar } from './components/Sidebar.svelte';
 export { default as Skeleton } from './components/Skeleton.svelte';

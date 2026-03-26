@@ -45,8 +45,8 @@
       {/each}
     </ul>
 
-    {#if data.failedFeeds.length > 0}
-      <p class="failed-note">{data.failedFeeds.length} feed{data.failedFeeds.length > 1 ? 's' : ''} could not be loaded.</p>
+    {#if data.errors.length > 0}
+      <p class="failed-note">{data.errors.length} feed{data.errors.length > 1 ? 's' : ''} could not be loaded.</p>
     {/if}
   {/if}
 </div>

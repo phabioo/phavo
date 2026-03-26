@@ -2,7 +2,7 @@
 interface Props {
   label?: string;
   placeholder?: string;
-  error?: string;
+  error?: string | undefined;
   type?: 'text' | 'password' | 'email' | 'url' | 'number';
   value?: string;
   oninput?: (e: Event) => void;

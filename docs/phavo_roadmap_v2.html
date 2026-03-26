@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Phavo — Road to v1.0</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600&family=Geist+Mono:wght@400;500&display=swap');
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:          #000000;
+  --bg-s:        #0a0a0a;
+  --bg-e:        #141414;
+  --bg-h:        #1c1c1e;
+  --border:      #2a2a2a;
+  --border-s:    #1c1c1c;
+  --border-str:  #3a3a3a;
+  --text:        #f5f5f7;
+  --text-2:      #86868b;
+  --text-3:      #48484a;
+  --accent:      #d4922a;
+  --accent-t:    rgba(212,146,42,.10);
+  --accent-text: #d4922a;
+  --amber-t:     rgba(133,79,11,.15);
+  --green:       #30a46c;
+  --green-t:     rgba(48,164,108,.10);
+  --purple:      #7c6af0;
+  --purple-t:    rgba(124,106,240,.10);
+  --blue:        #3b82f6;
+  --blue-t:      rgba(59,130,246,.10);
+  --coral:       #e05c4b;
+  --coral-t:     rgba(224,92,75,.10);
+  --font-ui:     'Geist', -apple-system, sans-serif;
+  --font-mono:   'Geist Mono', 'SF Mono', monospace;
+}
+
+html { scroll-behavior: smooth; }
+body {
+  font-family: var(--font-ui);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── HEADER ── */
+.doc-header {
+  border-bottom: 1px solid var(--border-s);
+  padding: 32px 48px 24px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+.doc-header h1 {
+  font-size: 18px;
+  font-weight: 500;
+  letter-spacing: -.02em;
+  color: var(--text);
+}
+.doc-header .sub {
+  font-size: 11px;
+  color: var(--text-3);
+  font-family: var(--font-mono);
+  margin-top: 3px;
+}
+.legend {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+.leg-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--text-3);
+  font-family: var(--font-mono);
+}
+.leg-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+
+/* ── PROGRESS ── */
+.progress-bar {
+  background: var(--bg-s);
+  border-bottom: 1px solid var(--border-s);
+  padding: 12px 48px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.progress-track {
+  flex: 1;
+  height: 2px;
+  background: var(--border);
+  border-radius: 1px;
+  overflow: hidden;
+}
+.progress-fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 1px;
+}
+.progress-label {
+  font-size: 11px;
+  font-family: var(--font-mono);
+  color: var(--text-3);
+  white-space: nowrap;
+}
+.progress-label b { color: var(--accent-text); font-weight: 500; }
+
+/* ── LAYOUT ── */
+.main { display: grid; grid-template-columns: 192px 1fr; min-height: calc(100vh - 100px); }
+
+/* ── SIDEBAR ── */
+.sidebar {
+  border-right: 1px solid var(--border-s);
+  padding: 24px 0;
+  position: sticky;
+  top: 0;
+  height: calc(100vh - 100px);
+  overflow-y: auto;
+}
+.sidebar-label {
+  font-size: 10px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: .1em;
+  color: var(--text-3);
+  padding: 10px 20px 4px;
+  font-family: var(--font-mono);
+}
+.sidebar a {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 20px;
+  font-size: 12px;
+  color: var(--text-3);
+  text-decoration: none;
+  border-left: 2px solid transparent;
+  transition: all .12s;
+  font-family: var(--font-mono);
+}
+.sidebar a:hover { color: var(--text-2); background: var(--bg-h); }
+.sidebar a.done { color: var(--green); }
+.sidebar a.active { color: var(--accent-text); border-left-color: var(--accent); background: var(--accent-t); }
+
+/* ── CONTENT ── */
+.content { padding: 36px 48px 80px; max-width: 860px; }
+
+/* ── SESSION CARDS ── */
+.session {
+  margin-bottom: 28px;
+  border: 1px solid var(--border-s);
+  border-radius: 10px;
+  overflow: hidden;
+  scroll-margin-top: 32px;
+}
+.session-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border-s);
+  flex-wrap: wrap;
+}
+.session.done .session-header     { background: var(--green-t);  border-bottom-color: rgba(48,164,108,.15); }
+.session.active .session-header   { background: var(--accent-t); border-bottom-color: rgba(212,146,42,.15); }
+.session.upcoming .session-header { background: var(--bg-e); }
+.session.prelaunch .session-header{ background: var(--purple-t); border-bottom-color: rgba(124,106,240,.15); }
+
+.session-num {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  padding: 2px 8px;
+  border-radius: 4px;
+  letter-spacing: .06em;
+  flex-shrink: 0;
+}
+.session.done .session-num     { background: var(--green-t);  color: var(--green);  border: 1px solid rgba(48,164,108,.3); }
+.session.active .session-num   { background: var(--accent-t); color: var(--accent); border: 1px solid rgba(212,146,42,.3); }
+.session.upcoming .session-num { background: var(--bg-h); color: var(--text-3); border: 1px solid var(--border); }
+.session.prelaunch .session-num{ background: var(--purple-t); color: var(--purple); border: 1px solid rgba(124,106,240,.3); }
+
+.session-title    { font-size: 13px; font-weight: 500; color: var(--text); }
+.session-subtitle { font-size: 11px; color: var(--text-3); margin-left: auto; font-family: var(--font-mono); }
+.session-body { padding: 14px 16px; }
+
+/* ── TASKS ── */
+.tasks { display: flex; flex-direction: column; gap: 4px; }
+.task {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 6px 9px;
+  border-radius: 5px;
+  font-size: 12px;
+}
+.task:hover { background: var(--bg-h); }
+.task-icon { flex-shrink: 0; font-size: 11px; margin-top: 1px; line-height: 1.6; }
+.task-text { flex: 1; color: var(--text-2); line-height: 1.55; }
+.task-done .task-text   { color: var(--text-3); text-decoration: line-through; text-decoration-color: var(--text-3); }
+.task-block .task-text  { color: #e8a87c; }
+.task-active .task-text { color: var(--text); }
+
+.task-tag {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  padding: 1px 6px;
+  border-radius: 3px;
+  border: 1px solid;
+  flex-shrink: 0;
+  align-self: flex-start;
+  margin-top: 2px;
+  letter-spacing: .03em;
+}
+.tag-security { border-color: rgba(224,92,75,.4);   color: #e8887a; background: var(--coral-t); }
+.tag-ui       { border-color: rgba(59,130,246,.4);  color: #7db3f5; background: var(--blue-t); }
+.tag-api      { border-color: rgba(212,146,42,.35); color: var(--accent); background: var(--accent-t); }
+.tag-infra    { border-color: rgba(133,79,11,.4);   color: #c9874e; background: var(--amber-t); }
+.tag-ux       { border-color: rgba(124,106,240,.4); color: #a89cf5; background: var(--purple-t); }
+.tag-design   { border-color: rgba(48,164,108,.4);  color: #5bc98a; background: var(--green-t); }
+
+/* ── DEP NOTE ── */
+.dep-note {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 9px;
+  margin-bottom: 10px;
+  background: var(--bg-e);
+  border-radius: 5px;
+  font-size: 11px;
+  color: var(--text-3);
+  font-family: var(--font-mono);
+}
+.dep-note::before { content: '↳'; color: var(--text-3); }
+
+/* ── DIVIDERS ── */
+.phase-divider {
+  margin: 28px 0 20px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.phase-divider-label {
+  font-size: 10px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: .1em;
+  color: var(--text-3);
+  white-space: nowrap;
+  font-family: var(--font-mono);
+}
+.phase-divider-line { flex: 1; height: 1px; background: var(--border-s); }
+
+/* ── LAUNCH BOX ── */
+.launch-box {
+  border: 1px solid rgba(124,106,240,.25);
+  background: var(--purple-t);
+  border-radius: 10px;
+  padding: 18px 20px;
+  margin-top: 28px;
+}
+.launch-title {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--purple);
+  margin-bottom: 10px;
+  letter-spacing: -.01em;
+}
+.launch-item {
+  font-size: 12px;
+  color: #a89cf5;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 3px 0;
+}
+.launch-item::before { content: '→'; color: rgba(124,106,240,.5); flex-shrink: 0; }
+</style>
+</head>
+<body>
+
+<div class="doc-header">
+  <div>
+    <h1>Phavo — Road to v1.0</h1>
+    <div class="sub">Sessions 1–3 complete · Updated 2026-03-26 · PRD ref v2.2</div>
+  </div>
+  <div class="legend">
+    <div class="leg-item"><div class="leg-dot" style="background:#30a46c"></div> Done</div>
+    <div class="leg-item"><div class="leg-dot" style="background:#d4922a"></div> In progress</div>
+    <div class="leg-item"><div class="leg-dot" style="background:#3a3a3a"></div> Upcoming</div>
+    <div class="leg-item"><div class="leg-dot" style="background:#7c6af0"></div> Pre-launch</div>
+  </div>
+</div>
+
+<div class="progress-bar">
+  <span class="progress-label">Overall progress</span>
+  <div class="progress-track"><div class="progress-fill" style="width:42%"></div></div>
+  <span class="progress-label"><b>~42%</b> to v1.0 &nbsp;·&nbsp; Sessions 1–3 complete &nbsp;·&nbsp; 6 sessions + pre-launch remaining</span>
+</div>
+
+<div class="main">
+<nav class="sidebar">
+  <div class="sidebar-label">Completed</div>
+  <a href="#s0" class="done">S0 — Scaffold</a>
+  <a href="#s1" class="done">S1 — Foundation</a>
+  <a href="#s2" class="done">S2 — Auth &amp; Security</a>
+  <a href="#s3" class="done">S3 — Integrations</a>
+
+  <div class="sidebar-label">Upcoming</div>
+  <a href="#s4">S4 — Setup Wizard</a>
+  <a href="#s5">S5 — Settings Page</a>
+  <a href="#s6">S6 — Licence UI</a>
+  <a href="#s7">S7 — Import / Export</a>
+  <a href="#s8">S8 — Mobile</a>
+  <a href="#s9">S9 — Hardening</a>
+
+  <div class="sidebar-label">Pre-Launch</div>
+  <a href="#prelaunch">Final checklist</a>
+</nav>
+
+<div class="content">
+
+  <!-- COMPLETED -->
+  <div class="phase-divider"><span class="phase-divider-label">Completed</span><div class="phase-divider-line"></div></div>
+
+  <div class="session done" id="s0">
+    <div class="session-header">
+      <span class="session-num">S0</span>
+      <span class="session-title">Monorepo Scaffold</span>
+      <span class="session-subtitle">complete</span>
+    </div>
+    <div class="session-body"><div class="tasks">
+      <div class="task task-done"><div class="task-icon">✅</div><div class="task-text">Full monorepo (apps/web, desktop stub, packages/ui, db, types, agent)</div></div>
+      <div class="task task-done"><div class="task-icon">✅</div><div class="task-text">Dashboard layout — Sidebar, Header, widget cards rendering</div></div>
+      <div class="task task-done"><div class="task-icon">✅</div><div class="task-text">All 7 Free-tier metric widgets with real data from @phavo/agent</div></div>
+      <div class="task task-done"><div class="task-icon">✅</div><div class="task-text">Config GET/POST, Update check, Notification panel</div></div>
+      <div class="task task-done"><div class="task-icon">✅</div><div class="task-text">Quick Setup Wizard UI, PHAVO_DEV_MOCK_AUTH bypass</div></div>
+      <div class="task task-done"><div class="task-icon">✅</div><div class="task-text">Dockerfile (2-stage, non-root), docker-compose.yml, CI workflows</div></div>
+    </div></div>
+  </div>
+
+  <div class="session done" id="s1">
+    <div class="session-header">
+      <span class="session-num">S1</span>
+      <span class="session-title">Foundation — Types, Schema, Encryption, Platform</span>
+      <span class="session-subtitle">complete</span>
+    </div>
+    <div class="session-body"><div class="tasks">
+      <div class="task task-done"><div class="task-icon">✅</div><div class="task-text">packages/types/src/env.ts — PhavoEnv, InstallMethod, all env vars</div><span class="task-tag tag-infra">infra</span></div>
+      <div class="task task-done"><div class="task-icon">✅</div><div class="task-text">apps/web/src/lib/server/paths.ts — all file paths via env.dataDir</div><span class="task-tag tag-infra">infra</span></div>
+      <div class="task task-done"><div class="task-icon">✅</div><div class="task-text">DB schema — all 7 tables, Drizzle migration 0001_spicy_clea.sql</div><span class="task-tag tag-api">api</span></div>
+      <div class="task task-done"><div class="task-icon">✅</div><div class="task-text">AES-256-GCM encrypt/decrypt, HKDF-SHA256 key derivation</div><span class="task-tag tag-security">security</span></div>
+    </div></div>
+  </div>
+
+  <div class="session done" id="s2">
+    <div class="session-header">
+      <span class="session-num">S2</span>
+      <span class="session-title">Auth, Session Middleware &amp; Tier Enforcement</span>
+      <span class="session-subtitle">complete</span>
+    </div>
+    <div class="session-body"><div class="tasks">
+      <div class="task task-done"><div class="task-icon">✅</div><div class="task-text">authMiddleware — session cookie validation, expiry + grace period, DB lookup</div><span class="task-tag tag-security">security</span></div>
+      <div class="task task-done"><div class="task-icon">✅</div><div class="task-text">requireTier() + requireSession() on all endpoints</div><span class="task-tag tag-security">security</span></div>
+      <div class="task task-done"><div class="task-icon">✅</div><div class="task-text">csrfMiddleware — POST/PUT/DELETE/PATCH validation</div><span class="task-tag tag-security">security</span></div>
+      <div class="task task-done"><div class="task-icon">✅</div><div class="task-text">POST /auth/login — phavo.io OAuth + Local Argon2id, both paths</div><span class="task-tag tag-api">api</span></div>
+      <div class="task task-done"><div class="task-icon">✅</div><div class="task-text">GET /health, logout, session (no tier field), TOTP</div><span class="task-tag tag-api">api</span></div>
+      <div class="task task-done"><div class="task-icon">✅</div><div class="task-text">install.ts — deriveInstallMethod() from env.platform</div><span class="task-tag tag-infra">infra</span></div>
+      <div class="task task-done"><div class="task-icon">✅</div><div class="task-text">Mock auth production-gated — NODE_ENV !== 'production'</div><span class="task-tag tag-security">security</span></div>
+    </div></div>
+  </div>
+
+  <div class="session done" id="s3">
+    <div class="session-header">
+      <span class="session-num">S3</span>
+      <span class="session-title">Integrations, Manifest Split &amp; Design</span>
+      <span class="session-subtitle">complete</span>
+    </div>
+    <div class="session-body"><div class="tasks">
+      <div class="task task-done"><div class="task-icon">✅</div><div class="task-text">Widget manifest split — 7 full + 3 WidgetTeaserDefinition for Free tier</div><span class="task-tag tag-api">api</span></div>
+      <div class="task task-done"><div class="task-icon">✅</div><div class="task-text">Widget drawer locked cards — lock icon, upgrade prompt, no Add button</div><span class="task-tag tag-ui">ui</span></div>
+      <div class="task task-done"><div class="task-icon">✅</div><div class="task-text">Tab limit enforced — Free tier: upgrade prompt + server-side 403</div><span class="task-tag tag-security">security</span></div>
+      <div class="task task-done"><div class="task-icon">✅</div><div class="task-text">Pi-hole endpoint — reads encrypted credentials from DB</div><span class="task-tag tag-api">api</span></div>
+      <div class="task task-done"><div class="task-icon">✅</div><div class="task-text">RSS endpoint — per-instance feed configs; partial failure handling</div><span class="task-tag tag-api">api</span></div>
+      <div class="task task-done"><div class="task-icon">✅</div><div class="task-text">Links endpoint — reads grouped config from configEncrypted</div><span class="task-tag tag-api">api</span></div>
+      <div class="task task-done"><div class="task-icon">✅</div><div class="task-text">POST /widgets/:instanceId/config — credential split, Zod validation</div><span class="task-tag tag-api">api</span></div>
+      <div class="task task-done"><div class="task-icon">✅</div><div class="task-text">POST /license/activate + /deactivate — registered in Hono router</div><span class="task-tag tag-api">api</span></div>
+      <div class="task task-done"><div class="task-icon">✅</div><div class="task-text">Theme — pure black (#000), Geist font, amber/gold accent (#d4922a)</div><span class="task-tag tag-design">design</span></div>
+      <div class="task task-done"><div class="task-icon">✅</div><div class="task-text">Locked card layout fixed — flex layout, no absolute positioning overlap</div><span class="task-tag tag-ui">ui</span></div>
+    </div></div>
+  </div>
+
+  <!-- UPCOMING -->
+  <div class="phase-divider"><span class="phase-divider-label">Upcoming</span><div class="phase-divider-line"></div></div>
+
+  <div class="session upcoming" id="s4">
+    <div class="session-header">
+      <span class="session-num">S4</span>
+      <span class="session-title">Full Setup Wizard — all 10 steps wired</span>
+      <span class="session-subtitle">~3–4h</span>
+    </div>
+    <div class="session-body">
+      <div class="dep-note">Depends on: S3 (auth login, widget manifest, Pi-hole/RSS config endpoints)</div>
+      <div class="tasks">
+        <div class="task task-todo"><div class="task-icon">⬜</div><div class="task-text">Step 3 auth — wire real POST /auth/login call (both phavo.io + local paths)</div><span class="task-tag tag-ux">ux</span></div>
+        <div class="task task-todo"><div class="task-icon">⬜</div><div class="task-text">Step 5 location — Open-Meteo geocoding with 500ms debounce + live weather preview</div><span class="task-tag tag-ux">ux</span></div>
+        <div class="task task-todo"><div class="task-icon">⬜</div><div class="task-text">Step 6 tabs — Free: add button disabled after 1 tab with upgrade prompt</div><span class="task-tag tag-ux">ux</span></div>
+        <div class="task task-todo"><div class="task-icon">⬜</div><div class="task-text">Step 7 widget select — render from GET /api/v1/widgets, locked teasers with lock icon</div><span class="task-tag tag-ux">ux</span></div>
+        <div class="task task-todo"><div class="task-icon">⬜</div><div class="task-text">Step 8 widget-to-tab assignment — drag on desktop, select dropdown on mobile</div><span class="task-tag tag-ux">ux</span></div>
+        <div class="task task-todo"><div class="task-icon">⬜</div><div class="task-text">Step 9 widget config — Pi-hole test connection, RSS URLs, Links quick-add</div><span class="task-tag tag-ux">ux</span></div>
+        <div class="task task-todo"><div class="task-icon">⬜</div><div class="task-text">Step 10 done — persist full state via POST /api/v1/config</div><span class="task-tag tag-ux">ux</span></div>
+        <div class="task task-todo"><div class="task-icon">⬜</div><div class="task-text">sessionStorage persistence — resume from last step on browser refresh</div><span class="task-tag tag-ux">ux</span></div>
+        <div class="task task-todo"><div class="task-icon">⬜</div><div class="task-text">Quick Setup — wire auth step (currently UI-only)</div><span class="task-tag tag-ux">ux</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="session upcoming" id="s5">
+    <div class="session-header">
+      <span class="session-num">S5</span>
+      <span class="session-title">Settings Page — 3 missing tabs + Pi-hole/RSS config UI</span>
+      <span class="session-subtitle">~3h</span>
+    </div>
+    <div class="session-body">
+      <div class="dep-note">Depends on: S3 (widget config endpoint, credentials separation)</div>
+      <div class="tasks">
+        <div class="task task-todo"><div class="task-icon">⬜</div><div class="task-text">Settings → Widgets tab — Pi-hole URL/token + test, RSS feed list, Links CRUD</div><span class="task-tag tag-ui">ui</span></div>
+        <div class="task task-todo"><div class="task-icon">⬜</div><div class="task-text">Pi-hole config panel — URL + token fields, inline ✓/✗ test result</div><span class="task-tag tag-ui">ui</span></div>
+        <div class="task task-todo"><div class="task-icon">⬜</div><div class="task-text">RSS config panel — feed URL list, add/remove, per-feed auth toggle</div><span class="task-tag tag-ui">ui</span></div>
+        <div class="task task-todo"><div class="task-icon">⬜</div><div class="task-text">Settings → Licence tab — tier views (Free upgrade banner, Standard, Local)</div><span class="task-tag tag-ui">ui</span></div>
+        <div class="task task-todo"><div class="task-icon">⬜</div><div class="task-text">Settings → Import/Export tab — export button + passphrase toggle, import file picker + preview</div><span class="task-tag tag-ui">ui</span></div>
+        <div class="task task-todo"><div class="task-icon">⬜</div><div class="task-text">Settings deep-link via URL hash (/settings#widgets, #licence, #import-export)</div><span class="task-tag tag-ui">ui</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="session upcoming" id="s6">
+    <div class="session-header">
+      <span class="session-num">S6</span>
+      <span class="session-title">Licence UI — activate / deactivate forms + tier views</span>
+      <span class="session-subtitle">~2h</span>
+    </div>
+    <div class="session-body">
+      <div class="dep-note">Depends on: S3 (/license/* routes), S5 (Settings → Licence tab)</div>
+      <div class="tasks">
+        <div class="task task-todo"><div class="task-icon">⬜</div><div class="task-text">Free view — upgrade banner, "Already have a key?" activate form</div><span class="task-tag tag-ui">ui</span></div>
+        <div class="task task-todo"><div class="task-icon">⬜</div><div class="task-text">Standard view — masked key, account email, grace period countdown, upgrade-to-Local link</div><span class="task-tag tag-ui">ui</span></div>
+        <div class="task task-todo"><div class="task-icon">⬜</div><div class="task-text">Local view — masked key, instance ID, activation date, deactivate button</div><span class="task-tag tag-ui">ui</span></div>
+        <div class="task task-todo"><div class="task-icon">⬜</div><div class="task-text">POST /license/activate UI — wire form, handle session reload after tier change</div><span class="task-tag tag-api">api</span></div>
+        <div class="task task-todo"><div class="task-icon">⬜</div><div class="task-text">POST /license/deactivate UI — confirmation dialog, downgrade to Free gracefully</div><span class="task-tag tag-api">api</span></div>
+        <div class="task task-todo"><div class="task-icon">⬜</div><div class="task-text">Fix: after deactivation, Local user needs a Free-tier re-login path</div><span class="task-tag tag-ux">ux</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="session upcoming" id="s7">
+    <div class="session-header">
+      <span class="session-num">S7</span>
+      <span class="session-title">Import / Export — API endpoints + UI wired end-to-end</span>
+      <span class="session-subtitle">~2h</span>
+    </div>
+    <div class="session-body">
+      <div class="dep-note">Depends on: S5 (import/export UI tab, credentials separation)</div>
+      <div class="tasks">
+        <div class="task task-todo"><div class="task-icon">⬜</div><div class="task-text">GET /api/v1/config/export — full config JSON download, credentials excluded by default</div><span class="task-tag tag-api">api</span></div>
+        <div class="task task-todo"><div class="task-icon">⬜</div><div class="task-text">POST /api/v1/config/export (with credentials) — passphrase-encrypted blob</div><span class="task-tag tag-api">api</span></div>
+        <div class="task task-todo"><div class="task-icon">⬜</div><div class="task-text">POST /api/v1/config/import — Zod-validate, cap tabs for Free, queue notifications for missing credentials</div><span class="task-tag tag-api">api</span></div>
+        <div class="task task-todo"><div class="task-icon">⬜</div><div class="task-text">Export UI — dated filename, client-side download trigger</div><span class="task-tag tag-ui">ui</span></div>
+        <div class="task task-todo"><div class="task-icon">⬜</div><div class="task-text">Import UI — client-side JSON validation, preview diff, confirm dialog</div><span class="task-tag tag-ui">ui</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="session upcoming" id="s8">
+    <div class="session-header">
+      <span class="session-num">S8</span>
+      <span class="session-title">Mobile Responsiveness — ≥375px across all pages</span>
+      <span class="session-subtitle">~2–3h</span>
+    </div>
+    <div class="session-body">
+      <div class="dep-note">Depends on: S4+S5 (setup + settings must exist before responsive work)</div>
+      <div class="tasks">
+        <div class="task task-todo"><div class="task-icon">⬜</div><div class="task-text">theme.css — breakpoint variables (--bp-mobile: 640px, --bp-tablet: 1024px)</div><span class="task-tag tag-ui">ui</span></div>
+        <div class="task task-todo"><div class="task-icon">⬜</div><div class="task-text">Sidebar → bottom nav bar on mobile, icon rail on tablet</div><span class="task-tag tag-ui">ui</span></div>
+        <div class="task task-todo"><div class="task-icon">⬜</div><div class="task-text">Widget grid — 1 col mobile, 2 col tablet, 12-col desktop</div><span class="task-tag tag-ui">ui</span></div>
+        <div class="task task-todo"><div class="task-icon">⬜</div><div class="task-text">Settings page — vertical tab stack on mobile</div><span class="task-tag tag-ui">ui</span></div>
+        <div class="task task-todo"><div class="task-icon">⬜</div><div class="task-text">Setup wizard — full-screen per step on mobile, sticky back/next footer</div><span class="task-tag tag-ui">ui</span></div>
+        <div class="task task-todo"><div class="task-icon">⬜</div><div class="task-text">Notification panel + widget drawer — bottom sheet on mobile</div><span class="task-tag tag-ui">ui</span></div>
+        <div class="task task-todo"><div class="task-icon">⬜</div><div class="task-text">Touch targets — minimum 44×44px (WCAG 2.1 AA)</div><span class="task-tag tag-ui">ui</span></div>
+        <div class="task task-todo"><div class="task-icon">⬜</div><div class="task-text">Smoke test at 375px — no horizontal scroll anywhere</div><span class="task-tag tag-ui">ui</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="session upcoming" id="s9">
+    <div class="session-header">
+      <span class="session-num">S9</span>
+      <span class="session-title">Hardening — Docker, CSP, Rate Limits, Migration fix</span>
+      <span class="session-subtitle">~2h</span>
+    </div>
+    <div class="session-body">
+      <div class="dep-note">Depends on: all previous sessions (applied to finished product)</div>
+      <div class="tasks">
+        <div class="task task-block"><div class="task-icon">🚨</div><div class="task-text">Fix bun drizzle-kit migrate — broken; new Docker installs fail without this</div><span class="task-tag tag-infra">infra</span></div>
+        <div class="task task-todo"><div class="task-icon">⬜</div><div class="task-text">CSP headers — Content-Security-Policy middleware on all dashboard pages</div><span class="task-tag tag-security">security</span></div>
+        <div class="task task-todo"><div class="task-icon">⬜</div><div class="task-text">HTTP rate limiting middleware — all endpoints per rate limit table in arch spec</div><span class="task-tag tag-security">security</span></div>
+        <div class="task task-todo"><div class="task-icon">⬜</div><div class="task-text">Docker multi-arch — linux/amd64,linux/arm64 in CI workflow</div><span class="task-tag tag-infra">infra</span></div>
+        <div class="task task-todo"><div class="task-icon">⬜</div><div class="task-text">docker-compose.yml — add read_only: true + tmpfs mounts</div><span class="task-tag tag-infra">infra</span></div>
+        <div class="task task-todo"><div class="task-icon">⬜</div><div class="task-text">Final grep — no /data/ literals, no port 3000 hardcoded, no old accent colours</div><span class="task-tag tag-infra">infra</span></div>
+        <div class="task task-todo"><div class="task-icon">⬜</div><div class="task-text">bun run typecheck + bun run lint — zero errors across entire monorepo</div><span class="task-tag tag-infra">infra</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PRE-LAUNCH -->
+  <div class="phase-divider"><span class="phase-divider-label">Pre-Launch</span><div class="phase-divider-line"></div></div>
+
+  <div class="launch-box" id="prelaunch">
+    <div class="launch-title">v1.0 Pre-Launch — before publishing anything</div>
+    <div class="launch-item">phavo.io landing page — hero screenshot, pricing table, "Get started free" CTA</div>
+    <div class="launch-item">docs.phavo.io — installation guide, widget reference, setup walkthrough, FAQ</div>
+    <div class="launch-item">phavo.io licence backend — validate, activate, deactivate, upgrade endpoints live</div>
+    <div class="launch-item">Gumroad products configured — Standard €7.99, Local €19.99, upgrade €12.00</div>
+    <div class="launch-item">Public demo instance built and deployed on phavo.io</div>
+    <div class="launch-item">Docker Hub image — phavo/phavo:1.0.0 and :latest, amd64 + arm64</div>
+    <div class="launch-item">GitHub — SECURITY.md, CONTRIBUTING.md, issue templates, v1.0.0 release notes</div>
+    <div class="launch-item">README final — quick start, pricing, screenshots, roadmap teaser</div>
+    <div class="launch-item">End-to-end smoke test — setup → widget config → export → import → clean Docker install</div>
+    <div class="launch-item">Security review — credentials not in logs, CSP verified, rate limits tested</div>
+    <div class="launch-item">Launch posts drafted — r/selfhosted, r/homelab, r/pihole, Product Hunt, HN Show HN</div>
+    <div class="launch-item">Discord server — #announcements, #support, #widget-sharing channels open</div>
+  </div>
+
+</div>
+</div>
+
+</body>
+</html>

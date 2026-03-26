@@ -2,6 +2,8 @@ interface LicenseValidationResult {
   valid: boolean;
   tier: 'free' | 'standard' | 'local';
   graceUntil?: number;
+  activationJwt?: string;
+  error?: string;
 }
 
 const GRACE_PERIOD_FREE = 24 * 60 * 60 * 1000; // 24 hours
@@ -9,7 +11,7 @@ const GRACE_PERIOD_STANDARD = 72 * 60 * 60 * 1000; // 72 hours
 
 export async function validateLicense(
   licenseKey: string,
-  authMode: 'phavio-io' | 'local',
+  authMode: 'phavo-io' | 'local',
 ): Promise<LicenseValidationResult> {
   // Local tier: validate once on activation, fully offline after
   if (authMode === 'local') {
@@ -57,18 +59,37 @@ export async function activateLocalLicense(
 ): Promise<LicenseValidationResult> {
   const phavoIoUrl = process.env.PHAVO_IO_URL ?? 'https://phavo.io';
 
-  const response = await fetch(`${phavoIoUrl}/api/license/activate`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ licenseKey, instanceIdentifier }),
-  });
+  try {
+    const response = await fetch(`${phavoIoUrl}/api/license/activate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ licenseKey, instanceId: instanceIdentifier }),
+      signal: AbortSignal.timeout(15_000),
+    });
 
-  if (!response.ok) {
-    return { valid: false, tier: 'local' };
+    if (!response.ok) {
+      let error = 'License activation failed';
+      try {
+        const payload = (await response.json()) as { error?: string };
+        if (payload.error) error = payload.error;
+      } catch {
+        // Ignore invalid error payloads.
+      }
+
+      return { valid: false, tier: 'local', error };
+    }
+
+    const data = (await response.json()) as { activationJwt?: string };
+    if (!data.activationJwt) {
+      return { valid: false, tier: 'local', error: 'Missing activation token from phavo.io' };
+    }
+
+    return {
+      valid: true,
+      tier: 'local',
+      activationJwt: data.activationJwt,
+    };
+  } catch {
+    return { valid: false, tier: 'local', error: 'phavo.io unreachable' };
   }
-
-  return {
-    valid: true,
-    tier: 'local',
-  };
 }

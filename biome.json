@@ -28,11 +28,11 @@
       "**/*.ts",
       "**/*.js",
       "**/*.json",
-      "!!**/.turbo/**",
-      "!!**/node_modules/**",
-      "!!**/.svelte-kit/**",
-      "!!**/build/**",
-      "!!**/dist/**"
+      "!!**/.turbo",
+      "!!**/node_modules",
+      "!!**/.svelte-kit",
+      "!!**/build",
+      "!!**/dist"
     ]
   },
   "overrides": [

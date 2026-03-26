@@ -1,5 +1,10 @@
 <script lang="ts">
-import type { WidgetDefinition, WidgetSize } from '@phavo/types';
+import {
+  isWidgetDefinition,
+  type WidgetDefinition,
+  type WidgetManifestEntry,
+  type WidgetSize,
+} from '@phavo/types';
 import type {
   CpuMetrics,
   DiskMetrics,
@@ -11,24 +16,31 @@ import type {
   UptimeMetrics,
   WeatherMetrics,
 } from '@phavo/agent';
-import { page } from '$app/state';
-import { WidgetCard, TabBar, WidgetDrawer, UpgradeBanner } from '@phavo/ui';
+import { Button, WidgetCard, TabBar, WidgetDrawer } from '@phavo/ui';
 import en from '$lib/i18n/en.json';
-import { notify } from '$lib/stores/notifications.svelte';
 import { getConfig } from '$lib/stores/config.svelte';
+import { relativeTime } from '$lib/utils/time';
 import {
   getTabs,
   getCurrentTabId,
   getWidgetInstances,
+  getWidgetManifest,
+  getWidgetData,
+  getWidgetError,
   getIsDrawerOpen,
+  getWidgetLastSuccess,
+  getWidgetState,
+  getWidgetWarning,
   setDrawerOpen,
   setActiveTab,
   loadTabs,
+  loadWidgetManifest,
   createTab,
   updateTab,
   deleteTab,
   addWidget,
   removeWidget,
+  retryWidget,
   updateInstance,
   swapWidgets,
 } from '$lib/stores/widgets.svelte';
@@ -43,100 +55,14 @@ import TemperatureWidget from '$lib/widgets/TemperatureWidget.svelte';
 import UptimeWidget from '$lib/widgets/UptimeWidget.svelte';
 import WeatherWidget from '$lib/widgets/WeatherWidget.svelte';
 
-let widgetData = $state<Record<string, unknown>>({});
-let widgetLoading = $state<Record<string, boolean>>({});
-let widgetErrors = $state<Record<string, string | null>>({});
-let widgetManifest = $state<WidgetDefinition[]>([]);
 let showUpgradeBanner = $state(false);
-
-// ── Threshold-notification throttle state ────────────────────────────
-const diskThrottleMap = new Map<string, number>();
-let tempLastNotified = 0;
-let piholeFailStreak = 0;
-
-function checkThresholds(widgetId: string, data: unknown): void {
-  if (widgetId === 'disk') {
-    for (const disk of data as DiskMetrics[]) {
-      if (disk.usePercent > 90) {
-        const last = diskThrottleMap.get(disk.mount) ?? 0;
-        if (Date.now() - last > 3_600_000) {
-          notify({
-            type: 'widget-warning',
-            title: en.notifications.diskAlmostFull,
-            body: `${disk.mount} at ${Math.round(disk.usePercent)}%`,
-            widgetId: 'disk',
-          });
-          diskThrottleMap.set(disk.mount, Date.now());
-        }
-      }
-    }
-  }
-  if (widgetId === 'temperature') {
-    const temp = data as TemperatureMetrics;
-    if (temp.cpuTemp !== null && temp.cpuTemp > 80) {
-      if (Date.now() - tempLastNotified > 1_800_000) {
-        notify({
-          type: 'system-alert',
-          title: en.notifications.highCpuTemp,
-          body: `${temp.cpuTemp}°C detected`,
-          widgetId: 'temperature',
-        });
-        tempLastNotified = Date.now();
-      }
-    }
-  }
-}
-
-async function fetchWidgetManifest() {
-  try {
-    const res = await fetch('/api/v1/widgets');
-    const json = (await res.json()) as { ok: boolean; data: WidgetDefinition[] };
-    if (json.ok) widgetManifest = json.data;
-  } catch {
-    // silently fail
-  }
-}
-
-async function fetchWidgetData(widgetId: string, endpoint: string, silent = false) {
-  if (!silent) widgetLoading[widgetId] = true;
-  widgetErrors[widgetId] = null;
-  try {
-    const res = await fetch(endpoint);
-    const json = (await res.json()) as { ok: boolean; data: unknown; error?: string };
-    if (json.ok) {
-      widgetData[widgetId] = json.data;
-      checkThresholds(widgetId, json.data);
-      if (widgetId === 'pihole') piholeFailStreak = 0;
-    } else {
-      if (!silent) widgetErrors[widgetId] = json.error ?? en.errors.generic;
-      trackPiholeFailure(widgetId);
-    }
-  } catch {
-    if (!silent) widgetErrors[widgetId] = en.errors.networkError;
-    trackPiholeFailure(widgetId);
-  } finally {
-    if (!silent) widgetLoading[widgetId] = false;
-  }
-}
-
-function trackPiholeFailure(widgetId: string): void {
-  if (widgetId !== 'pihole') return;
-  piholeFailStreak++;
-  if (piholeFailStreak >= 3) {
-    notify({
-      type: 'widget-error',
-      title: en.notifications.piholeUnreachable,
-      body: en.notifications.piholeUnreachableBody,
-      widgetId: 'pihole',
-      settingsTab: 'general',
-    });
-    piholeFailStreak = 0;
-  }
-}
+let upgradeBannerMessage = $state('');
+let hideUpgradeBannerTimeout: ReturnType<typeof setTimeout> | null = null;
 
 // Get the WidgetDefinition for a widget id
 function getDef(widgetId: string): WidgetDefinition | undefined {
-  return widgetManifest.find((w) => w.id === widgetId);
+  const entry = getWidgetManifest().find((w) => w.id === widgetId);
+  return entry && isWidgetDefinition(entry) ? entry : undefined;
 }
 
 // ── Tab handlers ─────────────────────────────────────────────────────
@@ -144,16 +70,34 @@ function handleSelectTab(id: string) {
   setActiveTab(id);
 }
 
-const devMode = $derived(!!page.data.devMode);
+const configTier = $derived(getConfig().tier);
+const freeTabLimitReached = $derived(configTier === 'free' && getTabs().length >= 1);
 
-function handleAddTab(label: string) {
-  const config = getConfig();
-  if (config.tier === 'free' && !devMode) {
-    showUpgradeBanner = true;
-    setTimeout(() => (showUpgradeBanner = false), 5000);
+function showUpgradePrompt(message: string) {
+  upgradeBannerMessage = message;
+  showUpgradeBanner = true;
+  if (hideUpgradeBannerTimeout) clearTimeout(hideUpgradeBannerTimeout);
+  hideUpgradeBannerTimeout = setTimeout(() => {
+    showUpgradeBanner = false;
+    hideUpgradeBannerTimeout = null;
+  }, 5000);
+}
+
+async function handleAddTab(label: string) {
+  if (freeTabLimitReached) {
+    showUpgradePrompt('Upgrade to Standard to add unlimited tabs — €7.99 one-time');
     return;
   }
-  createTab(label);
+
+  const result = await createTab(label);
+  if (!result.ok && result.error === 'Tab limit reached — upgrade to Standard') {
+    showUpgradePrompt('Upgrade to Standard to add unlimited tabs — €7.99 one-time');
+  }
+}
+
+function handleLockedAddTab() {
+  if (!freeTabLimitReached) return;
+  showUpgradePrompt('Upgrade to Standard to add unlimited tabs — €7.99 one-time');
 }
 
 function handleRenameTab(id: string, newLabel: string) {
@@ -230,32 +174,8 @@ const sortedInstances = $derived(
 
 // ── Init and polling ─────────────────────────────────────────────────
 $effect(() => {
-  fetchWidgetManifest();
+  loadWidgetManifest();
   loadTabs();
-});
-
-$effect(() => {
-  if (widgetManifest.length === 0) return;
-
-  // Only fetch data for widgets that are on the current tab
-  const instanceWidgetIds = new Set(getWidgetInstances().map((i) => i.widgetId));
-  const activeWidgets = widgetManifest.filter(
-    (w) => instanceWidgetIds.size === 0 || instanceWidgetIds.has(w.id),
-  );
-
-  for (const widget of activeWidgets) {
-    fetchWidgetData(widget.id, widget.dataEndpoint);
-  }
-
-  const intervals = activeWidgets
-    .filter((w) => w.refreshInterval > 0)
-    .map((w) =>
-      setInterval(() => fetchWidgetData(w.id, w.dataEndpoint, true), w.refreshInterval),
-    );
-
-  return () => {
-    for (const interval of intervals) clearInterval(interval);
-  };
 });
 </script>
 
@@ -263,9 +183,10 @@ $effect(() => {
 <TabBar
   tabs={getTabs()}
   activeTabId={getCurrentTabId()}
-  canAddTab={devMode || getConfig().tier !== 'free'}
+  canAddTab={!freeTabLimitReached}
   onSelectTab={handleSelectTab}
   onAddTab={handleAddTab}
+  onLockedAddTab={handleLockedAddTab}
   onRenameTab={handleRenameTab}
   onDeleteTab={handleDeleteTab}
   addTabLabel={en.dashboard.addTab}
@@ -277,9 +198,11 @@ $effect(() => {
   }}
 />
 
-{#if showUpgradeBanner && !devMode}
+{#if showUpgradeBanner}
   <div class="upgrade-wrapper">
-    <UpgradeBanner feature={en.upgrade.tabLimit} />
+    <div class="upgrade-prompt" role="status" aria-live="polite">
+      {upgradeBannerMessage}
+    </div>
   </div>
 {/if}
 
@@ -297,12 +220,17 @@ $effect(() => {
 <div class="widget-grid" role="grid">
   {#each sortedInstances as instance (instance.id)}
     {@const def = getDef(instance.widgetId)}
+    {@const state = getWidgetState(instance.id)}
+    {@const data = getWidgetData(instance.widgetId)}
+    {@const warning = getWidgetWarning(instance.id)}
+    {@const error = getWidgetError(instance.id)}
+    {@const lastSuccess = getWidgetLastSuccess(instance.id)}
     {#if def}
       <WidgetCard
         title={def.name}
         size={instance.size}
-        loading={widgetLoading[instance.widgetId] ?? true}
-        error={widgetErrors[instance.widgetId] ?? null}
+        loading={state === 'loading'}
+        error={null}
         availableSizes={def.sizes}
         instanceId={instance.id}
         draggable={true}
@@ -310,32 +238,57 @@ $effect(() => {
         onSwapDrop={(draggedId) => handleSwapDrop(instance.id, draggedId)}
         sizeLabel={en.dashboard.sizeLabel}
       >
-        {#if instance.widgetId === 'cpu' && widgetData[instance.widgetId]}
-          <CpuWidget data={widgetData[instance.widgetId] as CpuMetrics} />
-        {:else if instance.widgetId === 'memory' && widgetData[instance.widgetId]}
-          <MemoryWidget data={widgetData[instance.widgetId] as MemoryMetrics} />
-        {:else if instance.widgetId === 'disk' && widgetData[instance.widgetId]}
-          <DiskWidget data={widgetData[instance.widgetId] as DiskMetrics[]} />
-        {:else if instance.widgetId === 'network' && widgetData[instance.widgetId]}
-          <NetworkWidget data={widgetData[instance.widgetId] as NetworkMetrics} />
-        {:else if instance.widgetId === 'temperature' && widgetData[instance.widgetId]}
-          <TemperatureWidget data={widgetData[instance.widgetId] as TemperatureMetrics} />
-        {:else if instance.widgetId === 'uptime' && widgetData[instance.widgetId]}
-          <UptimeWidget data={widgetData[instance.widgetId] as UptimeMetrics} />
-        {:else if instance.widgetId === 'weather' && widgetData[instance.widgetId]}
-          <WeatherWidget data={widgetData[instance.widgetId] as WeatherMetrics} />
-        {:else if instance.widgetId === 'pihole' && widgetData[instance.widgetId]}
-          <PiholeWidget data={widgetData[instance.widgetId] as PiholeMetrics} />
-        {:else if instance.widgetId === 'rss' && widgetData[instance.widgetId]}
-          <RssWidget data={widgetData[instance.widgetId] as RssFeedResult} />
-        {:else if instance.widgetId === 'links' && widgetData[instance.widgetId]}
-          <LinksWidget data={widgetData[instance.widgetId] as { label: string; url: string; category?: string }[]} />
-        {:else if widgetData[instance.widgetId]}
+        {#if state === 'unconfigured'}
+          <div class="widget-state widget-state-warning">
+            <p class="widget-state-title">Configuration required</p>
+            <p class="widget-state-body">Open Settings and save this widget before it starts polling.</p>
+            <a class="widget-state-link" href={`/settings#widgets/${instance.widgetId}`}>Configure</a>
+          </div>
+        {:else if state === 'error'}
+          <div class="widget-state widget-state-error">
+            <p class="widget-state-title">Unable to load widget</p>
+            <p class="widget-state-body">{error ?? en.errors.generic}</p>
+            <Button variant="secondary" size="sm" onclick={() => retryWidget(instance.id)}>
+              Retry
+            </Button>
+          </div>
+        {:else}
+          {#if state === 'stale' && warning}
+            <div class="widget-stale-banner">
+              <span>{warning}</span>
+              {#if lastSuccess}
+                <span>Last success {relativeTime(new Date(lastSuccess))}</span>
+              {/if}
+            </div>
+          {/if}
+
+        {#if instance.widgetId === 'cpu' && data}
+          <CpuWidget data={data as CpuMetrics} />
+        {:else if instance.widgetId === 'memory' && data}
+          <MemoryWidget data={data as MemoryMetrics} />
+        {:else if instance.widgetId === 'disk' && data}
+          <DiskWidget data={data as DiskMetrics[]} />
+        {:else if instance.widgetId === 'network' && data}
+          <NetworkWidget data={data as NetworkMetrics} />
+        {:else if instance.widgetId === 'temperature' && data}
+          <TemperatureWidget data={data as TemperatureMetrics} />
+        {:else if instance.widgetId === 'uptime' && data}
+          <UptimeWidget data={data as UptimeMetrics} />
+        {:else if instance.widgetId === 'weather' && data}
+          <WeatherWidget data={data as WeatherMetrics} />
+        {:else if instance.widgetId === 'pihole' && data}
+          <PiholeWidget data={data as PiholeMetrics} />
+        {:else if instance.widgetId === 'rss' && data}
+          <RssWidget data={data as RssFeedResult} />
+        {:else if instance.widgetId === 'links' && data}
+          <LinksWidget data={data as { groups: { label: string; links: { title: string; url: string; icon?: string }[] }[] }} />
+        {:else if data}
           <div class="widget-data mono">
-            <pre>{JSON.stringify(widgetData[instance.widgetId], null, 2)}</pre>
+            <pre>{JSON.stringify(data, null, 2)}</pre>
           </div>
         {:else}
           <span class="no-data">{en.common.noData}</span>
+        {/if}
         {/if}
       </WidgetCard>
     {/if}
@@ -346,9 +299,8 @@ $effect(() => {
 <!-- Widget drawer (triggered from Header's "+" button) -->
 <WidgetDrawer
   open={getIsDrawerOpen()}
-  widgets={widgetManifest}
+  widgets={getWidgetManifest()}
   instances={getWidgetInstances()}
-  tier={devMode ? 'standard' : getConfig().tier}
   onClose={() => setDrawerOpen(false)}
   onAdd={handleDrawerAdd}
   onRemove={handleDrawerRemove}
@@ -362,33 +314,36 @@ $effect(() => {
     filterSystem: en.dashboard.filterSystem,
     filterConsumer: en.dashboard.filterConsumer,
     filterIntegration: en.dashboard.filterIntegration,
+    filterUtility: en.dashboard.filterUtility,
     alreadyAdded: en.dashboard.alreadyAdded,
     remove: en.dashboard.remove,
     removeConfirm: en.dashboard.removeConfirm,
     locked: en.dashboard.locked,
+    upgradePrompt: en.upgrade.widgetLocked,
   }}
 >
   {#snippet preview(widgetId: string)}
-    {#if widgetId === 'cpu' && widgetData[widgetId]}
-      <CpuWidget data={widgetData[widgetId] as CpuMetrics} />
-    {:else if widgetId === 'memory' && widgetData[widgetId]}
-      <MemoryWidget data={widgetData[widgetId] as MemoryMetrics} />
-    {:else if widgetId === 'disk' && widgetData[widgetId]}
-      <DiskWidget data={widgetData[widgetId] as DiskMetrics[]} />
-    {:else if widgetId === 'network' && widgetData[widgetId]}
-      <NetworkWidget data={widgetData[widgetId] as NetworkMetrics} />
-    {:else if widgetId === 'temperature' && widgetData[widgetId]}
-      <TemperatureWidget data={widgetData[widgetId] as TemperatureMetrics} />
-    {:else if widgetId === 'uptime' && widgetData[widgetId]}
-      <UptimeWidget data={widgetData[widgetId] as UptimeMetrics} />
-    {:else if widgetId === 'weather' && widgetData[widgetId]}
-      <WeatherWidget data={widgetData[widgetId] as WeatherMetrics} />
-    {:else if widgetId === 'pihole' && widgetData[widgetId]}
-      <PiholeWidget data={widgetData[widgetId] as PiholeMetrics} />
-    {:else if widgetId === 'rss' && widgetData[widgetId]}
-      <RssWidget data={widgetData[widgetId] as RssFeedResult} />
-    {:else if widgetId === 'links' && widgetData[widgetId]}
-      <LinksWidget data={widgetData[widgetId] as { label: string; url: string; category?: string }[]} />
+    {@const data = getWidgetData(widgetId)}
+    {#if widgetId === 'cpu' && data}
+      <CpuWidget data={data as CpuMetrics} />
+    {:else if widgetId === 'memory' && data}
+      <MemoryWidget data={data as MemoryMetrics} />
+    {:else if widgetId === 'disk' && data}
+      <DiskWidget data={data as DiskMetrics[]} />
+    {:else if widgetId === 'network' && data}
+      <NetworkWidget data={data as NetworkMetrics} />
+    {:else if widgetId === 'temperature' && data}
+      <TemperatureWidget data={data as TemperatureMetrics} />
+    {:else if widgetId === 'uptime' && data}
+      <UptimeWidget data={data as UptimeMetrics} />
+    {:else if widgetId === 'weather' && data}
+      <WeatherWidget data={data as WeatherMetrics} />
+    {:else if widgetId === 'pihole' && data}
+      <PiholeWidget data={data as PiholeMetrics} />
+    {:else if widgetId === 'rss' && data}
+      <RssWidget data={data as RssFeedResult} />
+    {:else if widgetId === 'links' && data}
+      <LinksWidget data={data as { groups: { label: string; links: { title: string; url: string; icon?: string }[] }[] }} />
     {:else}
       <div class="preview-loading">
         <span class="preview-loading-text">{getDef(widgetId)?.name ?? widgetId}</span>
@@ -451,9 +406,66 @@ $effect(() => {
     opacity: 0.5;
   }
 
+  .widget-state {
+    align-items: flex-start;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+
+  .widget-state-title {
+    color: var(--color-text-primary);
+    font-size: 0.95rem;
+    font-weight: 600;
+    margin: 0;
+  }
+
+  .widget-state-body {
+    color: var(--color-text-secondary);
+    margin: 0;
+  }
+
+  .widget-state-link {
+    color: var(--color-accent-text);
+    font-size: 0.875rem;
+    font-weight: 600;
+    text-decoration: none;
+  }
+
+  .widget-state-warning {
+    color: var(--color-accent-text);
+  }
+
+  .widget-state-error {
+    color: var(--color-text-primary);
+  }
+
+  .widget-stale-banner {
+    align-items: center;
+    background: var(--color-warning-subtle);
+    border: 1px solid var(--color-warning);
+    border-radius: var(--radius-sm);
+    color: var(--color-text-primary);
+    display: flex;
+    font-size: 0.75rem;
+    justify-content: space-between;
+    margin-bottom: var(--space-3);
+    padding: var(--space-2) var(--space-3);
+  }
+
   .upgrade-wrapper {
     padding: 0 var(--space-6);
     margin-top: var(--space-3);
+  }
+
+  .upgrade-prompt {
+    border: 1px solid var(--color-accent);
+    border-radius: var(--radius-md);
+    background: var(--color-accent-subtle);
+    color: var(--color-accent-text);
+    padding: var(--space-4);
+    font-size: 0.95rem;
+    font-weight: 500;
   }
 
   @media (max-width: 768px) {
@@ -466,6 +478,12 @@ $effect(() => {
   @media (max-width: 480px) {
     .widget-grid {
       grid-template-columns: repeat(4, 1fr);
+    }
+
+    .widget-stale-banner {
+      align-items: flex-start;
+      flex-direction: column;
+      gap: var(--space-1);
     }
   }
 </style>

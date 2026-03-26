@@ -118,7 +118,7 @@ function handleNotificationClick(n: Notification) {
 </script>
 
 <svelte:head>
-  <meta name="theme-color" content="#1a1918" />
+  <meta name="theme-color" content="#000000" />
 </svelte:head>
 
 {#if isDashboard}

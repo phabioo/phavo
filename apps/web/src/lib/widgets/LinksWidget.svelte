@@ -1,31 +1,22 @@
 <script lang="ts">
   interface LinkItem {
-    id?: string;
-    label: string;
+    title: string;
     url: string;
-    category?: string;
+    icon?: string;
+  }
+
+  interface LinkGroup {
+    label: string;
+    links: LinkItem[];
   }
 
   interface Props {
-    data: LinkItem[];
+    data: { groups: LinkGroup[] };
   }
 
   let { data }: Props = $props();
 
-  const hasLinks = $derived(data.length > 0);
-
-  // Group links by category for nicer display
-  const grouped = $derived(() => {
-    if (!hasLinks) return new Map<string, LinkItem[]>();
-    const map = new Map<string, LinkItem[]>();
-    for (const link of data) {
-      const cat = link.category ?? 'Uncategorised';
-      const existing = map.get(cat) ?? [];
-      existing.push(link);
-      map.set(cat, existing);
-    }
-    return map;
-  });
+  const hasLinks = $derived(data.groups.length > 0);
 </script>
 
 <div class="links-widget">
@@ -35,11 +26,11 @@
       <p class="empty-message">No links yet — add bookmarks in Settings.</p>
     </div>
   {:else}
-    {#each [...grouped().entries()] as [category, links] (category)}
+    {#each data.groups as group (group.label)}
       <div class="link-group">
-        <span class="group-label">{category}</span>
+        <span class="group-label">{group.label}</span>
         <ul class="links-list">
-          {#each links as link (link.url)}
+          {#each group.links as link (link.url)}
             <li class="link-item">
               <a
                 href={link.url}
@@ -47,7 +38,7 @@
                 rel="noopener noreferrer"
                 class="link-anchor"
               >
-                {link.label}
+                {link.title}
               </a>
             </li>
           {/each}

@@ -1,8 +1,9 @@
-import { redirect, type ServerLoadEvent } from '@sveltejs/kit';
 import { schema } from '@phavo/db';
+import type { DashboardConfig } from '@phavo/types';
+import { redirect, type ServerLoadEvent } from '@sveltejs/kit';
 import { eq } from 'drizzle-orm';
 import { db, dbReady } from '$lib/server/db';
-import { DEV_MOCK_AUTH, getMockSession } from '$lib/server/mock-auth';
+import { DEV_MOCK_AUTH_ENABLED, getMockSession } from '$lib/server/mock-auth';
 
 const SETUP_PATH = '/setup';
 const AUTH_PREFIX = '/auth';
@@ -15,15 +16,14 @@ export const load = async ({ cookies, url }: ServerLoadEvent) => {
   }
 
   const onSetup = url.pathname.startsWith(SETUP_PATH);
-  const onAuth  = url.pathname.startsWith(AUTH_PREFIX);
+  const onAuth = url.pathname.startsWith(AUTH_PREFIX);
 
-  let config = {
+  let config: DashboardConfig = {
     setupComplete: false,
     dashboardName: 'My Dashboard',
-    tier: 'free' as const,
+    tier: 'free',
     tabs: [],
-    sessionTimeout: '7d' as const,
-    location: undefined as { name: string; latitude: number; longitude: number } | undefined,
+    sessionTimeout: '7d',
   };
 
   // ── 1. Read setupComplete from DB ────────────────────────────────────────
@@ -33,19 +33,20 @@ export const load = async ({ cookies, url }: ServerLoadEvent) => {
     const rows = await db.query.config.findMany();
     const entries: Record<string, string> = {};
     for (const row of rows) entries[row.key] = row.value;
-    setupComplete = entries['setup_complete'] === 'true';
+    setupComplete = entries.setup_complete === 'true';
     config = {
       setupComplete,
-      dashboardName: entries['dashboard_name'] ?? 'My Dashboard',
-      tier: (entries['tier'] as 'free' | 'standard' | 'local' | undefined) ?? 'free',
+      dashboardName: entries.dashboard_name ?? 'My Dashboard',
+      tier: (entries.tier as 'free' | 'standard' | 'local' | undefined) ?? 'free',
       tabs: [],
-      sessionTimeout: (entries['session_timeout'] as '1d' | '7d' | '30d' | 'never' | undefined) ?? '7d',
+      sessionTimeout:
+        (entries.session_timeout as '1d' | '7d' | '30d' | 'never' | undefined) ?? '7d',
       location:
-        entries['location_name'] && entries['location_latitude'] && entries['location_longitude']
+        entries.location_name && entries.location_latitude && entries.location_longitude
           ? {
-              name: entries['location_name'],
-              latitude: Number(entries['location_latitude']),
-              longitude: Number(entries['location_longitude']),
+              name: entries.location_name,
+              latitude: Number(entries.location_latitude),
+              longitude: Number(entries.location_longitude),
             }
           : undefined,
     };
@@ -56,8 +57,8 @@ export const load = async ({ cookies, url }: ServerLoadEvent) => {
 
   // ── 2. Resolve session ──────────────────────────────────────────────────
   let session: ReturnType<typeof getMockSession> | null = null;
-  if (DEV_MOCK_AUTH) {
-    // Dev bypass: synthetic standard-tier session, no phavo.io needed
+  if (DEV_MOCK_AUTH_ENABLED) {
+    // Dev bypass: synthetic mock-auth session, no phavo.io needed
     session = getMockSession();
   } else {
     const sessionId = cookies.get('phavo_session');
@@ -98,5 +99,5 @@ export const load = async ({ cookies, url }: ServerLoadEvent) => {
     redirect(303, '/auth/login');
   }
 
-  return { session, setupComplete, devMode: DEV_MOCK_AUTH, config };
+  return { session, setupComplete, devMode: DEV_MOCK_AUTH_ENABLED, config };
 };

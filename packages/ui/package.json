@@ -14,7 +14,8 @@
     "svelte": "^5.0.0"
   },
   "dependencies": {
-    "@phavo/types": "workspace:*"
+    "@phavo/types": "workspace:*",
+    "zod": "^3.23.0"
   },
   "devDependencies": {
     "svelte": "^5.0.0",

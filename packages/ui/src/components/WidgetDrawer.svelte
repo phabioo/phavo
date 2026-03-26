@@ -1,15 +1,22 @@
 <script lang="ts">
-  import type { WidgetDefinition, WidgetInstance, WidgetSize } from '@phavo/types';
+  import {
+    isWidgetDefinition,
+    isWidgetTeaserDefinition,
+    type WidgetCategory,
+    type WidgetDefinition,
+    type WidgetInstance,
+    type WidgetManifestEntry,
+    type WidgetSize,
+  } from '@phavo/types';
   import type { Snippet } from 'svelte';
   import * as icons from '../icons/icons';
 
-  type Category = 'all' | 'system' | 'consumer' | 'integration';
+  type Category = 'all' | WidgetCategory;
 
   interface Props {
     open: boolean;
-    widgets: WidgetDefinition[];
+    widgets: WidgetManifestEntry[];
     instances: WidgetInstance[];
-    tier: string;
     onClose: () => void;
     onAdd: (widgetId: string, size: WidgetSize) => void;
     onRemove: (instanceId: string) => void;
@@ -28,10 +35,12 @@
       filterSystem?: string;
       filterConsumer?: string;
       filterIntegration?: string;
+      filterUtility?: string;
       alreadyAdded?: string;
       remove?: string;
       removeConfirm?: string;
       locked?: string;
+      upgradePrompt?: string;
     };
   }
 
@@ -39,7 +48,6 @@
     open,
     widgets,
     instances,
-    tier,
     onClose,
     onAdd,
     onRemove,
@@ -52,6 +60,7 @@
   let activeFilter = $state<Category>('all');
   let selectedSizes = $state<Record<string, WidgetSize>>({});
   let confirmRemoveId = $state<string | null>(null);
+  let activeLockedId = $state<string | null>(null);
   let isDraggingFromDrawer = $state(false);
 
   // Resize handle state
@@ -72,23 +81,27 @@
     { key: 'system', label: () => labels.filterSystem ?? 'System' },
     { key: 'consumer', label: () => labels.filterConsumer ?? 'Consumer' },
     { key: 'integration', label: () => labels.filterIntegration ?? 'Integration' },
+    { key: 'utility', label: () => labels.filterUtility ?? 'Utility' },
   ];
 
   const filteredWidgets = $derived(
     activeFilter === 'all'
       ? widgets
-      : widgets.filter((w) => w.category === activeFilter),
+      : widgets.filter(
+          (w) => isWidgetTeaserDefinition(w) || (isWidgetDefinition(w) && w.category === activeFilter),
+        ),
   );
 
   function getInstanceForWidget(widgetId: string): WidgetInstance | undefined {
     return instances.find((i) => i.widgetId === widgetId);
   }
 
-  function isLocked(w: WidgetDefinition): boolean {
-    return w.tier === 'standard' && tier === 'free';
+  function isLocked(w: WidgetManifestEntry): boolean {
+    return isWidgetTeaserDefinition(w);
   }
 
-  function getSelectedSize(w: WidgetDefinition): WidgetSize {
+  function getSelectedSize(w: WidgetManifestEntry): WidgetSize {
+    if (!isWidgetDefinition(w)) return 'M';
     return selectedSizes[w.id] ?? w.sizes[0] ?? 'M';
   }
 
@@ -98,6 +111,10 @@
 
   function handleAdd(w: WidgetDefinition) {
     onAdd(w.id, getSelectedSize(w));
+  }
+
+  function handleLockedClick(widgetId: string) {
+    activeLockedId = activeLockedId === widgetId ? null : widgetId;
   }
 
   function handleRemoveClick(instanceId: string) {
@@ -113,8 +130,8 @@
     onClose();
   }
 
-  function handleDragStart(e: DragEvent, w: WidgetDefinition) {
-    if (isLocked(w) || !e.dataTransfer) return;
+  function handleDragStart(e: DragEvent, w: WidgetManifestEntry) {
+    if (isLocked(w) || !isWidgetDefinition(w) || !e.dataTransfer) return;
     isDraggingFromDrawer = true;
     e.dataTransfer.effectAllowed = 'copy';
     e.dataTransfer.setData('application/phavo-widget', JSON.stringify({
@@ -213,18 +230,31 @@
           class:drawer-card-locked={locked}
           class:drawer-card-added={!!inst}
           draggable={!locked && !inst ? 'true' : 'false'}
+          role={locked ? 'button' : undefined}
+          tabindex={locked ? 0 : undefined}
+          aria-label={locked ? `${w.name} locked` : undefined}
+          onclick={locked ? () => handleLockedClick(w.id) : undefined}
+          onkeydown={
+            locked
+              ? (event) => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    handleLockedClick(w.id);
+                  }
+                }
+              : undefined
+          }
           ondragstart={(e) => handleDragStart(e, w)}
           ondragend={handleDragEnd}
         >
           <!-- Preview area -->
-          <div class="drawer-card-preview">
+          <div class="drawer-card-preview" class:drawer-card-preview-locked={locked}>
             {#if locked}
-              <div class="lock-overlay">
+              <div class="locked-preview-content">
                 <span class="lock-icon">{@html icons.lock()}</span>
                 <span class="lock-text">{labels.locked ?? 'Standard'}</span>
               </div>
-            {/if}
-            {#if preview}
+            {:else if preview}
               {@render preview(w.id)}
             {:else}
               <div class="preview-placeholder">
@@ -242,22 +272,38 @@
 
             <!-- Size selector -->
             <div class="drawer-card-controls">
-              <div class="size-selector">
-                {#each w.sizes as s (s)}
-                  <button
-                    class="size-pill"
-                    class:size-active={getSelectedSize(w) === s}
-                    onclick={() => handleSizeSelect(w.id, s)}
-                    disabled={locked}
-                  >
-                    {s}
-                  </button>
-                {/each}
-              </div>
+              {#if isWidgetDefinition(w)}
+                <div class="size-selector">
+                  {#each w.sizes as s (s)}
+                    <button
+                      class="size-pill"
+                      class:size-active={getSelectedSize(w) === s}
+                      onclick={() => handleSizeSelect(w.id, s)}
+                      disabled={locked}
+                    >
+                      {s}
+                    </button>
+                  {/each}
+                </div>
+              {/if}
 
               <!-- Action button -->
               {#if locked}
-                <!-- no action -->
+                {#if activeLockedId === w.id}
+                  <div class="locked-prompt">
+                    <span class="locked-prompt-icon">{@html icons.lock()}</span>
+                    <span>{labels.upgradePrompt ?? 'Upgrade to Standard to unlock this widget — €7.99 one-time'}</span>
+                    <a
+                      class="locked-prompt-link"
+                      href="https://phavo.io/upgrade"
+                      target="_blank"
+                      rel="noreferrer"
+                      onclick={(event) => event.stopPropagation()}
+                    >
+                      phavo.io/upgrade
+                    </a>
+                  </div>
+                {/if}
               {:else if inst}
                 {#if confirmRemoveId === inst.id}
                   <button class="action-btn action-remove-confirm" onclick={() => handleRemoveConfirm(inst.id)}>
@@ -270,10 +316,12 @@
                   </button>
                 {/if}
               {:else}
-                <button class="action-btn action-add" onclick={() => handleAdd(w)}>
-                  {@html icons.plus()}
-                  <span>{labels.addToBoard ?? 'Add'}</span>
-                </button>
+                {#if isWidgetDefinition(w)}
+                  <button class="action-btn action-add" onclick={() => handleAdd(w)}>
+                    {@html icons.plus()}
+                    <span>{labels.addToBoard ?? 'Add'}</span>
+                  </button>
+                {/if}
               {/if}
             </div>
           </div>
@@ -449,13 +497,12 @@
   }
 
   .drawer-card-locked {
-    opacity: 0.55;
-    cursor: not-allowed;
+    cursor: pointer;
   }
 
   .drawer-card-locked:hover {
-    border-color: var(--color-border);
-    box-shadow: none;
+    border-color: var(--color-accent);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
   }
 
   .drawer-card-added {
@@ -470,27 +517,35 @@
     border-bottom: 1px solid var(--color-border-subtle);
   }
 
-  .lock-overlay {
-    position: absolute;
-    inset: 0;
+  .drawer-card-preview-locked {
+    display: flex;
+    flex: 1 1 auto;
+    align-items: center;
+    justify-content: center;
+    min-height: 140px;
+    padding: var(--space-4);
+    background: color-mix(in srgb, var(--color-bg) 20%, transparent);
+  }
+
+  .locked-preview-content {
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: var(--space-1);
-    background: rgba(0, 0, 0, 0.5);
-    z-index: 1;
+    gap: 6px;
   }
 
   .lock-icon {
-    color: var(--color-text-muted);
+    color: var(--color-warning);
     display: flex;
   }
 
   .lock-text {
     font-size: 11px;
     font-weight: 600;
-    color: var(--color-text-muted);
+    color: var(--color-warning);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
   }
 
   .preview-placeholder {
@@ -505,6 +560,35 @@
 
   .preview-name {
     opacity: 0.6;
+  }
+
+  .locked-prompt {
+    display: inline-flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--space-1);
+    padding: 4px 8px;
+    border-radius: var(--radius-sm, 4px);
+    background: var(--color-accent-subtle);
+    color: var(--color-accent-text);
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.4;
+  }
+
+  .locked-prompt-icon {
+    display: flex;
+    flex-shrink: 0;
+  }
+
+  .locked-prompt-link {
+    color: var(--color-accent-text);
+    font-weight: 700;
+    text-decoration: underline;
+  }
+
+  .locked-prompt-link:hover {
+    color: var(--color-text-primary);
   }
 
   .drawer-card-footer {
