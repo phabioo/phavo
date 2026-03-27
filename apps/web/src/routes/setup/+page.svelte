@@ -1,9 +1,9 @@
 <script lang="ts">
-import type { WeatherMetrics } from '@phavo/agent';
 import {
   isWidgetDefinition,
   isWidgetTeaserDefinition,
   type Tab,
+  type WeatherMetrics,
   type WidgetInstance,
   type WidgetManifestEntry,
   type WidgetSize,

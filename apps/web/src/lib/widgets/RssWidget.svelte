@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { RssFeedResult } from '@phavo/agent';
+  import type { RssFeedResult } from '@phavo/types';
 
   interface Props {
     data: RssFeedResult;

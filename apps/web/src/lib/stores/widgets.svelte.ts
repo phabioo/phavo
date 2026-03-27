@@ -1,7 +1,8 @@
-import type { DiskMetrics, TemperatureMetrics } from '@phavo/agent';
 import {
+  type DiskMetrics,
   isWidgetDefinition,
   type Tab,
+  type TemperatureMetrics,
   type WidgetDefinition,
   type WidgetInstance,
   type WidgetManifestEntry,
@@ -434,22 +435,78 @@ export async function addWidget(
 
 /** Remove a widget instance (optimistic). */
 export async function removeWidget(instanceId: string): Promise<void> {
-  const prev = widgetInstances;
-  widgetInstances = widgetInstances.filter((w) => w.id !== instanceId);
-  reconcileWidgetRuntime();
+  const prevInstances = widgetInstances;
+  const prevData = widgetData;
+  const prevStates = widgetStates;
+  const prevErrors = widgetErrors;
+  const prevWarnings = widgetWarnings;
+  const prevLastSuccess = widgetLastSuccess;
+  const prevFailureCounts = widgetFailureCounts;
+  removeWidgetInstanceFromStore(instanceId);
   try {
     const res = await fetch(`/api/v1/widget-instances/${encodeURIComponent(instanceId)}`, {
       method: 'DELETE',
     });
     const json = (await res.json()) as { ok: boolean };
     if (!json.ok) {
-      widgetInstances = prev; // revert
+      widgetInstances = prevInstances;
+      widgetData = prevData;
+      widgetStates = prevStates;
+      widgetErrors = prevErrors;
+      widgetWarnings = prevWarnings;
+      widgetLastSuccess = prevLastSuccess;
+      widgetFailureCounts = prevFailureCounts;
       reconcileWidgetRuntime();
     }
   } catch {
-    widgetInstances = prev; // revert
+    widgetInstances = prevInstances;
+    widgetData = prevData;
+    widgetStates = prevStates;
+    widgetErrors = prevErrors;
+    widgetWarnings = prevWarnings;
+    widgetLastSuccess = prevLastSuccess;
+    widgetFailureCounts = prevFailureCounts;
     reconcileWidgetRuntime();
   }
+}
+
+export function removeWidgetInstanceFromStore(instanceId: string): void {
+  const removedInstance = widgetInstances.find((instance) => instance.id === instanceId);
+  if (!removedInstance) return;
+
+  widgetInstances = widgetInstances.filter((instance) => instance.id !== instanceId);
+
+  const nextStates = { ...widgetStates };
+  delete nextStates[instanceId];
+  widgetStates = nextStates;
+
+  const nextErrors = { ...widgetErrors };
+  delete nextErrors[instanceId];
+  widgetErrors = nextErrors;
+
+  const nextWarnings = { ...widgetWarnings };
+  delete nextWarnings[instanceId];
+  widgetWarnings = nextWarnings;
+
+  const nextLastSuccess = { ...widgetLastSuccess };
+  delete nextLastSuccess[instanceId];
+  widgetLastSuccess = nextLastSuccess;
+
+  const hasRemainingInstances = widgetInstances.some(
+    (instance) => instance.widgetId === removedInstance.widgetId,
+  );
+
+  if (!hasRemainingInstances) {
+    const nextData = { ...widgetData };
+    delete nextData[removedInstance.widgetId];
+    widgetData = nextData;
+
+    const nextFailureCounts = { ...widgetFailureCounts };
+    delete nextFailureCounts[removedInstance.widgetId];
+    widgetFailureCounts = nextFailureCounts;
+  }
+
+  reconcileWidgetRuntime();
 }
 
 /** Optimistic update, then persist to server. */

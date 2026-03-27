@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { WeatherMetrics } from '@phavo/agent';
+  import type { WeatherMetrics } from '@phavo/types';
 
   interface Props {
     data: WeatherMetrics;

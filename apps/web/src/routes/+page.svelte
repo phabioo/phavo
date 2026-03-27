@@ -1,22 +1,20 @@
 <script lang="ts">
 import { onMount } from 'svelte';
 import {
+  type CpuMetrics,
+  type DiskMetrics,
   isWidgetDefinition,
+  type MemoryMetrics,
+  type NetworkMetrics,
+  type PiholeMetrics,
+  type RssFeedResult,
+  type TemperatureMetrics,
+  type UptimeMetrics,
+  type WeatherMetrics,
   type WidgetDefinition,
   type WidgetManifestEntry,
   type WidgetSize,
 } from '@phavo/types';
-import type {
-  CpuMetrics,
-  DiskMetrics,
-  MemoryMetrics,
-  NetworkMetrics,
-  PiholeMetrics,
-  RssFeedResult,
-  TemperatureMetrics,
-  UptimeMetrics,
-  WeatherMetrics,
-} from '@phavo/agent';
 import { Button, WidgetCard, TabBar, WidgetDrawer } from '@phavo/ui';
 import en from '$lib/i18n/en.json';
 import { getConfig } from '$lib/stores/config.svelte';

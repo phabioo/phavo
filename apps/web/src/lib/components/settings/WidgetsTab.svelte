@@ -9,23 +9,22 @@
     WidgetCard,
   } from '@phavo/ui';
   import {
+    type CpuMetrics,
+    type DiskMetrics,
     isWidgetDefinition,
+    type MemoryMetrics,
+    type NetworkMetrics,
+    type PiholeMetrics,
+    type RssFeedResult,
+    type TemperatureMetrics,
+    type UptimeMetrics,
+    type WeatherMetrics,
     z,
     type WidgetCategory,
     type WidgetDefinition,
     type WidgetInstance,
   } from '@phavo/types';
-  import type {
-    CpuMetrics,
-    DiskMetrics,
-    MemoryMetrics,
-    NetworkMetrics,
-    PiholeMetrics,
-    RssFeedResult,
-    TemperatureMetrics,
-    UptimeMetrics,
-    WeatherMetrics,
-  } from '@phavo/agent';
+  import { removeWidgetInstanceFromStore } from '$lib/stores/widgets.svelte';
   import CpuWidget from '$lib/widgets/CpuWidget.svelte';
   import DiskWidget from '$lib/widgets/DiskWidget.svelte';
   import LinksWidget from '$lib/widgets/LinksWidget.svelte';
@@ -183,16 +182,16 @@
 
     const summaries: WidgetSummary[] = [];
 
-    for (const [widgetId, widgetInstances] of grouped.entries()) {
-      const def = widgetDefs.find((d) => d.id === widgetId);
-      if (!def) continue;
+    for (const def of widgetDefs) {
+      const widgetInstances = grouped.get(def.id) ?? [];
 
-      const status: WidgetStatus = widgetInstances.some((instance) => instance.configured === false)
-        ? 'unconfigured'
-        : 'active';
+      const status: WidgetStatus =
+        widgetInstances.length === 0 || widgetInstances.some((instance) => instance.configured === false)
+          ? 'unconfigured'
+          : 'active';
 
       summaries.push({
-        id: widgetId,
+        id: def.id,
         def,
         instances: widgetInstances,
         status,
@@ -310,14 +309,33 @@
   async function removeAllInstances(widget: WidgetSummary): Promise<void> {
     removing = true;
     try {
-      await Promise.all(
-        widget.instances.map((instance) =>
-          fetch(`/api/v1/widget-instances/${encodeURIComponent(instance.id)}`, { method: 'DELETE' }),
-        ),
+      const removedIds = new Set(widget.instances.map((instance) => instance.id));
+
+      const responses = await Promise.all(
+        widget.instances.map(async (instance) => {
+          const response = await fetch(`/api/v1/widget-instances/${encodeURIComponent(instance.id)}`, {
+            method: 'DELETE',
+          });
+          const payload = (await response.json()) as { ok: boolean; error?: string };
+          if (!payload.ok) {
+            throw new Error(payload.error ?? 'Failed to remove widget instance');
+          }
+          return instance.id;
+        }),
       );
+
+      for (const instanceId of responses) {
+        removeWidgetInstanceFromStore(instanceId);
+      }
+
+      allInstances = allInstances.filter((instance) => !removedIds.has(instance.id));
+      selectedId = widget.id;
       confirmRemove = false;
       previewData = null;
+      previewError = '';
       await loadWidgets();
+    } catch (error) {
+      previewError = error instanceof Error ? error.message : 'Failed to remove widget instances';
     } finally {
       removing = false;
     }

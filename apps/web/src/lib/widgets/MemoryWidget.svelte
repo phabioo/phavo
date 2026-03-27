@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { MemoryMetrics } from '@phavo/agent';
+  import type { MemoryMetrics } from '@phavo/types';
   import { ProgressBar } from '@phavo/ui';
   import { formatBytes, formatPercentage } from '$lib/utils/format';
 

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { PiholeMetrics } from '@phavo/agent';
+  import type { PiholeMetrics } from '@phavo/types';
   import { ProgressBar } from '@phavo/ui';
 
   interface Props {

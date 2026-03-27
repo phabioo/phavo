@@ -1,14 +1,7 @@
+import type { DiskMetrics } from '@phavo/types';
 import si from 'systeminformation';
 
-export interface DiskMetrics {
-  fs: string;
-  mount: string;
-  used: number;
-  total: number;
-  usePercent: number;
-  readSpeed: number;
-  writeSpeed: number;
-}
+export type { DiskMetrics } from '@phavo/types';
 
 export async function getDisk(): Promise<DiskMetrics[]> {
   const [fsSize, fsStats] = await Promise.all([si.fsSize(), si.disksIO()]);

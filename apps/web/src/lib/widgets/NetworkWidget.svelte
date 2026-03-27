@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import type { NetworkMetrics } from '@phavo/agent';
+  import type { NetworkMetrics } from '@phavo/types';
   import { formatBytes, formatSpeed } from '$lib/utils/format';
 
   interface Props {

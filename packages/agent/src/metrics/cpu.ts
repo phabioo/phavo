@@ -1,13 +1,8 @@
 import os from 'node:os';
+import type { CpuMetrics } from '@phavo/types';
 import si from 'systeminformation';
 
-export interface CpuMetrics {
-  usage: number;
-  cores: number[];
-  loadAvg: [number, number, number];
-  speed: number;
-  model: string;
-}
+export type { CpuMetrics } from '@phavo/types';
 
 export async function getCpu(): Promise<CpuMetrics> {
   const [load, cpuInfo, cpuSpeed] = await Promise.all([

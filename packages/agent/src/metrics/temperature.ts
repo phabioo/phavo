@@ -1,9 +1,7 @@
+import type { TemperatureMetrics } from '@phavo/types';
 import si from 'systeminformation';
 
-export interface TemperatureMetrics {
-  cpuTemp: number | null;
-  unit: string;
-}
+export type { TemperatureMetrics } from '@phavo/types';
 
 export async function getTemperature(): Promise<TemperatureMetrics> {
   const temp = await si.cpuTemperature();

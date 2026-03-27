@@ -1,9 +1,7 @@
+import type { UptimeMetrics } from '@phavo/types';
 import si from 'systeminformation';
 
-export interface UptimeMetrics {
-  seconds: number;
-  formatted: string;
-}
+export type { UptimeMetrics } from '@phavo/types';
 
 function formatUptime(totalSeconds: number): string {
   const days = Math.floor(totalSeconds / 86400);

@@ -1,27 +1,11 @@
-export interface RssFeedConfig {
-  url: string;
-  auth?: {
-    type: 'basic' | 'bearer';
-    value: string;
-  };
-}
+import type { RssFeedConfig, RssFeedError, RssFeedItem, RssFeedResult } from '@phavo/types';
 
-export interface RssFeedItem {
-  title: string;
-  link: string;
-  source: string;
-  publishedAt: string;
-}
-
-export interface RssFeedError {
-  feedUrl: string;
-  error: string;
-}
-
-export interface RssFeedResult {
-  items: RssFeedItem[];
-  errors: RssFeedError[];
-}
+export type {
+  RssFeedConfig,
+  RssFeedError,
+  RssFeedItem,
+  RssFeedResult,
+} from '@phavo/types';
 
 async function fetchFeed(config: RssFeedConfig): Promise<RssFeedItem[]> {
   const headers: Record<string, string> = {};

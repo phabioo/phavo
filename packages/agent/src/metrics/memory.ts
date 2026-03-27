@@ -1,14 +1,7 @@
+import type { MemoryMetrics } from '@phavo/types';
 import si from 'systeminformation';
 
-export interface MemoryMetrics {
-  used: number;
-  total: number;
-  free: number;
-  swap: {
-    used: number;
-    total: number;
-  };
-}
+export type { MemoryMetrics } from '@phavo/types';
 
 export async function getMemory(): Promise<MemoryMetrics> {
   const mem = await si.mem();

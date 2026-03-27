@@ -1,17 +1,6 @@
-export interface WeatherForecastDay {
-  date: string;
-  tempMin: number;
-  tempMax: number;
-  conditionCode: number;
-}
+import type { WeatherForecastDay, WeatherMetrics } from '@phavo/types';
 
-export interface WeatherMetrics {
-  currentTemp: number;
-  conditionCode: number;
-  windSpeed: number;
-  humidity: number;
-  forecast: WeatherForecastDay[];
-}
+export type { WeatherForecastDay, WeatherMetrics } from '@phavo/types';
 
 export async function getWeather(latitude: number, longitude: number): Promise<WeatherMetrics> {
   const url = new URL('https://api.open-meteo.com/v1/forecast');

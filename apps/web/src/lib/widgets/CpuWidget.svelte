@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { CpuMetrics } from '@phavo/agent';
+  import type { CpuMetrics } from '@phavo/types';
   import { ProgressBar } from '@phavo/ui';
   import { formatPercentage } from '$lib/utils/format';
 

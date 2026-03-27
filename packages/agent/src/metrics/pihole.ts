@@ -1,10 +1,6 @@
-export interface PiholeMetrics {
-  totalQueries: number;
-  blockedQueries: number;
-  percentBlocked: number;
-  domainsOnBlocklist: number;
-  status: 'enabled' | 'disabled';
-}
+import type { PiholeMetrics } from '@phavo/types';
+
+export type { PiholeMetrics } from '@phavo/types';
 
 export async function getPihole(url: string, token: string): Promise<PiholeMetrics> {
   const apiUrl = new URL('/api/stats/summary', url);

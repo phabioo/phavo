@@ -1,11 +1,7 @@
+import type { NetworkMetrics } from '@phavo/types';
 import si from 'systeminformation';
 
-export interface NetworkMetrics {
-  uploadSpeed: number;
-  downloadSpeed: number;
-  totalSent: number;
-  totalReceived: number;
-}
+export type { NetworkMetrics } from '@phavo/types';
 
 export async function getNetwork(): Promise<NetworkMetrics> {
   const stats = await si.networkStats();

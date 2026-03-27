@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { UptimeMetrics } from '@phavo/agent';
+  import type { UptimeMetrics } from '@phavo/types';
 
   interface Props {
     data: UptimeMetrics;

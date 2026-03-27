@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { DiskMetrics } from '@phavo/agent';
+  import type { DiskMetrics } from '@phavo/types';
   import { ProgressBar } from '@phavo/ui';
   import { formatBytes, formatPercentage, formatSpeed } from '$lib/utils/format';
 
