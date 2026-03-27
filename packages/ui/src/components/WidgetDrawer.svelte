@@ -22,7 +22,7 @@
     onAdd: (widgetId: string, size: WidgetSize) => void;
     onRemove: (instanceId: string) => void;
     /** Render a live widget preview for a given widgetId */
-    preview?: Snippet<[string]>;
+    preview?: Snippet<[string, unknown | undefined, boolean, boolean]>;
     /** Called when a drag starts from inside the drawer */
     onDragStartFromDrawer?: () => void;
     /** Called when a drag from the drawer ends (drop or cancel) */
@@ -63,6 +63,11 @@
   let confirmRemoveId = $state<string | null>(null);
   let activeLockedId = $state<string | null>(null);
   let isDraggingFromDrawer = $state(false);
+  let previewData = $state<Record<string, unknown>>({});
+  let previewLoading = $state<Record<string, boolean>>({});
+  let previewErrors = $state<Record<string, string | null>>({});
+
+  const previewRequests = new Map<string, Promise<void>>();
 
   // Resize handle state
   let drawerHeight = $state(60); // vh
@@ -76,6 +81,19 @@
       $effect(() => {
         if (!open) {
           drawerHeight = 60;
+          previewData = {};
+          previewLoading = {};
+          previewErrors = {};
+          previewRequests.clear();
+          return;
+        }
+
+        const previewableWidgets = widgets.filter(
+          (widget): widget is WidgetDefinition => isWidgetDefinition(widget),
+        );
+
+        for (const widget of previewableWidgets) {
+          void loadPreview(widget);
         }
       });
     });
@@ -170,6 +188,46 @@
     isResizing = false;
     (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
   }
+
+  async function loadPreview(widget: WidgetDefinition): Promise<void> {
+    const inflightRequest = previewRequests.get(widget.id);
+    if (inflightRequest) {
+      await inflightRequest;
+      return;
+    }
+
+    previewLoading = { ...previewLoading, [widget.id]: true };
+
+    const request = (async () => {
+      try {
+        const response = await fetch(widget.dataEndpoint, { credentials: 'same-origin' });
+        const payload = (await response.json().catch(() => null)) as
+          | { ok: boolean; data?: unknown; error?: string }
+          | null;
+
+        if (!response.ok || !payload?.ok || payload.data == null) {
+          throw new Error(payload?.error ?? 'Preview unavailable');
+        }
+
+        previewData = { ...previewData, [widget.id]: payload.data };
+        previewErrors = { ...previewErrors, [widget.id]: null };
+      } catch (error) {
+        const nextPreviewData = { ...previewData };
+        delete nextPreviewData[widget.id];
+        previewData = nextPreviewData;
+        previewErrors = {
+          ...previewErrors,
+          [widget.id]: error instanceof Error ? error.message : 'Preview unavailable',
+        };
+      } finally {
+        previewLoading = { ...previewLoading, [widget.id]: false };
+        previewRequests.delete(widget.id);
+      }
+    })();
+
+    previewRequests.set(widget.id, request);
+    await request;
+  }
 </script>
 
 {#if open}
@@ -259,8 +317,15 @@
                 <span class="lock-icon">{@html icons.lock()}</span>
                 <span class="lock-text">{labels.locked ?? 'Standard'}</span>
               </div>
-            {:else if preview}
-              {@render preview(w.id)}
+            {:else if preview && isWidgetDefinition(w)}
+              <div class="drawer-preview-scale">
+                {@render preview(
+                  w.id,
+                  previewData[w.id],
+                  previewLoading[w.id] === true,
+                  (previewErrors[w.id] ?? null) !== null,
+                )}
+              </div>
             {:else}
               <div class="preview-placeholder">
                 <span class="preview-name">{w.name}</span>
@@ -300,12 +365,12 @@
                     <span>{labels.upgradePrompt ?? 'Upgrade to Standard to unlock this widget — €7.99 one-time'}</span>
                     <a
                       class="locked-prompt-link"
-                      href="https://phavo.io/upgrade"
+                      href="https://phavo.net/upgrade"
                       target="_blank"
                       rel="noreferrer"
                       onclick={(event) => event.stopPropagation()}
                     >
-                      phavo.io/upgrade
+                      phavo.net/upgrade
                     </a>
                   </div>
                 {/if}
@@ -520,6 +585,15 @@
     height: 140px;
     overflow: hidden;
     border-bottom: 1px solid var(--color-border-subtle);
+    background: var(--color-bg-surface);
+  }
+
+  .drawer-preview-scale {
+    width: 145%;
+    height: 145%;
+    transform: scale(0.69);
+    transform-origin: top left;
+    pointer-events: none;
   }
 
   .drawer-card-preview-locked {

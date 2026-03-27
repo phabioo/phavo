@@ -68,11 +68,11 @@ const sessionTimeoutOptions = [
   { value: 'never', label: en.settings.sessionTimeoutNever },
 ];
 
-const DOCS_URL = 'https://docs.phavo.io';
+const DOCS_URL = 'https://docs.phavo.net';
 const GITHUB_URL = 'https://github.com/phabioo/phavo';
 const DISCORD_URL = 'https://discord.gg/phavo';
-const PHAVO_ACCOUNT_URL = 'https://phavo.io/account';
-const PHAVO_LICENSE_URL = 'https://phavo.io/account/license';
+const PHAVO_ACCOUNT_URL = 'https://phavo.net/account';
+const PHAVO_LICENSE_URL = 'https://phavo.net/account/license';
 
 let activeTab = $state<TabId>('general');
 let loading = $state(true);

@@ -11,7 +11,7 @@ export const users = sqliteTable('users', {
     .$defaultFn(() => crypto.randomUUID()),
   // Unique when present; multiple NULLs are allowed in SQLite UNIQUE constraints.
   email: text('email').unique(),
-  // Argon2id hash. Local users only. Never stored for phavo.io users.
+  // Argon2id hash. Local users only. Never stored for phavo.net users.
   passwordHash: text('password_hash'),
   authMode: text('auth_mode', { enum: ['phavo-io', 'local'] }).notNull(),
   // AES-256-GCM encrypted. Set only when user enables 2FA.
@@ -30,7 +30,7 @@ export const sessions = sqliteTable('sessions', {
   // Single source of truth for tier enforcement. Set by server on login only.
   tier: text('tier', { enum: ['free', 'standard', 'local'] }).notNull(),
   authMode: text('auth_mode', { enum: ['phavo-io', 'local'] }).notNull(),
-  // Unix ms. Last successful phavo.io validation.
+  // Unix ms. Last successful phavo.net validation.
   validatedAt: integer('validated_at').notNull(),
   // Unix ms. Session valid offline until this time. Null for local tier.
   graceUntil: integer('grace_until'),
@@ -97,7 +97,7 @@ export const licenseActivation = sqliteTable('license_activation', {
   licenseKey: text('license_key').notNull(),
   // Only 'local' tier activates here — see arch spec.
   tier: text('tier', { enum: ['local'] }).notNull(),
-  // RS256-signed JWT from phavo.io. Payload: { instanceId, tier, activatedAt }.
+  // RS256-signed JWT from phavo.net. Payload: { instanceId, tier, activatedAt }.
   activationJwt: text('activation_jwt').notNull(),
   // Stable UUID bound to Docker volume (generated once, stored in instance.id).
   instanceIdentifier: text('instance_identifier').notNull(),

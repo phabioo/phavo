@@ -21,8 +21,8 @@ export async function validateLicense(
     };
   }
 
-  // phavo.io validation
-  const phavoIoUrl = process.env.PHAVO_IO_URL ?? 'https://phavo.io';
+  // phavo.net validation
+  const phavoIoUrl = process.env.PHAVO_IO_URL ?? 'https://phavo.net';
 
   try {
     const response = await fetch(`${phavoIoUrl}/api/license/validate`, {
@@ -41,7 +41,7 @@ export async function validateLicense(
 
     return { valid: false, tier: 'free' };
   } catch {
-    // phavo.io unreachable — apply grace period
+    // phavo.net unreachable — apply grace period
     const gracePeriod = licenseKey ? GRACE_PERIOD_STANDARD : GRACE_PERIOD_FREE;
     const graceUntil = Date.now() + gracePeriod;
 
@@ -57,7 +57,7 @@ export async function activateLocalLicense(
   licenseKey: string,
   instanceIdentifier: string,
 ): Promise<LicenseValidationResult> {
-  const phavoIoUrl = process.env.PHAVO_IO_URL ?? 'https://phavo.io';
+  const phavoIoUrl = process.env.PHAVO_IO_URL ?? 'https://phavo.net';
 
   try {
     const response = await fetch(`${phavoIoUrl}/api/license/activate`, {
@@ -81,7 +81,7 @@ export async function activateLocalLicense(
 
     const data = (await response.json()) as { activationJwt?: string };
     if (!data.activationJwt) {
-      return { valid: false, tier: 'local', error: 'Missing activation token from phavo.io' };
+      return { valid: false, tier: 'local', error: 'Missing activation token from phavo.net' };
     }
 
     return {
@@ -90,6 +90,6 @@ export async function activateLocalLicense(
       activationJwt: data.activationJwt,
     };
   } catch {
-    return { valid: false, tier: 'local', error: 'phavo.io unreachable' };
+    return { valid: false, tier: 'local', error: 'phavo.net unreachable' };
   }
 }

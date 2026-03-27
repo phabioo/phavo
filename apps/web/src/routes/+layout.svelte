@@ -19,6 +19,7 @@ import { getIsDrawerOpen, setDrawerOpen } from '$lib/stores/widgets.svelte';
 interface Props {
   data: {
     config?: DashboardConfig;
+    dashboardName?: string;
     setupComplete?: boolean;
     session?: object | null;
   };
@@ -58,9 +59,7 @@ const activeSidebarItem = $derived(
 );
 
 const headerTitle = $derived(
-  getConfig().tier === 'free'
-    ? en.dashboard.brandName
-    : (getConfig().dashboardName || en.dashboard.brandName),
+  data.dashboardName || getConfig().dashboardName || en.dashboard.brandName,
 );
 
 const headerBrandingLabel = $derived(

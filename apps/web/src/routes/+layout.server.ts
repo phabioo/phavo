@@ -12,7 +12,7 @@ const API_PREFIX = '/api';
 export const load = async ({ cookies, url }: ServerLoadEvent) => {
   // API routes never need session data — bypass all guards
   if (url.pathname.startsWith(API_PREFIX)) {
-    return { session: null, setupComplete: false };
+    return { session: null, setupComplete: false, dashboardName: 'My Dashboard' };
   }
 
   const onSetup = url.pathname.startsWith(SETUP_PATH);
@@ -58,7 +58,7 @@ export const load = async ({ cookies, url }: ServerLoadEvent) => {
   // ── 2. Resolve session ──────────────────────────────────────────────────
   let session: ReturnType<typeof getMockSession> | null = null;
   if (DEV_MOCK_AUTH_ENABLED) {
-    // Dev bypass: synthetic mock-auth session, no phavo.io needed
+    // Dev bypass: synthetic mock-auth session, no phavo.net needed
     session = getMockSession();
   } else {
     const sessionId = cookies.get('phavo_session');
@@ -99,5 +99,11 @@ export const load = async ({ cookies, url }: ServerLoadEvent) => {
     redirect(303, '/auth/login');
   }
 
-  return { session, setupComplete, devMode: DEV_MOCK_AUTH_ENABLED, config };
+  return {
+    session,
+    setupComplete,
+    devMode: DEV_MOCK_AUTH_ENABLED,
+    config,
+    dashboardName: config.dashboardName,
+  };
 };

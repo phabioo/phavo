@@ -1,7 +1,7 @@
 import type { Session } from '@phavo/types';
 
 /**
- * Set PHAVO_DEV_MOCK_AUTH=true in .env to bypass phavo.io validation in local
+ * Set PHAVO_DEV_MOCK_AUTH=true in .env to bypass phavo.net validation in local
  * development. A synthetic session is injected automatically.
  * The setup wizard still runs on first launch when setupComplete is false.
  */

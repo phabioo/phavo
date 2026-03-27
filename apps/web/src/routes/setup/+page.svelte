@@ -58,7 +58,7 @@ type PersistedFieldData = {
 
 // ── CONSTANTS ──────────────────────────────────────────────────────────────
 const SETUP_KEY = 'phavo_setup_state';
-const PHAVO_IO_URL = 'https://phavo.io';
+const PHAVO_IO_URL = 'https://phavo.net';
 const QUICK_STEPS: QuickStep[] = ['auth', 'location', 'done'];
 const FULL_STEPS: FullStep[] = [
   'tier', 'auth', 'name', 'location', 'tabs', 'widgets', 'assign', 'config', 'done',
@@ -692,7 +692,7 @@ onMount(() => {
 
   hydrated = true;
 
-  // Handle phavo.io OAuth callback return
+  // Handle phavo.net OAuth callback return
   const oauthStatus = params.get('oauth');
   if (oauthStatus) {
     void handleOauthReturn(oauthStatus, urlMode, params.get('message'));
@@ -764,7 +764,7 @@ onMount(() => {
           <div class="step-content">
             <button type="button" class="option-card" onclick={() => (quickAuthMethod = 'phavo-io')}>
               <h3>{en.setup.auth.phavoIo}</h3>
-              <p>Continue with phavo.io to create or validate your account.</p>
+              <p>Continue with phavo.net to create or validate your account.</p>
             </button>
             <button type="button" class="option-card" onclick={() => (quickAuthMethod = 'local')}>
               <h3>{en.setup.auth.localAccount}</h3>
@@ -775,7 +775,7 @@ onMount(() => {
         {:else if quickAuthMethod === 'phavo-io'}
           <div class="step-content">
             <p class="step-description">
-              You'll be redirected to phavo.io to authenticate, then returned here automatically.
+              You'll be redirected to phavo.net to authenticate, then returned here automatically.
             </p>
             {#if authError}<p class="form-error">{authError}</p>{/if}
             <div class="step-actions">
@@ -869,7 +869,7 @@ onMount(() => {
             onclick={() => { selectedTier = 'free'; nextFullStep(); }}
           >
             <h3>{en.setup.auth.phavoIo}</h3>
-            <p>Sign in with phavo.io. Free to start — Standard unlocks all widgets.</p>
+            <p>Sign in with phavo.net. Free to start — Standard unlocks all widgets.</p>
           </button>
           <button
             type="button"
@@ -890,7 +890,7 @@ onMount(() => {
         <div class="step-content">
           {#if selectedTier === 'free' || selectedTier === 'standard'}
             <p class="step-description">
-              You'll be redirected to phavo.io to authenticate, then returned here automatically.
+              You'll be redirected to phavo.net to authenticate, then returned here automatically.
             </p>
             {#if authError}<p class="form-error">{authError}</p>{/if}
             <div class="step-actions">

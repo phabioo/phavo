@@ -161,7 +161,7 @@
     }
 
     if (unwrapped instanceof z.ZodString) {
-      const isUrlField = unwrapped.safeParse('https://phavo.io').success;
+      const isUrlField = unwrapped.safeParse('https://phavo.net').success;
       const kind = meta.credential ? 'password' : isUrlField ? 'url' : 'text';
       return {
         key,

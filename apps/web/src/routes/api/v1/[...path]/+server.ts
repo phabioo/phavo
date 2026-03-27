@@ -668,7 +668,7 @@ app.post('/auth/login', async (c) => {
 
   if (body.authMode === 'phavo-io') {
     // ── phavo-io OAuth code exchange ──────────────────────────────────────────
-    const phavoIoUrl = process.env.PHAVO_IO_URL ?? 'https://phavo.io';
+    const phavoIoUrl = process.env.PHAVO_IO_URL ?? 'https://phavo.net';
 
     let accessToken: string;
     let userEmail: string;
@@ -698,10 +698,10 @@ app.post('/auth/login', async (c) => {
       userId = tokenData.user.id;
     } catch {
       recordLoginAttempt(ip, false);
-      return c.json(err('Failed to connect to phavo.io'), 503);
+      return c.json(err('Failed to connect to phavo.net'), 503);
     }
 
-    // Validate/determine tier — with grace period fallback if phavo.io is unreachable.
+    // Validate/determine tier — with grace period fallback if phavo.net is unreachable.
     try {
       const licRes = await fetch(`${phavoIoUrl}/api/license/validate`, {
         method: 'POST',
@@ -719,7 +719,7 @@ app.post('/auth/login', async (c) => {
         return c.json(err('License validation failed'), 403);
       }
     } catch {
-      // phavo.io unreachable — check if an existing session still has valid grace period.
+      // phavo.net unreachable — check if an existing session still has valid grace period.
       const existing = await db
         .select()
         .from(schema.sessions)
@@ -730,7 +730,7 @@ app.post('/auth/login', async (c) => {
         tier = ex.tier as 'free' | 'standard';
       } else {
         recordLoginAttempt(ip, false);
-        return c.json(err('phavo.io unreachable — grace period expired'), 401);
+        return c.json(err('phavo.net unreachable — grace period expired'), 401);
       }
     }
 
@@ -781,7 +781,7 @@ app.post('/auth/login', async (c) => {
 
     if (!activation.valid || !activation.activationJwt) {
       recordLoginAttempt(ip, false);
-      return c.json(err(activation.error ?? 'Failed to connect to phavo.io for activation'), 503);
+      return c.json(err(activation.error ?? 'Failed to connect to phavo.net for activation'), 503);
     }
 
     const activationJwt = activation.activationJwt;
@@ -1319,7 +1319,7 @@ app.post('/license/activate', requireSession(), async (c) => {
     const instanceIdentifier = readOrCreateInstanceIdentifier();
     const activation = await activateLocalLicense(requestBody.data.licenseKey, instanceIdentifier);
     if (!activation.valid || !activation.activationJwt) {
-      const status = activation.error === 'phavo.io unreachable' ? 503 : 400;
+      const status = activation.error === 'phavo.net unreachable' ? 503 : 400;
       return c.json(err(activation.error ?? 'License activation failed'), status);
     }
 
@@ -1375,7 +1375,7 @@ app.post('/license/deactivate', requireSession(), async (c) => {
       return c.json(err('No active local licence found'), 400);
     }
 
-    const phavoIoUrl = process.env.PHAVO_IO_URL ?? 'https://phavo.io';
+    const phavoIoUrl = process.env.PHAVO_IO_URL ?? 'https://phavo.net';
 
     let response: Response;
     try {
@@ -1389,7 +1389,7 @@ app.post('/license/deactivate', requireSession(), async (c) => {
         signal: AbortSignal.timeout(15_000),
       });
     } catch {
-      return c.json(err('phavo.io unreachable — internet connection required to deactivate'), 503);
+      return c.json(err('phavo.net unreachable — internet connection required to deactivate'), 503);
     }
 
     if (!response.ok) {

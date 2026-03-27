@@ -1,5 +1,5 @@
 // Better Auth configuration
-// Phase 1: local accounts + phavo.io OAuth
+// Phase 1: local accounts + phavo.net OAuth
 
 import type { Db } from '@phavo/db';
 
@@ -54,7 +54,7 @@ export function recordLoginAttempt(identifier: string, success: boolean): void {
 
 export function createAuth(_config: AuthConfig) {
   // Better Auth setup will be fully configured when dependencies are installed
-  // Phase 1: local email/password with Argon2id + phavo.io OAuth
+  // Phase 1: local email/password with Argon2id + phavo.net OAuth
   return {
     sessionMaxAge: _config.sessionMaxAge ?? 7 * 24 * 60 * 60, // 7 days
   };

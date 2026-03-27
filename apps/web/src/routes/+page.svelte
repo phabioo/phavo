@@ -123,6 +123,10 @@ function handleDrawerRemove(instanceId: string) {
   removeWidget(instanceId);
 }
 
+async function handleWidgetRemove(instanceId: string) {
+  await removeWidget(instanceId);
+}
+
 // ── Size change ──────────────────────────────────────────────────────
 function handleSizeChange(instanceId: string, newSize: WidgetSize) {
   updateInstance(instanceId, { size: newSize });
@@ -239,6 +243,10 @@ onMount(() => {
         draggable={true}
         onSizeChange={(s) => handleSizeChange(instance.id, s)}
         onSwapDrop={(draggedId) => handleSwapDrop(instance.id, draggedId)}
+        onRemove={handleWidgetRemove}
+        removeConfirmLabel={en.dashboard.removeConfirm}
+        removeCancelLabel={en.common.cancel}
+        removeActionLabel={en.dashboard.remove}
         sizeLabel={en.dashboard.sizeLabel}
       >
         {#if state === 'unconfigured'}
@@ -325,33 +333,44 @@ onMount(() => {
     upgradePrompt: en.upgrade.widgetLocked,
   }}
 >
-  {#snippet preview(widgetId: string)}
-    {@const data = getWidgetData(widgetId)}
-    {#if widgetId === 'cpu' && data}
-      <CpuWidget data={data as CpuMetrics} />
-    {:else if widgetId === 'memory' && data}
-      <MemoryWidget data={data as MemoryMetrics} />
-    {:else if widgetId === 'disk' && data}
-      <DiskWidget data={data as DiskMetrics[]} />
-    {:else if widgetId === 'network' && data}
-      <NetworkWidget data={data as NetworkMetrics} />
-    {:else if widgetId === 'temperature' && data}
-      <TemperatureWidget data={data as TemperatureMetrics} />
-    {:else if widgetId === 'uptime' && data}
-      <UptimeWidget data={data as UptimeMetrics} />
-    {:else if widgetId === 'weather' && data}
-      <WeatherWidget data={data as WeatherMetrics} />
-    {:else if widgetId === 'pihole' && data}
-      <PiholeWidget data={data as PiholeMetrics} />
-    {:else if widgetId === 'rss' && data}
-      <RssWidget data={data as RssFeedResult} />
-    {:else if widgetId === 'links' && data}
-      <LinksWidget data={data as { groups: { label: string; links: { title: string; url: string; icon?: string }[] }[] }} />
-    {:else}
-      <div class="preview-loading">
-        <span class="preview-loading-text">{getDef(widgetId)?.name ?? widgetId}</span>
-      </div>
-    {/if}
+  {#snippet preview(widgetId: string, data: unknown, loading: boolean, hasError: boolean)}
+    {@const def = getDef(widgetId)}
+    <WidgetCard
+      title={def?.name ?? widgetId}
+      size={def?.defaultSize?.w && def.defaultSize.w >= 6 ? 'L' : 'M'}
+      {loading}
+      error={null}
+    >
+      {#if hasError || !data}
+        <div class="preview-loading">
+          <span class="preview-loading-text">{def?.name ?? widgetId}</span>
+        </div>
+      {:else if widgetId === 'cpu'}
+        <CpuWidget data={data as CpuMetrics} />
+      {:else if widgetId === 'memory'}
+        <MemoryWidget data={data as MemoryMetrics} />
+      {:else if widgetId === 'disk'}
+        <DiskWidget data={data as DiskMetrics[]} />
+      {:else if widgetId === 'network'}
+        <NetworkWidget data={data as NetworkMetrics} />
+      {:else if widgetId === 'temperature'}
+        <TemperatureWidget data={data as TemperatureMetrics} />
+      {:else if widgetId === 'uptime'}
+        <UptimeWidget data={data as UptimeMetrics} />
+      {:else if widgetId === 'weather'}
+        <WeatherWidget data={data as WeatherMetrics} />
+      {:else if widgetId === 'pihole'}
+        <PiholeWidget data={data as PiholeMetrics} />
+      {:else if widgetId === 'rss'}
+        <RssWidget data={data as RssFeedResult} />
+      {:else if widgetId === 'links'}
+        <LinksWidget data={data as { groups: { label: string; links: { title: string; url: string; icon?: string }[] }[] }} />
+      {:else}
+        <div class="preview-loading">
+          <span class="preview-loading-text">{def?.name ?? widgetId}</span>
+        </div>
+      {/if}
+    </WidgetCard>
   {/snippet}
 </WidgetDrawer>
 
