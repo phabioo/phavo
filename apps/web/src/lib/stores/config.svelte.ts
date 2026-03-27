@@ -3,7 +3,6 @@ import type { DashboardConfig } from '@phavo/types';
 let config = $state<DashboardConfig>({
   setupComplete: false,
   dashboardName: 'My Dashboard',
-  tier: 'free',
   tabs: [],
   sessionTimeout: '7d',
   location: undefined,

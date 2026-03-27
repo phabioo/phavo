@@ -41,7 +41,6 @@ type UpdateInfo = {
 type ConfigResponse = {
   setupComplete: boolean;
   dashboardName: string;
-  tier: 'free' | 'standard' | 'local';
   tabs: Array<{ id: string; label: string; order: number }>;
   sessionTimeout: '1d' | '7d' | '30d' | 'never';
   location?: {

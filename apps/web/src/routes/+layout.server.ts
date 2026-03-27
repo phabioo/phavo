@@ -21,7 +21,6 @@ export const load = async ({ cookies, url }: ServerLoadEvent) => {
   let config: DashboardConfig = {
     setupComplete: false,
     dashboardName: 'My Dashboard',
-    tier: 'free',
     tabs: [],
     sessionTimeout: '7d',
   };
@@ -37,7 +36,6 @@ export const load = async ({ cookies, url }: ServerLoadEvent) => {
     config = {
       setupComplete,
       dashboardName: entries.dashboard_name ?? 'My Dashboard',
-      tier: (entries.tier as 'free' | 'standard' | 'local' | undefined) ?? 'free',
       tabs: [],
       sessionTimeout:
         (entries.session_timeout as '1d' | '7d' | '30d' | 'never' | undefined) ?? '7d',
@@ -64,22 +62,30 @@ export const load = async ({ cookies, url }: ServerLoadEvent) => {
     const sessionId = cookies.get('phavo_session');
     if (sessionId) {
       const rows = await db.select().from(schema.sessions).where(eq(schema.sessions.id, sessionId));
-      if (rows[0]) {
-        session = {
-          userId: rows[0].userId,
-          tier: rows[0].tier,
-          authMode: rows[0].authMode,
-          validatedAt: rows[0].validatedAt,
-          graceUntil: rows[0].graceUntil ?? undefined,
-        };
-      } else {
-        session = {
-          userId: sessionId,
-          tier: 'free' as const,
-          authMode: 'local' as const,
-          validatedAt: Date.now(),
-        };
+      const row = rows[0];
+      const now = Date.now();
+
+      if (
+        !row ||
+        row.expiresAt < now ||
+        (row.authMode === 'phavo-io' && row.graceUntil !== null && row.graceUntil < now)
+      ) {
+        if (row?.expiresAt && row.expiresAt < now) {
+          await db.delete(schema.sessions).where(eq(schema.sessions.id, sessionId));
+        }
+
+        cookies.delete('phavo_session', { path: '/' });
+        cookies.delete('phavo_csrf', { path: '/' });
+        redirect(303, SETUP_PATH);
       }
+
+      session = {
+        userId: row.userId,
+        tier: row.tier,
+        authMode: row.authMode,
+        validatedAt: row.validatedAt,
+        graceUntil: row.graceUntil ?? undefined,
+      };
     }
   }
 
@@ -90,7 +96,7 @@ export const load = async ({ cookies, url }: ServerLoadEvent) => {
   }
 
   // Setup already done: don't allow re-entering the wizard
-  if (setupComplete && onSetup) {
+  if (setupComplete && onSetup && session) {
     redirect(303, '/');
   }
 

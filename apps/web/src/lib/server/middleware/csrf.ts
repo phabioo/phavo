@@ -10,6 +10,7 @@
 // Public paths and safe-method requests (GET/HEAD/OPTIONS) are exempt.
 
 import { err } from '@phavo/types';
+import { env } from '@phavo/types/env';
 import type { MiddlewareHandler } from 'hono';
 import { DEV_MOCK_AUTH_ENABLED } from '$lib/server/mock-auth';
 import type { AppVariables } from './auth';
@@ -22,11 +23,15 @@ const PUBLIC_PATHS = new Set(['/api/v1/health', '/api/v1/auth/login', '/api/v1/a
 // Cached CSRF HMAC key (derived once from PHAVO_SECRET via HKDF).
 let _csrfKey: CryptoKey | null = null;
 
+if (env.nodeEnv === 'production' && !process.env.PHAVO_SECRET) {
+  console.error('[phavo] PHAVO_SECRET is required in production');
+  process.exit(1);
+}
+
 async function getCsrfKey(): Promise<CryptoKey> {
   if (_csrfKey) return _csrfKey;
-  const raw = new TextEncoder().encode(
-    process.env.PHAVO_SECRET ?? 'phavo-dev-secret-change-in-production',
-  );
+  const secret = process.env.PHAVO_SECRET ?? 'phavo-dev-secret-change-in-production';
+  const raw = new TextEncoder().encode(secret);
   const master = await crypto.subtle.importKey('raw', raw, 'HKDF', false, ['deriveKey']);
   _csrfKey = await crypto.subtle.deriveKey(
     {

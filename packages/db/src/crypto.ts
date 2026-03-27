@@ -5,11 +5,18 @@
 // Ciphertext format: base64( iv[12 bytes] + authTag[16 bytes] + ciphertext[n bytes] )
 // Note: SubtleCrypto.encrypt appends the authTag to the ciphertext automatically.
 
+import { env } from '@phavo/types/env';
+
 const ALGORITHM = 'AES-GCM';
 const IV_LENGTH = 12; // bytes
 const TAG_LENGTH = 128; // bits (= 16 bytes)
 
 let cachedKey: CryptoKey | null = null;
+
+if (env.nodeEnv === 'production' && !process.env.PHAVO_SECRET) {
+  console.error('[phavo] PHAVO_SECRET is required in production');
+  process.exit(1);
+}
 
 async function getKey(): Promise<CryptoKey> {
   if (cachedKey !== null) return cachedKey;

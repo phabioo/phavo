@@ -43,7 +43,7 @@ packages/agent/        @phavo/agent — metric functions (library, not a daemon)
 ### Tier enforcement
 - `requireTier()` middleware on **every** Standard/Local endpoint — no exceptions
 - `session.tier` always comes from the DB (`sessions` table), never from the cookie payload or any client header
-- No `tier` column in the `users` or `config` table — tier flows exclusively via phavo.io validation → session record → middleware
+- No `tier` column in the `users` or `config` table — tier flows exclusively via phavo.net validation → session record → middleware
 - Widget manifest: send `WidgetTeaserDefinition` entries for locked tiers — never expose `dataEndpoint`, `configSchema`, or `permissions` to unentitled tiers
 
 ### Credentials & security
@@ -59,14 +59,9 @@ packages/agent/        @phavo/agent — metric functions (library, not a daemon)
 - `installMethod` is read from the `config` table — never re-derived at runtime after first start
 - `GET /api/v1/health` must always be reachable (public, no auth) — the Tauri sidecar polls it on startup
 
-### Svelte 5 hydration rules (learned from production bugs)
-- Never read `page` from `$app/state` in `$state()` initializers — use `window.location` in `onMount` instead
-- Never put `$effect` at top-level of a component script — wrap in `$effect.root(() => { $effect(() => { ... }) })` inside `onMount`, return cleanup
-- Never use `replaceState` from `$app/navigation` in the setup page — use native `window.history.replaceState` instead
-
 ### TypeScript
 - `strict: true` — no `any`, no `as unknown as X` without a comment explaining why
-- Validate all external API responses (GitHub, phavo.io, Open-Meteo) with Zod before use
+- Validate all external API responses (GitHub, phavo.net, Open-Meteo) with Zod before use
 - Shared types come from `@phavo/types` — never duplicate them
 
 ### Design system
@@ -118,7 +113,7 @@ All endpoints under `/api/v1/*`. Tier mapping:
 - ✅ DB schema — all 7 tables, Drizzle migration `0001_spicy_clea.sql`
 - ✅ AES-256-GCM encryption (`packages/db/src/crypto.ts`) — HKDF-SHA256 key derivation
 - ✅ Platform abstraction (`packages/types/src/env.ts`, `apps/web/src/lib/server/paths.ts`)
-- ✅ Auth flows — full phavo.io OAuth + Local Argon2id paths; session creation with tier
+- ✅ Auth flows — full phavo.net OAuth + Local Argon2id paths; session creation with tier
 - ✅ Session validation middleware — standalone `authMiddleware`; expiry + grace period enforced
 - ✅ Tier enforcement middleware — `requireTier()` on all Standard endpoints; mock auth defaults to `'free'`
 - ✅ Widget registry + split manifest — `getManifest(tier)` returns 7 full + 3 teasers for Free; 10 full for Standard/Local
@@ -145,8 +140,8 @@ All endpoints under `/api/v1/*`. Tier mapping:
 - ✅ Widget drawer — locked teaser cards; category filter chips (All/System/Consumer/Integration/Utility)
 - ✅ Tab limit UI — Free tier shows upgrade prompt on second tab attempt
 - 🔄 Notification panel — exists + wired; working
-- ✅ Quick Setup Wizard — real auth wiring (phavo.io OAuth + Local), location, sessionStorage persistence
-- ✅ Full Setup Wizard — all steps wired: auth (phavo.io + local), location + weather preview, tab builder (Free-tier limit), widget select from manifest, widget-to-tab assignment, per-widget config (Pi-hole, RSS, Links), final save via existing endpoints
+- ✅ Quick Setup Wizard — real auth wiring (phavo.net OAuth + Local), location, sessionStorage persistence
+- ✅ Full Setup Wizard — all steps wired: auth (phavo.net + local), location + weather preview, tab builder (Free-tier limit), widget select from manifest, widget-to-tab assignment, per-widget config (Pi-hole, RSS, Links), final save via existing endpoints
 - ✅ Settings page — 7 tabs: general, account, security, about, widgets (master/detail), licence, import/export (placeholder)
 - ✅ Licence UI — Free/Standard/Local views; activate + deactivate wired to backend
 - ✅ Update panel — Settings → About; version, changelog, update command
@@ -171,7 +166,7 @@ All endpoints under `/api/v1/*`. Tier mapping:
 - ⬜ Tauri updater config + Ed25519 keypair
 - ⬜ CI matrix (macOS / Windows / Linux)
 - ⬜ Code signing (Apple Developer ID, Windows EV cert)
-- ⬜ phavo.io update endpoint
+- ⬜ phavo.net update endpoint
 
 ---
 
@@ -189,6 +184,8 @@ All endpoints under `/api/v1/*`. Tier mapping:
 - No `any`, no hardcoded colours, no credentials in the frontend
 - No `/data/` literals in server code — sanity check: `grep -r '"/data/' apps/web/src/lib/server/ packages/`
 
+### Testing environment
+Visual verification is done by the user manually in Safari or Chrome at http://localhost:3000. The agent must never attempt to open a browser, use `open` commands, or interact with any browser directly. After code changes, the agent starts or restarts the dev server and reports the URL — the user handles all browser testing.
 
 ### What you must never do
 - Implement tier logic on the client (always server-side)
@@ -249,6 +246,11 @@ const db = createClient({ url: 'file:/data/phavo.db' })
 - ~~Tab limit not enforced client-side~~ — upgrade prompt shown + server-side 403 enforced
 - ~~Locked widget cards layout broken~~ — flex layout fixed, no absolute positioning
 
+### Resolved — Security Hardening ✅
+- ~~`tier` in `DashboardConfig`~~ — removed; tier now only from session
+- ~~Layout fake session fallback~~ — cleared; invalid sessions now redirect to /setup
+- ~~CSRF fallback secret~~ — `PHAVO_SECRET` required in production, process exits if missing
+
 ### Active — pre-Session 6
 - **Import / Export UI** — placeholder tab exists; endpoints + real UI needed; Session 7
 - **svelte-check accessibility warnings** — 5 pre-existing warnings in shared UI components (Input, Select, Switch, TabBar, WidgetDrawer); address in dedicated UI polish session
@@ -264,5 +266,5 @@ const db = createClient({ url: 'file:/data/phavo.db' })
 
 ---
 
-*Phavo · phavo.io · github.com/phabioo/phavo*
-*CLAUDE.md v1.5 · PRD ref: v2.5 · Arch Spec ref: v1.7 · Roadmap: docs/phavo_roadmap_v2.html*
+*Phavo · phavo.net · github.com/phabioo/phavo*
+*CLAUDE.md v1.6 · PRD ref: v2.5 · Arch Spec ref: v1.7 · Contract: PHAVO_CONTRACT_v3.md · Roadmap: docs/phavo_roadmap_v2.html*

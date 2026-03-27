@@ -724,14 +724,6 @@ onMount(() => {
 
 <div class="setup-root">
 
-<button
-  type="button"
-  style="position:fixed;top:0;left:0;z-index:9999;background:red;color:white;font-size:24px;padding:20px;cursor:pointer;"
-  onclick={() => alert('SVELTE WORKS')}
->
-  TEST
-</button>
-
 <div class="setup-container">
   {#if mode === 'welcome'}
     <!-- ── WELCOME ────────────────────────────────────────────────────────── -->
@@ -770,6 +762,9 @@ onMount(() => {
               <h3>{en.setup.auth.localAccount}</h3>
               <p>Sign in with a local account stored only on this device.</p>
             </button>
+          </div>
+          <div class="step-actions">
+            <Button variant="ghost" onclick={backToWelcome}>{en.common.back}</Button>
           </div>
 
         {:else if quickAuthMethod === 'phavo-io'}

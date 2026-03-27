@@ -61,7 +61,6 @@ function parseConfigEntries(rows: Array<{ key: string; value: string }>) {
   return {
     setupComplete: entries.setup_complete === 'true',
     dashboardName: entries.dashboard_name ?? 'My Dashboard',
-    tier: (entries.tier as 'free' | 'standard' | 'local' | undefined) ?? 'free',
     tabs: [],
     sessionTimeout: (entries.session_timeout as '1d' | '7d' | '30d' | 'never' | undefined) ?? '7d',
     location:
@@ -556,7 +555,6 @@ app.get('/config', requireSession(), async (c) => {
       ok({
         setupComplete: false,
         dashboardName: 'My Dashboard',
-        tier: 'free',
         tabs: [],
         sessionTimeout: '7d',
       }),
@@ -570,7 +568,6 @@ app.post('/config', requireSession(), async (c) => {
     const body = (await c.req.json()) as {
       setupComplete?: boolean;
       dashboardName?: string;
-      tier?: string;
       sessionTimeout?: '1d' | '7d' | '30d' | 'never';
       location?: { name: string; latitude: number; longitude: number } | null;
     };
@@ -581,7 +578,6 @@ app.post('/config', requireSession(), async (c) => {
       upserts.push({ key: 'setup_complete', value: body.setupComplete ? 'true' : 'false' });
     if (body.dashboardName !== undefined)
       upserts.push({ key: 'dashboard_name', value: body.dashboardName.trim() || 'My Dashboard' });
-    if (body.tier) upserts.push({ key: 'tier', value: body.tier });
     if (body.sessionTimeout) upserts.push({ key: 'session_timeout', value: body.sessionTimeout });
     if (body.location === null) {
       deletes.push('location_name', 'location_latitude', 'location_longitude');
@@ -1429,14 +1425,14 @@ let _notifiedUpdateVersion = '';
 app.get('/about', requireSession(), async (c) => {
   try {
     await dbReady;
-    const configRows = await db.query.config.findMany();
-    const config = parseConfigEntries(configRows);
+    const session = c.get('session');
+    if (!session) return c.json(err('Unauthorized'), 401);
     const licenseRows = await db.select().from(schema.licenseActivation);
     const latestLicense = licenseRows[licenseRows.length - 1];
     return c.json(
       ok({
         version: PHAVO_VERSION,
-        tier: config.tier,
+        tier: session.tier,
         licenseKeyMasked: maskLicenseKey(latestLicense?.licenseKey ?? null),
       }),
     );

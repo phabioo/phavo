@@ -17,7 +17,7 @@ import {
 } from '@phavo/types';
 import { Button, WidgetCard, TabBar, WidgetDrawer } from '@phavo/ui';
 import en from '$lib/i18n/en.json';
-import { getConfig } from '$lib/stores/config.svelte';
+import { getSession } from '$lib/stores/session.svelte';
 import { relativeTime } from '$lib/utils/time';
 import {
   getTabs,
@@ -69,8 +69,8 @@ function handleSelectTab(id: string) {
   setActiveTab(id);
 }
 
-const configTier = $derived(getConfig().tier);
-const freeTabLimitReached = $derived(configTier === 'free' && getTabs().length >= 1);
+const sessionTier = $derived(getSession()?.tier ?? 'free');
+const freeTabLimitReached = $derived(sessionTier === 'free' && getTabs().length >= 1);
 
 function showUpgradePrompt(message: string) {
   upgradeBannerMessage = message;

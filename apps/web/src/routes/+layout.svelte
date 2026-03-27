@@ -3,9 +3,10 @@ import '@phavo/ui/src/theme.css';
 import { onMount, type Snippet } from 'svelte';
 import { goto } from '$app/navigation';
 import { icons, Sidebar, Header, NotificationPanel } from '@phavo/ui';
-import type { DashboardConfig, Notification } from '@phavo/types';
+import type { DashboardConfig, Notification, Session } from '@phavo/types';
 import en from '$lib/i18n/en.json';
 import { getConfig, setConfig } from '$lib/stores/config.svelte';
+import { getSession, setSession } from '$lib/stores/session.svelte';
 import {
   getNotifications,
   getUnreadCount,
@@ -21,7 +22,7 @@ interface Props {
     config?: DashboardConfig;
     dashboardName?: string;
     setupComplete?: boolean;
-    session?: object | null;
+    session?: Session | null;
   };
   children: Snippet;
 }
@@ -63,7 +64,7 @@ const headerTitle = $derived(
 );
 
 const headerBrandingLabel = $derived(
-  getConfig().tier === 'free' ? en.dashboard.poweredBy : undefined,
+  getSession()?.tier === 'free' ? en.dashboard.poweredBy : undefined,
 );
 
 function navigate(id: string) {
@@ -97,6 +98,10 @@ onMount(() => {
       if (data.config) {
         setConfig(data.config);
       }
+    });
+
+    $effect(() => {
+      setSession(data.session ?? null);
     });
 
     $effect(() => {
