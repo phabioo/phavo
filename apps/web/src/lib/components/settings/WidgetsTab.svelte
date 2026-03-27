@@ -9,7 +9,10 @@
     WidgetCard,
   } from '@phavo/ui';
   import {
+    isWidgetDefinition,
+    z,
     type WidgetCategory,
+    type WidgetDefinition,
     type WidgetInstance,
   } from '@phavo/types';
   import type {
@@ -23,10 +26,6 @@
     UptimeMetrics,
     WeatherMetrics,
   } from '@phavo/agent';
-  import {
-    registry,
-    type RegisteredWidgetDefinition,
-  } from '$lib/server/widget-registry';
   import CpuWidget from '$lib/widgets/CpuWidget.svelte';
   import DiskWidget from '$lib/widgets/DiskWidget.svelte';
   import LinksWidget from '$lib/widgets/LinksWidget.svelte';
@@ -48,7 +47,7 @@
   };
   type WidgetSummary = {
     id: string;
-    def: RegisteredWidgetDefinition;
+    def: WidgetDefinition;
     instances: WidgetInstance[];
     status: WidgetStatus;
     isPlugin: boolean;
@@ -64,6 +63,7 @@
 
   let loading = $state(true);
   let loadError = $state('');
+  let widgetDefs = $state<WidgetDefinition[]>([]);
   let search = $state('');
   let categoryFilter = $state<CategoryFilter>('all');
   let selectedId = $state<string | null>(null);
@@ -81,15 +81,23 @@
   );
   const isMobile = $derived(typeof window !== 'undefined' ? window.innerWidth < 640 : false);
 
-  $effect(() => {
-    if (!selectedWidget) return;
-    selectedId = selectedWidget.id;
+  onMount(() => {
+    $effect.root(() => {
+      $effect(() => {
+        if (!selectedWidget) return;
+        selectedId = selectedWidget.id;
+      });
+    });
   });
 
-  $effect(() => {
-    if (!selectedWidget) return;
-    updateHash(selectedWidget.id);
-    void loadPreview(selectedWidget.def);
+  onMount(() => {
+    $effect.root(() => {
+      $effect(() => {
+        if (!selectedWidget) return;
+        updateHash(selectedWidget.id);
+        void loadPreview(selectedWidget.def);
+      });
+    });
   });
 
   onMount(() => {
@@ -97,12 +105,35 @@
     void loadWidgets();
   });
 
+  /**
+   * configSchema is typed as unknown in the client-side WidgetDefinition because
+   * the API manifest strips the actual Zod object. The `{#if configSchema}` guard
+   * ensures this is only called when truthy — in practice it never is (API omits it).
+   */
+  function asZodSchema(v: unknown): z.ZodSchema {
+    return v as z.ZodSchema;
+  }
+
   async function loadWidgets(): Promise<void> {
     loading = true;
     loadError = '';
 
     try {
-      const tabsResponse = await fetch('/api/v1/tabs');
+      const [defsResponse, tabsResponse] = await Promise.all([
+        fetch('/api/v1/widgets'),
+        fetch('/api/v1/tabs'),
+      ]);
+
+      const defsPayload = (await defsResponse.json()) as {
+        ok: boolean;
+        data?: Array<unknown>;
+      };
+      if (defsPayload.ok && Array.isArray(defsPayload.data)) {
+        widgetDefs = defsPayload.data.filter(
+          (entry): entry is WidgetDefinition => isWidgetDefinition(entry as never),
+        );
+      }
+
       const tabsPayload = (await tabsResponse.json()) as {
         ok: boolean;
         data?: Array<{ id: string }>;
@@ -153,7 +184,7 @@
     const summaries: WidgetSummary[] = [];
 
     for (const [widgetId, widgetInstances] of grouped.entries()) {
-      const def = registry.getById(widgetId);
+      const def = widgetDefs.find((d) => d.id === widgetId);
       if (!def) continue;
 
       const status: WidgetStatus = widgetInstances.some((instance) => instance.configured === false)
@@ -165,7 +196,7 @@
         def,
         instances: widgetInstances,
         status,
-        isPlugin: def.isPlugin === true,
+        isPlugin: false,
       });
     }
 
@@ -209,7 +240,7 @@
     history.replaceState(history.state, '', `${window.location.pathname}${nextHash}`);
   }
 
-  async function loadPreview(def: RegisteredWidgetDefinition | null): Promise<void> {
+  async function loadPreview(def: WidgetDefinition | null): Promise<void> {
     if (!def) {
       previewData = null;
       previewError = '';
@@ -412,7 +443,7 @@
 
         {#if widget.def.configSchema}
           <SchemaRenderer
-            schema={widget.def.configSchema}
+            schema={asZodSchema(widget.def.configSchema)}
             instanceId={widget.instances[0]?.id ?? ''}
             currentConfig={getCurrentConfig(widget)}
             onSaved={handleSaved}

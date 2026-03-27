@@ -7,6 +7,7 @@
     z,
     type SchemaMeta,
   } from '@phavo/types';
+  import { onMount } from 'svelte';
   import Button from './Button.svelte';
   import Input from './Input.svelte';
   import Select from './Select.svelte';
@@ -51,15 +52,19 @@
   const fieldDescriptors = $derived(buildObjectDescriptors(schema));
 
   let initializedFor = '';
-  $effect(() => {
-    const signature = `${instanceId}:${JSON.stringify(currentConfig ?? {})}`;
-    if (initializedFor === signature) return;
-    initializedFor = signature;
-    formValues = initialiseObjectValues(fieldDescriptors, currentConfig ?? {});
-    validationErrors = {};
-    testStatuses = {};
-    saveError = '';
-    saveSuccess = false;
+  onMount(() => {
+    return $effect.root(() => {
+      $effect(() => {
+        const signature = `${instanceId}:${JSON.stringify(currentConfig ?? {})}`;
+        if (initializedFor === signature) return;
+        initializedFor = signature;
+        formValues = initialiseObjectValues(fieldDescriptors, currentConfig ?? {});
+        validationErrors = {};
+        testStatuses = {};
+        saveError = '';
+        saveSuccess = false;
+      });
+    });
   });
 
   function unwrapSchema(schemaValue: z.ZodTypeAny): { schema: z.ZodTypeAny; required: boolean } {

@@ -59,6 +59,11 @@ packages/agent/        @phavo/agent — metric functions (library, not a daemon)
 - `installMethod` is read from the `config` table — never re-derived at runtime after first start
 - `GET /api/v1/health` must always be reachable (public, no auth) — the Tauri sidecar polls it on startup
 
+### Svelte 5 hydration rules (learned from production bugs)
+- Never read `page` from `$app/state` in `$state()` initializers — use `window.location` in `onMount` instead
+- Never put `$effect` at top-level of a component script — wrap in `$effect.root(() => { $effect(() => { ... }) })` inside `onMount`, return cleanup
+- Never use `replaceState` from `$app/navigation` in the setup page — use native `window.history.replaceState` instead
+
 ### TypeScript
 - `strict: true` — no `any`, no `as unknown as X` without a comment explaining why
 - Validate all external API responses (GitHub, phavo.io, Open-Meteo) with Zod before use
@@ -184,14 +189,6 @@ All endpoints under `/api/v1/*`. Tier mapping:
 - No `any`, no hardcoded colours, no credentials in the frontend
 - No `/data/` literals in server code — sanity check: `grep -r '"/data/' apps/web/src/lib/server/ packages/`
 
-### Testing environment — VS Code only
-**Never open a browser outside of VS Code to test.** All visual verification must happen through the VS Code Simple Browser or the built-in preview panel:
-- Use the VS Code command **"Simple Browser: Show"** with `http://localhost:3000`
-- Or use the Ports panel in VS Code to open the forwarded port
-- Do NOT launch Safari, Chrome, or any external browser
-- Do NOT use `open http://localhost:3000` shell commands
-- Screenshots for reporting must come from VS Code's built-in tools only
-If visual verification is not possible within VS Code, describe the expected result in text instead of opening an external browser.
 
 ### What you must never do
 - Implement tier logic on the client (always server-side)
@@ -224,6 +221,7 @@ If visual verification is not possible within VS Code, describe the expected res
 1. Update schema in `packages/db/src/schema.ts`
 2. Run `bun drizzle-kit generate`
 3. Commit the migration file — never edit the DB file manually
+4. `0001_spicy_clea.sql` is the canonical full schema — `0000_initial.sql` is now a SELECT 1 no-op
 
 ### Reference a file path correctly
 ```typescript
@@ -256,7 +254,7 @@ const db = createClient({ url: 'file:/data/phavo.db' })
 - **svelte-check accessibility warnings** — 5 pre-existing warnings in shared UI components (Input, Select, Switch, TabBar, WidgetDrawer); address in dedicated UI polish session
 - **Plugin discovery notification missing** — server start doesn't notify on new plugins; Phase 1.x
 - **8 svelte-check warnings** in `packages/ui` — pre-existing, address in dedicated UI session
-- **`bun drizzle-kit migrate` broken** — must be fixed before Docker production deploy; Session 9
+- ~~`bun drizzle-kit migrate` broken~~ — ✅ Fixed: libsql client bumped to ^0.14.0, duplicate migration SQL removed, db.ts now exits on migration failure, hooks.server.ts awaits migration before handling requests, stale bun cache cleared
 
 ### General
 - **Open-Meteo geocoding rate limits** in Setup Wizard — debounce required (500ms recommended)

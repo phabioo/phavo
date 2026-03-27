@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
   import type { NetworkMetrics } from '@phavo/agent';
   import { formatBytes, formatSpeed } from '$lib/utils/format';
 
@@ -10,9 +11,14 @@
 
   // Track the max seen speed for a mini spark-like visual proportion
   let maxSpeed = $state(1);
-  $effect(() => {
-    const peak = Math.max(data.uploadSpeed, data.downloadSpeed, 1);
-    if (peak > maxSpeed) maxSpeed = peak;
+  
+  onMount(() => {
+    $effect.root(() => {
+      $effect(() => {
+        const peak = Math.max(data.uploadSpeed, data.downloadSpeed, 1);
+        if (peak > maxSpeed) maxSpeed = peak;
+      });
+    });
   });
 
   const downPct = $derived(Math.min(100, (data.downloadSpeed / maxSpeed) * 100));

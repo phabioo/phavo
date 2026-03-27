@@ -1,4 +1,5 @@
 <script lang="ts">
+import { onMount } from 'svelte';
 import type { Snippet } from 'svelte';
 import * as icons from '../icons/icons';
 
@@ -26,11 +27,15 @@ let {
 
 let time = $state(new Date());
 
-$effect(() => {
-  const interval = setInterval(() => {
-    time = new Date();
-  }, 1000);
-  return () => clearInterval(interval);
+onMount(() => {
+  return $effect.root(() => {
+    $effect(() => {
+      const interval = setInterval(() => {
+        time = new Date();
+      }, 1000);
+      return () => clearInterval(interval);
+    });
+  });
 });
 
 const formattedTime = $derived(

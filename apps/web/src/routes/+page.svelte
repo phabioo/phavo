@@ -1,4 +1,5 @@
 <script lang="ts">
+import { onMount } from 'svelte';
 import {
   isWidgetDefinition,
   type WidgetDefinition,
@@ -173,9 +174,13 @@ const sortedInstances = $derived(
 );
 
 // ── Init and polling ─────────────────────────────────────────────────
-$effect(() => {
-  loadWidgetManifest();
-  loadTabs();
+onMount(() => {
+  $effect.root(() => {
+    $effect(() => {
+      loadWidgetManifest();
+      loadTabs();
+    });
+  });
 });
 </script>
 

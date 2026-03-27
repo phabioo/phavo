@@ -167,20 +167,21 @@ onMount(() => {
   };
 });
 
-$effect(() => {
-  if (typeof window === 'undefined') return;
-  const nextHash = `#${activeTab}`;
-  if (window.location.hash === nextHash || window.location.hash.startsWith(`${nextHash}/`)) {
-    if (activeTab === 'about' && !updateInfo && !checkingUpdates) {
-      void checkForUpdates();
-    }
-    return;
-  }
+onMount(() => {
+  $effect.root(() => {
+    $effect(() => {
+      if (typeof window === 'undefined') return;
+      const nextHash = `#${activeTab}`;
+      if (window.location.hash === nextHash || window.location.hash.startsWith(`${nextHash}/`)) {
+        if (activeTab === 'about' && !updateInfo && !checkingUpdates) {
+          void checkForUpdates();
+        }
+        return;
+      }
 
-  history.replaceState(history.state, '', `${window.location.pathname}${nextHash}`);
-  if (activeTab === 'about' && !updateInfo && !checkingUpdates) {
-    void checkForUpdates();
-  }
+      history.replaceState(history.state, '', `${window.location.pathname}${nextHash}`);
+    });
+  });
 });
 
 function syncTabFromHash(): void {

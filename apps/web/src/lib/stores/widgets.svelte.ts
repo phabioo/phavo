@@ -516,25 +516,25 @@ export async function swapWidgets(draggedId: string, targetId: string): Promise<
   }
 }
 
-$effect(() => {
-  reconcileWidgetRuntime();
+$effect.root(() => {
+  $effect(() => {
+    const activeDefinitions = widgetManifest.filter(
+      (entry): entry is WidgetDefinition =>
+        isWidgetDefinition(entry) && getPollableInstances(entry.id).length > 0,
+    );
 
-  const activeDefinitions = widgetManifest.filter(
-    (entry): entry is WidgetDefinition =>
-      isWidgetDefinition(entry) && getPollableInstances(entry.id).length > 0,
-  );
+    if (activeDefinitions.length === 0) return;
 
-  if (activeDefinitions.length === 0) return;
+    for (const def of activeDefinitions) {
+      void fetchWidgetData(def, false);
+    }
 
-  for (const def of activeDefinitions) {
-    void fetchWidgetData(def, false);
-  }
+    const intervals = activeDefinitions
+      .filter((def) => def.refreshInterval > 0)
+      .map((def) => setInterval(() => void fetchWidgetData(def, true), def.refreshInterval));
 
-  const intervals = activeDefinitions
-    .filter((def) => def.refreshInterval > 0)
-    .map((def) => setInterval(() => void fetchWidgetData(def, true), def.refreshInterval));
-
-  return () => {
-    for (const interval of intervals) clearInterval(interval);
-  };
+    return () => {
+      for (const interval of intervals) clearInterval(interval);
+    };
+  });
 });

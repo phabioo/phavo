@@ -8,6 +8,7 @@
     type WidgetManifestEntry,
     type WidgetSize,
   } from '@phavo/types';
+  import { onMount } from 'svelte';
   import type { Snippet } from 'svelte';
   import * as icons from '../icons/icons';
 
@@ -70,10 +71,14 @@
   let resizeStartHeight = 60;
 
   // Reset height each time the drawer is closed so next open starts at 60vh
-  $effect(() => {
-    if (!open) {
-      drawerHeight = 60;
-    }
+  onMount(() => {
+    return $effect.root(() => {
+      $effect(() => {
+        if (!open) {
+          drawerHeight = 60;
+        }
+      });
+    });
   });
 
   const filters: { key: Category; label: () => string }[] = [

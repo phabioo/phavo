@@ -1,10 +1,9 @@
 <script lang="ts">
 import '@phavo/ui/src/theme.css';
-import type { Snippet } from 'svelte';
-import { page } from '$app/state';
+import { onMount, type Snippet } from 'svelte';
 import { goto } from '$app/navigation';
 import { icons, Sidebar, Header, NotificationPanel } from '@phavo/ui';
-import type { Notification } from '@phavo/types';
+import type { DashboardConfig, Notification } from '@phavo/types';
 import en from '$lib/i18n/en.json';
 import { getConfig, setConfig } from '$lib/stores/config.svelte';
 import {
@@ -18,15 +17,21 @@ import {
 import { getIsDrawerOpen, setDrawerOpen } from '$lib/stores/widgets.svelte';
 
 interface Props {
+  data: {
+    config?: DashboardConfig;
+    setupComplete?: boolean;
+    session?: object | null;
+  };
   children: Snippet;
 }
 
-let { children }: Props = $props();
+let { data, children }: Props = $props();
 
 let sidebarCollapsed = $state(false);
 let panelOpen = $state(false);
 let updateAvailable = $state(false);
 let latestUpdateVersion = $state('');
+let currentPathname = $state('/');
 
 const sidebarItems = [
   { id: 'home', label: 'Dashboard', icon: icons.cpu() },
@@ -41,8 +46,7 @@ const sidebarBottomItems = [
  * /setup and /auth are full-screen standalone pages.
  */
 const isDashboard = $derived(
-  !page.url.pathname.startsWith('/setup') &&
-  !page.url.pathname.startsWith('/auth'),
+  Boolean(data.setupComplete && data.session),
 );
 
 /**
@@ -50,7 +54,7 @@ const isDashboard = $derived(
  * '/' → 'home', '/settings' → 'settings', etc.
  */
 const activeSidebarItem = $derived(
-  page.url.pathname === '/' ? 'home' : (page.url.pathname.replace(/^\//, '').split('/')[0] || 'home'),
+  currentPathname === '/' ? 'home' : (currentPathname.replace(/^\//, '').split('/')[0] || 'home'),
 );
 
 const headerTitle = $derived(
@@ -67,11 +71,56 @@ function navigate(id: string) {
   goto(id === 'home' ? '/' : `/${id}`);
 }
 
-/** Poll server for notifications every 60 s while the dashboard is active. */
-$effect(() => {
-  if (page.data.config) {
-    setConfig(page.data.config);
-  }
+onMount(() => {
+  const syncPathname = () => {
+    currentPathname = window.location.pathname;
+  };
+
+  syncPathname();
+
+  const originalPushState = window.history.pushState.bind(window.history);
+  const originalReplaceState = window.history.replaceState.bind(window.history);
+
+  window.history.pushState = ((...args) => {
+    originalPushState(...args);
+    syncPathname();
+  }) as History['pushState'];
+
+  window.history.replaceState = ((...args) => {
+    originalReplaceState(...args);
+    syncPathname();
+  }) as History['replaceState'];
+
+  window.addEventListener('popstate', syncPathname);
+
+  const cleanupEffects = $effect.root(() => {
+    $effect(() => {
+      if (data.config) {
+        setConfig(data.config);
+      }
+    });
+
+    $effect(() => {
+      if (!isDashboard) return;
+      void checkForUpdate();
+      const updateInterval = setInterval(checkForUpdate, 60 * 60 * 1000);
+      return () => clearInterval(updateInterval);
+    });
+
+    $effect(() => {
+      if (!isDashboard) return;
+      syncFromServer();
+      const interval = setInterval(syncFromServer, 60_000);
+      return () => clearInterval(interval);
+    });
+  });
+
+  return () => {
+    window.history.pushState = originalPushState;
+    window.history.replaceState = originalReplaceState;
+    window.removeEventListener('popstate', syncPathname);
+    cleanupEffects();
+  };
 });
 
 async function checkForUpdate() {
@@ -87,20 +136,6 @@ async function checkForUpdate() {
     }
   } catch { /* ignore, runs silently in the background */ }
 }
-
-$effect(() => {
-  if (!isDashboard) return;
-  void checkForUpdate();
-  const updateInterval = setInterval(checkForUpdate, 60 * 60 * 1000);
-  return () => clearInterval(updateInterval);
-});
-
-$effect(() => {
-  if (!isDashboard) return;
-  syncFromServer();
-  const interval = setInterval(syncFromServer, 60_000);
-  return () => clearInterval(interval);
-});
 
 function handleNotificationClick(n: Notification) {
   markRead(n.id);
