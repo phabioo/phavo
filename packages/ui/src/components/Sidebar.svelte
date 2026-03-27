@@ -89,6 +89,24 @@ let {
   {/if}
 </aside>
 
+<!-- Mobile bottom navigation bar (visible only <640px) -->
+<nav class="bottom-nav" aria-label="Main navigation">
+  {#each [...items, ...bottomItems].slice(0, 4) as item}
+    <button
+      class="bottom-nav-item"
+      class:bottom-nav-active={activeItem === item.id}
+      onclick={() => onnavigate?.(item.id)}
+      type="button"
+      aria-label={item.label}
+    >
+      {#if item.icon}
+        <span class="bottom-nav-icon">{@html item.icon}</span>
+      {/if}
+      <span class="bottom-nav-label">{item.label}</span>
+    </button>
+  {/each}
+</nav>
+
 <style>
   .sidebar {
     position: fixed;
@@ -205,5 +223,111 @@ let {
   .sidebar-footer {
     padding: var(--space-4);
     border-top: 1px solid var(--color-border-subtle);
+  }
+
+  /* ── TABLET (640px–1023px): icon-only rail, no toggle ─────────────────── */
+  @media (min-width: 640px) and (max-width: 1023px) {
+    .sidebar {
+      width: var(--sidebar-collapsed-width);
+    }
+
+    .sidebar-logo {
+      display: none;
+    }
+
+    .sidebar-toggle {
+      display: none;
+    }
+
+    .sidebar-header {
+      justify-content: center;
+      padding: var(--space-4) var(--space-2);
+    }
+
+    .nav-label {
+      display: none;
+    }
+
+    .nav-item {
+      justify-content: center;
+      padding: var(--space-2);
+      min-height: 44px;
+    }
+  }
+
+  /* ── MOBILE (<640px): hide sidebar, show bottom nav ───────────────────── */
+  @media (max-width: 639px) {
+    .sidebar {
+      display: none;
+    }
+  }
+
+  /* ── BOTTOM NAV (mobile only) ─────────────────────────────────────────── */
+  .bottom-nav {
+    display: none; /* hidden on tablet and desktop */
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: var(--color-bg-surface);
+    border-top: 1px solid var(--color-border-subtle);
+    z-index: 100;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .bottom-nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    flex: 1;
+    min-height: 56px;
+    padding: var(--space-1) var(--space-2);
+    background: none;
+    border: none;
+    color: var(--color-text-secondary);
+    font-family: var(--font-ui);
+    font-size: 10px;
+    cursor: pointer;
+    transition: color 0.15s;
+  }
+
+  .bottom-nav-item:hover {
+    color: var(--color-text-primary);
+  }
+
+  .bottom-nav-active {
+    color: var(--color-accent-text);
+  }
+
+  .bottom-nav-icon {
+    display: flex;
+    align-items: center;
+    width: 20px;
+    height: 20px;
+  }
+
+  .bottom-nav-label {
+    white-space: nowrap;
+  }
+
+  @media (max-width: 639px) {
+    .bottom-nav {
+      display: flex;
+    }
+  }
+
+  /* ── TOUCH TARGETS (all screen sizes) ────────────────────────────────── */
+  .nav-item {
+    min-height: 44px;
+  }
+
+  .sidebar-toggle {
+    min-height: 44px;
+    min-width: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 </style>

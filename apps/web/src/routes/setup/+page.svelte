@@ -13,6 +13,14 @@ import { onMount } from 'svelte';
 import { goto } from '$app/navigation';
 import en from '$lib/i18n/en.json';
 
+interface Props {
+  data: {
+    devMode?: boolean;
+  };
+}
+
+let { data }: Props = $props();
+
 // ── TYPES ──────────────────────────────────────────────────────────────────
 type SetupMode = 'welcome' | 'quick' | 'full';
 type QuickStep = 'auth' | 'location' | 'done';
@@ -243,8 +251,36 @@ function encodeOauthState(nextMode: 'quick' | 'full'): string {
   return btoa(JSON.stringify({ source: 'setup', mode: nextMode }));
 }
 
-function startPhavoOauth(nextMode: 'quick' | 'full') {
+async function startPhavoOauth(nextMode: 'quick' | 'full') {
   authError = '';
+
+  if (data.devMode) {
+    authLoading = true;
+    try {
+      const resp = await apiRequest<LoginSuccess>('/api/v1/auth/login', {
+        method: 'POST',
+        body: { authMode: 'phavo-io', code: 'dev-mock' },
+      });
+      if (!resp.ok) {
+        authError = resp.error;
+        return;
+      }
+      const ok = await syncSessionContext();
+      if (!ok) return;
+      if (nextMode === 'quick') {
+        quickStep = 'location';
+        return;
+      }
+      fullStep = 'name';
+      return;
+    } catch {
+      authError = en.errors.networkError;
+      return;
+    } finally {
+      authLoading = false;
+    }
+  }
+
   const redirectUri = `${window.location.origin}/auth/callback`;
   const authorizeUrl = new URL(`${PHAVO_IO_URL}/oauth/authorize`);
   authorizeUrl.searchParams.set('response_type', 'code');
@@ -1480,16 +1516,57 @@ onMount(() => {
   }
 
   /* ── RESPONSIVE ───────────────────────────────────────────────────────── */
-  @media (max-width: 640px) {
+  @media (max-width: 639px) {
+    /* Full-screen: no centering, fill viewport */
+    .setup-container {
+      min-height: 100dvh;
+      align-items: stretch;
+      justify-content: flex-start;
+      padding: var(--space-4) var(--space-4) 0;
+    }
+
+    .setup-welcome {
+      padding-bottom: var(--space-6);
+    }
+
+    .setup-wizard,
+    .setup-wizard.wide {
+      width: 100%;
+      padding-bottom: calc(80px + env(safe-area-inset-bottom));
+    }
+
+    /* Welcome option cards and tier grid: single column */
     .setup-options,
     .tier-grid,
     .widget-grid {
       grid-template-columns: 1fr;
     }
 
+    /* Sticky footer for step navigation buttons */
+    .step-actions {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      margin: 0;
+      padding: var(--space-3) var(--space-4);
+      padding-bottom: calc(var(--space-3) + env(safe-area-inset-bottom));
+      background: var(--color-bg-base);
+      border-top: 1px solid var(--color-border-subtle);
+      justify-content: flex-end;
+      gap: var(--space-2);
+      z-index: 50;
+    }
+
+    /* Touch-friendly assign and config rows */
     .assign-row,
     .row-field {
       grid-template-columns: 1fr;
+    }
+
+    /* Touch targets */
+    .option-card {
+      min-height: 44px;
     }
   }
 

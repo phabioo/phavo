@@ -244,9 +244,20 @@ function handleNotificationClick(n: Notification) {
     opacity: 0.8;
   }
 
-  @media (max-width: 768px) {
-    .main-content {
+  /* ── TABLET (640px–1023px): fixed icon-only rail, no collapse toggle ── */
+  @media (min-width: 640px) and (max-width: 1023px) {
+    .main-content,
+    .main-content.sidebar-collapsed {
+      margin-left: var(--sidebar-collapsed-width);
+    }
+  }
+
+  /* ── MOBILE (<640px): bottom nav, no left margin ─────────────────────── */
+  @media (max-width: 639px) {
+    .main-content,
+    .main-content.sidebar-collapsed {
       margin-left: 0;
+      padding-bottom: calc(56px + env(safe-area-inset-bottom));
     }
   }
 </style>

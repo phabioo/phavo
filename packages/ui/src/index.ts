@@ -21,4 +21,4 @@ export { default as WidgetCard } from './components/WidgetCard.svelte';
 export { default as WidgetDrawer } from './components/WidgetDrawer.svelte';
 
 // Icons
-export * as icons from './icons/icons';
+export * as icons from './icons/icons.js';

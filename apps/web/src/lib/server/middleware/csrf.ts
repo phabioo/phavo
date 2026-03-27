@@ -13,7 +13,7 @@ import { err } from '@phavo/types';
 import { env } from '@phavo/types/env';
 import type { MiddlewareHandler } from 'hono';
 import { DEV_MOCK_AUTH_ENABLED } from '$lib/server/mock-auth';
-import type { AppVariables } from './auth';
+import type { AppVariables } from './auth.js';
 
 const CSRF_EXEMPT_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 

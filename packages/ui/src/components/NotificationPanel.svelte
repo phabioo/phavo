@@ -340,4 +340,59 @@
     color: var(--color-text-muted);
     margin-top: 2px;
   }
+
+  /* ── MOBILE (<640px): right drawer → bottom sheet ────────────────────── */
+  @media (max-width: 639px) {
+    .notif-panel {
+      top: auto;
+      bottom: calc(56px + env(safe-area-inset-bottom)); /* above bottom nav */
+      right: 0;
+      left: 0;
+      width: 100%;
+      height: auto;
+      max-height: 85dvh;
+      border-left: none;
+      border-top: 1px solid var(--color-border);
+      border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+      transform: translateY(calc(100% + 56px + env(safe-area-inset-bottom)));
+    }
+
+    .notif-panel-open {
+      transform: translateY(0);
+    }
+
+    /* Touch targets for mobile */
+    .notif-close-btn {
+      min-height: 44px;
+      min-width: 44px;
+      width: 44px;
+      height: 44px;
+    }
+
+    .notif-action-btn {
+      min-height: 44px;
+      padding: 0 var(--space-3);
+    }
+  }
+
+  /* ── DESKTOP / PC: force right drawer on hover+pointer devices ───────── */
+  @media (min-width: 640px), (hover: hover) and (pointer: fine) {
+    .notif-panel {
+      top: 0;
+      right: 0;
+      bottom: auto;
+      left: auto;
+      width: 380px;
+      height: 100dvh;
+      max-height: none;
+      border-top: none;
+      border-left: 1px solid var(--color-border);
+      border-radius: 0;
+      transform: translateX(100%);
+    }
+
+    .notif-panel-open {
+      transform: translateX(0);
+    }
+  }
 </style>

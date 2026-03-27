@@ -1,5 +1,16 @@
 {
   "$schema": "https://turbo.build/schema.json",
+  "globalEnv": [
+    "NODE_ENV",
+    "PHAVO_ENV",
+    "PHAVO_SECRET",
+    "PHAVO_DATA_DIR",
+    "PHAVO_PORT",
+    "PHAVO_HTTPS_PORT",
+    "PHAVO_IO_URL",
+    "PHAVO_IO_PUBLIC_KEY",
+    "PHAVO_DEV_MOCK_AUTH"
+  ],
   "tasks": {
     "dev": {
       "dependsOn": ["^build"],

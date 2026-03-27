@@ -428,4 +428,60 @@ function isSizeAvailable(s: WidgetSize): boolean {
     font-size: 13px;
     height: 100%;
   }
+
+  /* ── MOBILE (<640px): single-column grid, simplified toolbar ──────────── */
+  @media (max-width: 639px) {
+    .widget-card {
+      min-height: 120px;
+    }
+
+    /* All sizes span full width on single-column grid */
+    .widget-S,
+    .widget-M,
+    .widget-L,
+    .widget-XL {
+      grid-column: span 1;
+      grid-row: auto;
+    }
+
+    /* Toolbar: hide size selector, keep only remove button */
+    .size-selector {
+      display: none;
+    }
+
+    .toolbar-divider {
+      display: none;
+    }
+
+    /* WCAG 2.1 AA touch target: 44px minimum */
+    .widget-toolbar {
+      min-height: 44px;
+    }
+
+    .widget-remove-trigger {
+      min-height: 44px;
+      min-width: 44px;
+      width: 44px;
+      height: 44px;
+    }
+  }
+
+  /* ── TABLET (640px–1023px): two-column grid span overrides ───────────── */
+  @media (min-width: 640px) and (max-width: 1023px) {
+    .widget-S {
+      grid-column: span 1;
+    }
+
+    .widget-M {
+      grid-column: span 1;
+    }
+
+    .widget-L {
+      grid-column: span 2;
+    }
+
+    .widget-XL {
+      grid-column: span 2;
+    }
+  }
 </style>

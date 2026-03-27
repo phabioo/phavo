@@ -126,7 +126,7 @@ All endpoints under `/api/v1/*`. Tier mapping:
 - ✅ RSS endpoint — reads per-instance feed configs; partial failures return items + errors array
 - ✅ Links endpoint — reads grouped link config from `configEncrypted`
 - ✅ Config GET / POST — `requireSession()`; Free tier tab count capped at 1 server-side
-- ⬜ Config export / import — no endpoints exist
+- ✅ Config export / import — GET /api/v1/config/export + POST /api/v1/config/export (passphrase-encrypted credentials via PBKDF2-SHA256 → AES-256-GCM) + POST /api/v1/config/import (Zod-validated, UUID remapping, Free-tier tab cap, widget-warning notifications)
 - ✅ Update check — 1h cache; notification trigger; update command per `installMethod`
 - ✅ Widget instance config — `POST /api/v1/widgets/:instanceId/config`; credential fields → encrypted `credentials` table; rest → `configEncrypted`
 - ✅ Licence activate / deactivate — `POST /api/v1/license/activate` + `/deactivate` registered
@@ -146,8 +146,8 @@ All endpoints under `/api/v1/*`. Tier mapping:
 - ✅ Licence UI — Free/Standard/Local views; activate + deactivate wired to backend
 - ✅ Update panel — Settings → About; version, changelog, update command
 - ✅ Pi-hole + RSS config UI — Settings → Widgets master/detail with SchemaRenderer; credential masking; test connection button
-- ⬜ Import / Export UI — not present
-- 🔄 Mobile responsiveness — 768px breakpoints exist; no 375px; no responsive rules in `theme.css`
+- ✅ Import / Export UI — ImportExportTab.svelte: export with optional credential encryption, drag-and-drop import, client-side validation, preview panel, warnings display
+- ✅ Mobile responsiveness — ≥375px across all pages; bottom nav <640px; widget grid 1/2/12-col; settings vertical stack; setup full-screen steps; bottom sheet panels
 
 ### Phase 1 — Design
 - ✅ Theme — pure black (#000000) dark; Geist font (UI + Mono); amber/gold accent (#d4922a)
@@ -155,9 +155,9 @@ All endpoints under `/api/v1/*`. Tier mapping:
 - ⬜ Light theme — token system ready, not designed
 
 ### Phase 1 — Infrastructure
-- 🔄 Docker — 2-stage + non-root user; no multi-arch; missing `read_only: true` + `tmpfs`
-- ⬜ CSP headers — not set anywhere
-- 🔄 Rate limiting — login rate limiting only; no HTTP-level limiting on other endpoints
+- ✅ Docker — 2-stage + non-root user; multi-arch (amd64 + arm64); read_only + tmpfs; PHAVO_MIGRATIONS_DIR env var for runtime migration path
+- ✅ CSP headers — full Content-Security-Policy in hooks.server.ts; API routes exempt
+- ✅ Rate limiting — per-IP in-memory limiter (rate-limit.ts); TOTP 5/5min, metrics 60/1min, import 5/10min, default 120/1min; 429 + Retry-After header
 - ⬜ Plugin loading pipeline — `paths.plugins` defined; no loading logic
 
 ### Phase 2 — Desktop app (after Phase 1 launch)
@@ -251,8 +251,8 @@ const db = createClient({ url: 'file:/data/phavo.db' })
 - ~~Layout fake session fallback~~ — cleared; invalid sessions now redirect to /setup
 - ~~CSRF fallback secret~~ — `PHAVO_SECRET` required in production, process exits if missing
 
-### Active — pre-Session 6
-- **Import / Export UI** — placeholder tab exists; endpoints + real UI needed; Session 7
+### Active — pre-Launch
+- **Windows ESM module resolution** — `packages/types/src/index.ts` uses extensionless relative imports (e.g. `./api`) which fail on Windows; needs `.js` extensions
 - **svelte-check accessibility warnings** — 5 pre-existing warnings in shared UI components (Input, Select, Switch, TabBar, WidgetDrawer); address in dedicated UI polish session
 - **Plugin discovery notification missing** — server start doesn't notify on new plugins; Phase 1.x
 - **8 svelte-check warnings** in `packages/ui` — pre-existing, address in dedicated UI session
@@ -267,4 +267,4 @@ const db = createClient({ url: 'file:/data/phavo.db' })
 ---
 
 *Phavo · phavo.net · github.com/phabioo/phavo*
-*CLAUDE.md v1.6 · PRD ref: v2.5 · Arch Spec ref: v1.7 · Contract: PHAVO_CONTRACT_v3.md · Roadmap: docs/phavo_roadmap_v2.html*
+*CLAUDE.md v1.8 · PRD ref: v2.5 · Arch Spec ref: v1.7 · Contract: PHAVO_CONTRACT_v3.md · Roadmap: docs/phavo_roadmap_v2.html*

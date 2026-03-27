@@ -490,22 +490,26 @@ onMount(() => {
     font-weight: 500;
   }
 
-  @media (max-width: 768px) {
+  @media (max-width: 639px) {
     .widget-grid {
-      grid-template-columns: repeat(6, 1fr);
+      grid-template-columns: 1fr;
       padding: var(--space-3);
-    }
-  }
-
-  @media (max-width: 480px) {
-    .widget-grid {
-      grid-template-columns: repeat(4, 1fr);
     }
 
     .widget-stale-banner {
       align-items: flex-start;
       flex-direction: column;
       gap: var(--space-1);
+    }
+
+    .upgrade-wrapper {
+      padding: 0 var(--space-3);
+    }
+  }
+
+  @media (min-width: 640px) and (max-width: 1023px) {
+    .widget-grid {
+      grid-template-columns: repeat(2, 1fr);
     }
   }
 </style>

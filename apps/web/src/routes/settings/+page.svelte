@@ -1044,13 +1044,14 @@ function formatReleaseDate(iso: string): string {
     color: var(--color-text-secondary);
   }
 
-  @media (max-width: 768px) {
+  @media (max-width: 639px) {
     .settings-page {
-      padding: var(--space-4);
+      padding: var(--space-3);
+      gap: var(--space-4);
     }
 
     .settings-card-content {
-      padding: var(--space-4);
+      padding: var(--space-3);
     }
 
     .setting-grid {
@@ -1060,6 +1061,23 @@ function formatReleaseDate(iso: string): string {
     .session-item {
       flex-direction: column;
       align-items: flex-start;
+    }
+
+    /* Tabs: horizontal scroll on mobile (7 tabs too many to stack cleanly) */
+    :global(.tabs) {
+      overflow-x: auto;
+      padding: 0 var(--space-3);
+      scrollbar-width: none;
+    }
+
+    :global(.tabs::-webkit-scrollbar) {
+      display: none;
+    }
+
+    :global(.tab) {
+      white-space: nowrap;
+      flex-shrink: 0;
+      min-height: 44px;
     }
   }
 </style>

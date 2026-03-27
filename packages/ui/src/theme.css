@@ -63,6 +63,10 @@
   --sidebar-width: 220px;
   --sidebar-collapsed-width: 56px;
 
+  /* Breakpoint reference — documentation only, cannot be used in @media queries */
+  --bp-mobile:  640px;  /* <640px  = mobile  */
+  --bp-tablet: 1024px;  /* <1024px = tablet  */
+
   /* Widget grid */
   --grid-cols: 12;
   --grid-gap: 12px;
@@ -70,6 +74,9 @@
 
 /* Base reset */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+/* Prevent horizontal scroll at any viewport width */
+html { max-width: 100%; overflow-x: hidden; }
 
 body {
   font-family: var(--font-ui);

@@ -1,8 +1,8 @@
 export { z } from 'zod';
-export * from './api';
-export * from './auth';
-export * from './config';
-export * from './metrics';
-export * from './notifications';
-export * from './schema-meta';
-export * from './widget';
+export * from './api.js';
+export * from './auth.js';
+export * from './config.js';
+export * from './metrics.js';
+export * from './notifications.js';
+export * from './schema-meta.js';
+export * from './widget.js';

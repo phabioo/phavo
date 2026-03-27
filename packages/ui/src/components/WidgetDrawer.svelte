@@ -789,7 +789,7 @@
     }
   }
 
-  @media (max-width: 600px) {
+  @media (max-width: 639px) {
     .widget-grid-drawer {
       grid-template-columns: 1fr;
     }
@@ -799,6 +799,32 @@
     .sheet-body {
       padding-left: var(--space-4);
       padding-right: var(--space-4);
+    }
+  }
+
+  /* ── DESKTOP / PC: right-side drawer ─────────────────────────────────── */
+  @media (min-width: 640px), (hover: hover) and (pointer: fine) {
+    .bottom-sheet {
+      top: 0;
+      right: 0;
+      bottom: 0;
+      left: auto;
+      width: min(560px, 100vw);
+      /* Override the mobile inline height style; drawer spans full viewport */
+      height: 100dvh !important;
+      border-top: none;
+      border-left: 1px solid var(--color-border);
+      border-radius: 0;
+      transform: translateX(100%);
+    }
+
+    .sheet-open {
+      transform: translateX(0);
+    }
+
+    /* Hide the drag-to-resize handle on desktop */
+    .sheet-handle-area {
+      display: none;
     }
   }
 </style>

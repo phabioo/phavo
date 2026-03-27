@@ -1,7 +1,7 @@
 import { mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { createDb, runMigrations } from '@phavo/db';
-import { paths } from './paths';
+import { paths } from './paths.js';
 
 // Ensure the data directory exists before opening the database.
 mkdirSync(dirname(paths.db), { recursive: true });

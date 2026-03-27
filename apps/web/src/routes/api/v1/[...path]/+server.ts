@@ -35,6 +35,14 @@ import {
   requireTier,
 } from '$lib/server/middleware/auth';
 import { csrfMiddleware, deriveCsrfToken } from '$lib/server/middleware/csrf';
+import {
+  checkIpRateLimit,
+  DEFAULT_RULE,
+  getClientIp,
+  IMPORT_RULE,
+  METRICS_RULE,
+  TOTP_RULE,
+} from '$lib/server/middleware/rate-limit';
 import { DEV_MOCK_AUTH_ENABLED } from '$lib/server/mock-auth';
 import { drainQueue, serverNotify } from '$lib/server/notifier';
 import { paths } from '$lib/server/paths';
@@ -52,6 +60,47 @@ const PHAVO_VERSION = process.env.PHAVO_VERSION ?? '0.0.1';
 // csrfMiddleware validates the X-CSRF-Token header on state-changing requests.
 app.use('*', authMiddleware);
 app.use('*', csrfMiddleware);
+
+// rateLimitMiddleware: applied after auth so we have the full path.
+// /auth/login has its own rate limiting in the handler (checkRateLimit).
+// /health is public and not rate-limited here.
+app.use('*', async (c, next) => {
+  const path = c.req.path;
+  // Public paths handled elsewhere — skip.
+  if (path === '/api/v1/health' || path === '/api/v1/auth/login') {
+    return next();
+  }
+
+  const ip = getClientIp(c.req);
+
+  // Select the applicable rule based on route.
+  let rule = DEFAULT_RULE;
+  if (path === '/api/v1/auth/totp') {
+    rule = TOTP_RULE;
+  } else if (
+    path === '/api/v1/cpu' ||
+    path === '/api/v1/memory' ||
+    path === '/api/v1/disk' ||
+    path === '/api/v1/network' ||
+    path === '/api/v1/temperature' ||
+    path === '/api/v1/uptime' ||
+    path === '/api/v1/weather'
+  ) {
+    rule = METRICS_RULE;
+  } else if (path === '/api/v1/config/import') {
+    rule = IMPORT_RULE;
+  }
+
+  const result = checkIpRateLimit(`${ip}:${path}`, rule);
+  if (!result.allowed) {
+    const retryAfterSec = Math.ceil((result.retryAfterMs ?? 60_000) / 1000);
+    return c.json(err('Rate limit exceeded'), 429, {
+      'Retry-After': String(retryAfterSec),
+    });
+  }
+
+  return next();
+});
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -200,18 +249,30 @@ setInterval(() => {
   }
 }, 60_000);
 
-/** Sets phavo_session (HttpOnly) and phavo_csrf (readable by JS) response cookies.
- *  Pass c.header.bind(c, 'Set-Cookie') as the first argument. */
+function appendSetCookie(response: Response, value: string): void {
+  response.headers.append('Set-Cookie', value);
+}
+
+/** Sets phavo_session (HttpOnly) and phavo_csrf (readable by JS) response cookies. */
 async function setSessionCookies(
-  appendCookie: (value: string) => void,
+  response: Response,
   token: string,
   maxAgeSeconds: number,
 ): Promise<void> {
   const csrfToken = await deriveCsrfToken(token);
-  appendCookie(
+  appendSetCookie(
+    response,
     `phavo_session=${token}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${maxAgeSeconds}`,
   );
-  appendCookie(`phavo_csrf=${csrfToken}; Path=/; SameSite=Lax; Max-Age=${maxAgeSeconds}`);
+  appendSetCookie(
+    response,
+    `phavo_csrf=${csrfToken}; Path=/; SameSite=Lax; Max-Age=${maxAgeSeconds}`,
+  );
+}
+
+function clearSessionCookies(response: Response): void {
+  appendSetCookie(response, 'phavo_session=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0');
+  appendSetCookie(response, 'phavo_csrf=; Path=/; SameSite=Lax; Max-Age=0');
 }
 
 type PiholeCredentials = {
@@ -508,6 +569,169 @@ function buildRssFeedAuth(
   };
 }
 
+// ─── Passphrase-based AES-GCM (for config export/import with credentials) ────
+// Distinct from the PHAVO_SECRET-based encrypt/decrypt — uses user passphrase
+// with PBKDF2-SHA256 (100 000 iterations, random 16-byte salt) to derive the key.
+// Blob layout: base64( salt[16] + iv[12] + ciphertext[n] + authTag[16] )
+
+const _EXPORT_SALT_LEN = 16;
+const _EXPORT_IV_LEN = 12;
+const _EXPORT_PBKDF2_ITERS = 100_000;
+
+async function exportEncrypt(plaintext: string, passphrase: string): Promise<string> {
+  const salt = crypto.getRandomValues(new Uint8Array(_EXPORT_SALT_LEN));
+  const iv = crypto.getRandomValues(new Uint8Array(_EXPORT_IV_LEN));
+  const keyMaterial = await crypto.subtle.importKey(
+    'raw',
+    new TextEncoder().encode(passphrase),
+    'PBKDF2',
+    false,
+    ['deriveKey'],
+  );
+  const key = await crypto.subtle.deriveKey(
+    { name: 'PBKDF2', salt, iterations: _EXPORT_PBKDF2_ITERS, hash: 'SHA-256' },
+    keyMaterial,
+    { name: 'AES-GCM', length: 256 },
+    false,
+    ['encrypt'],
+  );
+  const enc = await crypto.subtle.encrypt(
+    { name: 'AES-GCM', iv, tagLength: 128 },
+    key,
+    new TextEncoder().encode(plaintext),
+  );
+  const combined = new Uint8Array(salt.length + iv.length + enc.byteLength);
+  combined.set(salt, 0);
+  combined.set(iv, salt.length);
+  combined.set(new Uint8Array(enc), salt.length + iv.length);
+  return Buffer.from(combined).toString('base64');
+}
+
+async function exportDecrypt(ciphertext: string, passphrase: string): Promise<string> {
+  const combined = Uint8Array.from(Buffer.from(ciphertext, 'base64'));
+  const salt = combined.slice(0, _EXPORT_SALT_LEN);
+  const iv = combined.slice(_EXPORT_SALT_LEN, _EXPORT_SALT_LEN + _EXPORT_IV_LEN);
+  const data = combined.slice(_EXPORT_SALT_LEN + _EXPORT_IV_LEN);
+  const keyMaterial = await crypto.subtle.importKey(
+    'raw',
+    new TextEncoder().encode(passphrase),
+    'PBKDF2',
+    false,
+    ['deriveKey'],
+  );
+  const key = await crypto.subtle.deriveKey(
+    { name: 'PBKDF2', salt, iterations: _EXPORT_PBKDF2_ITERS, hash: 'SHA-256' },
+    keyMaterial,
+    { name: 'AES-GCM', length: 256 },
+    false,
+    ['decrypt'],
+  );
+  const decrypted = await crypto.subtle.decrypt({ name: 'AES-GCM', iv, tagLength: 128 }, key, data);
+  return new TextDecoder().decode(decrypted);
+}
+
+// Zod schema for the export envelope — validated on import before any DB write.
+const ExportConfigSchema = z.object({
+  dashboardName: z.string().optional(),
+  sessionTimeout: z.enum(['1d', '7d', '30d', 'never']).optional(),
+  location: z
+    .object({ name: z.string(), latitude: z.number(), longitude: z.number() })
+    .nullable()
+    .optional(),
+});
+
+const ExportTabSchema = z.object({
+  id: z.string(),
+  label: z.string(),
+  order: z.number().int(),
+});
+
+const ExportWidgetInstanceSchema = z.object({
+  id: z.string(),
+  widgetId: z.string(),
+  tabId: z.string(),
+  size: z.enum(['S', 'M', 'L', 'XL']),
+  positionX: z.number().int(),
+  positionY: z.number().int(),
+  config: z.record(z.unknown()).nullable().optional(),
+});
+
+const ExportEnvelopeSchema = z.object({
+  version: z.literal('1'),
+  exportedAt: z.number(),
+  config: ExportConfigSchema,
+  tabs: z.array(ExportTabSchema),
+  widgetInstances: z.array(ExportWidgetInstanceSchema),
+  // base64 blob — passphrase-encrypted credential map. Present only when exported
+  // with ?includeCredentials=true.
+  credentials: z.string().optional(),
+});
+
+type ExportEnvelope = z.infer<typeof ExportEnvelopeSchema>;
+
+/** Collects the current config + tabs + widgetInstances into an export payload.
+ *  configEncrypted is decrypted so the file is portable across PHAVO_SECRET rotations. */
+async function buildExportPayload(): Promise<Omit<ExportEnvelope, 'credentials'>> {
+  await dbReady;
+
+  const configRows = await db.query.config.findMany();
+  const parsed = parseConfigEntries(configRows);
+
+  const tabRows = await db.select().from(schema.tabs).orderBy(asc(schema.tabs.order));
+
+  const instanceRows = await db.select().from(schema.widgetInstances);
+  const widgetInstances = await Promise.all(
+    instanceRows.map(async (r) => ({
+      id: r.id,
+      widgetId: r.widgetId,
+      tabId: r.tabId,
+      size: r.size as 'S' | 'M' | 'L' | 'XL',
+      positionX: r.positionX,
+      positionY: r.positionY,
+      config: (await parseWidgetPublicConfig(r.configEncrypted)) ?? null,
+    })),
+  );
+
+  return {
+    version: '1',
+    exportedAt: Date.now(),
+    config: {
+      dashboardName: parsed.dashboardName,
+      sessionTimeout: parsed.sessionTimeout,
+      location: parsed.location,
+    },
+    tabs: tabRows.map((t) => ({ id: t.id, label: t.label, order: t.order })),
+    widgetInstances,
+  };
+}
+
+/** Collects all credentials keyed by instanceId → fieldPath → plaintext.
+ *  Only covers widget credential keys (widget:${instanceId}:${fieldPath}).
+ *  Returns a map safe to serialise into the credentials export blob. */
+async function collectExportCredentials(): Promise<Record<string, Record<string, string>>> {
+  const rows = await db.select().from(schema.credentials);
+  const out: Record<string, Record<string, string>> = {};
+
+  for (const row of rows) {
+    if (!row.key.startsWith('widget:')) continue;
+    const withoutPrefix = row.key.slice('widget:'.length);
+    const colonIdx = withoutPrefix.indexOf(':');
+    if (colonIdx < 0) continue;
+    const instanceId = withoutPrefix.slice(0, colonIdx);
+    const fieldPath = withoutPrefix.slice(colonIdx + 1);
+    if (!instanceId || !fieldPath) continue;
+    try {
+      const value = await decrypt(row.valueEncrypted);
+      // biome-ignore lint/suspicious/noAssignInExpressions: intentional initialisation
+      (out[instanceId] ??= {})[fieldPath] = value;
+    } catch {
+      // Skip rows that can no longer be decrypted.
+    }
+  }
+
+  return out;
+}
+
 // ─── Zod schemas for request validation ──────────────────────────────────────
 
 const LoginSchema = z.discriminatedUnion('authMode', [
@@ -621,6 +845,267 @@ app.post('/config', requireSession(), async (c) => {
   }
 });
 
+// ─── Config Export / Import ───────────────────────────────────────────────────
+
+// NOTE: These endpoints return raw JSON (no ok() envelope) because the response
+// IS the downloadable file itself. The import endpoint receives the raw file
+// content string and validates the export envelope with Zod.
+
+// GET /config/export — no credentials. Client downloads via blob URL.
+app.get('/config/export', requireSession(), async (c) => {
+  try {
+    const payload = await buildExportPayload();
+    const dateStr = new Date().toISOString().slice(0, 10);
+    return new Response(JSON.stringify(payload, null, 2), {
+      status: 200,
+      headers: {
+        'Content-Type': 'application/json',
+        'Content-Disposition': `attachment; filename="phavo-config-${dateStr}.json"`,
+      },
+    });
+  } catch (e) {
+    return c.json(err(e instanceof Error ? e.message : 'Export failed'), 500);
+  }
+});
+
+// POST /config/export — with encrypted credentials (requires passphrase in body).
+// Client uses POST when ?includeCredentials=true (see arch spec §import-export).
+app.post('/config/export', requireSession(), async (c) => {
+  try {
+    let rawBody: unknown;
+    try {
+      rawBody = await c.req.json();
+    } catch {
+      return c.json(err('Invalid request body'), 400);
+    }
+
+    const bodySchema = z.object({ passphrase: z.string().min(1) });
+    const bodyParsed = bodySchema.safeParse(rawBody);
+    if (!bodyParsed.success) {
+      return c.json(err('passphrase is required when exporting credentials'), 400);
+    }
+
+    const payload = await buildExportPayload();
+    const rawCredentials = await collectExportCredentials();
+    const credentialBlob = await exportEncrypt(
+      JSON.stringify(rawCredentials),
+      bodyParsed.data.passphrase,
+    );
+
+    const dateStr = new Date().toISOString().slice(0, 10);
+    return new Response(JSON.stringify({ ...payload, credentials: credentialBlob }, null, 2), {
+      status: 200,
+      headers: {
+        'Content-Type': 'application/json',
+        'Content-Disposition': `attachment; filename="phavo-config-${dateStr}.json"`,
+      },
+    });
+  } catch (e) {
+    return c.json(err(e instanceof Error ? e.message : 'Export with credentials failed'), 500);
+  }
+});
+
+// POST /config/import — applies an exported config JSON.
+// Body: { exportJson: string, passphrase?: string }
+app.post('/config/import', requireSession(), async (c) => {
+  try {
+    await dbReady;
+    const session = c.get('session');
+    if (!session) return c.json(err('Unauthorized'), 401);
+
+    let rawBody: unknown;
+    try {
+      rawBody = await c.req.json();
+    } catch {
+      return c.json(err('Invalid request body'), 400);
+    }
+
+    const requestSchema = z.object({
+      exportJson: z.string().min(1),
+      passphrase: z.string().optional(),
+    });
+    const requestParsed = requestSchema.safeParse(rawBody);
+    if (!requestParsed.success) {
+      return c.json(err('exportJson is required'), 400);
+    }
+
+    // Parse and validate the export envelope before touching the DB.
+    let parsedExport: unknown;
+    try {
+      parsedExport = JSON.parse(requestParsed.data.exportJson);
+    } catch {
+      return c.json(err('Export file is not valid JSON'), 400);
+    }
+
+    const exportResult = ExportEnvelopeSchema.safeParse(parsedExport);
+    if (!exportResult.success) {
+      const issue = exportResult.error.issues[0];
+      return c.json(
+        err(`Invalid export file: ${issue?.message ?? 'unknown validation error'}`),
+        400,
+      );
+    }
+
+    const exportData = exportResult.data;
+    const warnings: string[] = [];
+
+    // ── Resolve which tabs will actually be imported (free tier cap = 1) ──────
+    let tabsToImport = exportData.tabs;
+    if (session.tier === 'free' && tabsToImport.length > 1) {
+      tabsToImport = tabsToImport.slice(0, 1);
+      warnings.push(`Tab count reduced to 1 (Free tier limit)`);
+    }
+    const keptTabIds = new Set(tabsToImport.map((t) => t.id));
+
+    // ── Apply config keys (skip setupComplete — preserve current value) ───────
+    const cfgUpserts: Array<{ key: string; value: string }> = [];
+    if (exportData.config.dashboardName !== undefined) {
+      cfgUpserts.push({
+        key: 'dashboard_name',
+        value: exportData.config.dashboardName.trim() || 'My Dashboard',
+      });
+    }
+    if (exportData.config.sessionTimeout !== undefined) {
+      cfgUpserts.push({ key: 'session_timeout', value: exportData.config.sessionTimeout });
+    }
+    if (exportData.config.location != null) {
+      cfgUpserts.push({ key: 'location_name', value: exportData.config.location.name });
+      cfgUpserts.push({
+        key: 'location_latitude',
+        value: String(exportData.config.location.latitude),
+      });
+      cfgUpserts.push({
+        key: 'location_longitude',
+        value: String(exportData.config.location.longitude),
+      });
+    }
+    for (const entry of cfgUpserts) {
+      await db
+        .insert(schema.config)
+        .values({ key: entry.key, value: entry.value })
+        .onConflictDoUpdate({
+          target: schema.config.key,
+          set: { value: entry.value, updatedAt: new Date() },
+        });
+    }
+
+    // ── Replace tabs ──────────────────────────────────────────────────────────
+    // Delete widget instances first (FK constraint: widgetInstances.tabId → tabs.id).
+    await db.delete(schema.widgetInstances);
+    await db.delete(schema.tabs);
+
+    // Insert tabs with new UUIDs; build oldId → newId map.
+    const tabIdMap = new Map<string, string>();
+    for (const tab of tabsToImport) {
+      const newId = crypto.randomUUID();
+      tabIdMap.set(tab.id, newId);
+      await db.insert(schema.tabs).values({ id: newId, label: tab.label, order: tab.order });
+    }
+
+    // Fallback: if all imported tabs were discarded (edge case), create a default Home tab.
+    if (tabIdMap.size === 0) {
+      const homeId = crypto.randomUUID();
+      await db.insert(schema.tabs).values({ id: homeId, label: 'Home', order: 0 });
+      // No widgets can be imported either.
+      return c.json(ok({ warnings }));
+    }
+
+    // Get the first kept tab's new ID (for reassigning widgets from dropped tabs).
+    const firstNewTabId = tabIdMap.values().next().value as string;
+
+    // ── Import widget instances ───────────────────────────────────────────────
+    const widgetIdMap = new Map<string, string>(); // oldId → newId
+    for (const wi of exportData.widgetInstances) {
+      // Widgets assigned to tabs that were discarded due to Free tier cap get
+      // reassigned to the first tab (they appear locked if tier doesn't cover them).
+      const resolvedOldTabId = keptTabIds.has(wi.tabId) ? wi.tabId : tabsToImport[0]?.id;
+      if (!resolvedOldTabId) continue; // no tabs at all — skip
+
+      const newTabId = tabIdMap.get(resolvedOldTabId) ?? firstNewTabId;
+      const newInstanceId = crypto.randomUUID();
+      widgetIdMap.set(wi.id, newInstanceId);
+
+      const configEncrypted =
+        wi.config && Object.keys(wi.config).length > 0
+          ? await encrypt(JSON.stringify(wi.config))
+          : null;
+
+      await db.insert(schema.widgetInstances).values({
+        id: newInstanceId,
+        widgetId: wi.widgetId,
+        tabId: newTabId,
+        size: wi.size,
+        positionX: wi.positionX,
+        positionY: wi.positionY,
+        configEncrypted,
+      });
+    }
+
+    // ── Import credentials (if blob present and passphrase provided) ──────────
+    if (exportData.credentials && requestParsed.data.passphrase) {
+      let decryptedCredentials: Record<string, Record<string, string>>;
+      try {
+        const raw = await exportDecrypt(exportData.credentials, requestParsed.data.passphrase);
+        const credentialSchema = z.record(z.record(z.string()));
+        const parsed = credentialSchema.safeParse(JSON.parse(raw));
+        if (!parsed.success) throw new Error('Invalid credential structure');
+        decryptedCredentials = parsed.data;
+      } catch {
+        warnings.push('Could not decrypt credentials — wrong passphrase or corrupted file');
+        decryptedCredentials = {};
+      }
+
+      // Store credentials re-encrypted with PHAVO_SECRET under the new instance IDs.
+      for (const [oldInstanceId, fields] of Object.entries(decryptedCredentials)) {
+        const newInstanceId = widgetIdMap.get(oldInstanceId);
+        if (!newInstanceId) continue; // instance was not imported (tab discarded)
+        for (const [fieldPath, value] of Object.entries(fields)) {
+          const key = credentialStorageKey(newInstanceId, fieldPath);
+          const valueEncrypted = await encrypt(value);
+          await db
+            .insert(schema.credentials)
+            .values({ key, valueEncrypted, updatedAt: Date.now() })
+            .onConflictDoUpdate({
+              target: schema.credentials.key,
+              set: { valueEncrypted, updatedAt: Date.now() },
+            });
+        }
+      }
+    } else if (exportData.credentials && !requestParsed.data.passphrase) {
+      // Credentials in file but no passphrase provided.
+      warnings.push(
+        'Export contains credentials but no passphrase was provided — credentials were not imported',
+      );
+    }
+
+    // ── Queue reconfiguration notifications for widgets that lack credentials ─
+    for (const wi of exportData.widgetInstances) {
+      const newInstanceId = widgetIdMap.get(wi.id);
+      if (!newInstanceId) continue;
+      const def = registry.getById(wi.widgetId);
+      if (!def?.configSchema) continue;
+      const hasCredentials = await hasStoredWidgetCredentials(newInstanceId);
+      if (!hasCredentials) {
+        // Only notify if the widget actually expects credentials.
+        const hasCredentialField = JSON.stringify(def.configSchema._def).includes('"credential"');
+        if (hasCredentialField) {
+          serverNotify({
+            type: 'widget-warning',
+            title: `${def.name} needs reconfiguration`,
+            body: `Widget "${def.name}" needs credentials configured after import`,
+            widgetId: wi.widgetId,
+            settingsTab: 'widgets',
+          });
+        }
+      }
+    }
+
+    return c.json(ok({ warnings }));
+  } catch (e) {
+    return c.json(err(e instanceof Error ? e.message : 'Import failed'), 500);
+  }
+});
+
 // ─── Auth ─────────────────────────────────────────────────────────────────────
 
 /**
@@ -631,7 +1116,9 @@ app.post('/config', requireSession(), async (c) => {
 app.post('/auth/login', async (c) => {
   // In dev mode, always succeed without real credentials.
   if (DEV_MOCK_AUTH_ENABLED) {
-    return c.json(ok({ tier: 'free' as const }));
+    const response = c.json(ok({ tier: 'free' as const }));
+    await setSessionCookies(response, 'dev', 7 * 24 * 60 * 60);
+    return response;
   }
 
   const ip =
@@ -762,8 +1249,9 @@ app.post('/auth/login', async (c) => {
     });
 
     recordLoginAttempt(ip, true);
-    await setSessionCookies((v) => c.header('Set-Cookie', v), token, SESSION_MAX_AGE);
-    return c.json(ok({ tier }));
+    const response = c.json(ok({ tier }));
+    await setSessionCookies(response, token, SESSION_MAX_AGE);
+    return response;
   }
 
   // ── Local auth ──────────────────────────────────────────────────────────────
@@ -824,8 +1312,9 @@ app.post('/auth/login', async (c) => {
     });
 
     recordLoginAttempt(ip, true);
-    await setSessionCookies((v) => c.header('Set-Cookie', v), token, SESSION_MAX_AGE);
-    return c.json(ok({ tier: 'local' as const }));
+    const response = c.json(ok({ tier: 'local' as const }));
+    await setSessionCookies(response, token, SESSION_MAX_AGE);
+    return response;
   }
 
   // Subsequent local login (fully offline).
@@ -893,8 +1382,9 @@ app.post('/auth/login', async (c) => {
   }
 
   recordLoginAttempt(ip, true);
-  await setSessionCookies((v) => c.header('Set-Cookie', v), token, SESSION_MAX_AGE);
-  return c.json(ok({ tier: 'local' as const }));
+  const response = c.json(ok({ tier: 'local' as const }));
+  await setSessionCookies(response, token, SESSION_MAX_AGE);
+  return response;
 });
 
 /** POST /api/v1/auth/totp — completes 2FA flow after partial token issued by login. */
@@ -945,8 +1435,9 @@ app.post('/auth/totp', async (c) => {
   });
   partialSessions.delete(partialToken);
 
-  await setSessionCookies((v) => c.header('Set-Cookie', v), token, SESSION_MAX_AGE);
-  return c.json(ok({ tier: pending.tier }));
+  const response = c.json(ok({ tier: pending.tier }));
+  await setSessionCookies(response, token, SESSION_MAX_AGE);
+  return response;
 });
 
 /** POST /api/v1/auth/logout — invalidates current session and clears cookies. */
@@ -955,9 +1446,9 @@ app.post('/auth/logout', requireSession(), async (c) => {
   if (session && !DEV_MOCK_AUTH_ENABLED) {
     await db.delete(schema.sessions).where(eq(schema.sessions.id, session.id));
   }
-  c.header('Set-Cookie', 'phavo_session=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0');
-  c.header('Set-Cookie', 'phavo_csrf=; Path=/; SameSite=Lax; Max-Age=0');
-  return c.json(ok(null));
+  const response = c.json(ok(null));
+  clearSessionCookies(response);
+  return response;
 });
 
 /**
@@ -1008,9 +1499,9 @@ app.post('/auth/logout-all', requireSession(), async (c) => {
     if (session && !DEV_MOCK_AUTH_ENABLED) {
       await db.delete(schema.sessions).where(eq(schema.sessions.userId, session.userId));
     }
-    c.header('Set-Cookie', 'phavo_session=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0');
-    c.header('Set-Cookie', 'phavo_csrf=; Path=/; SameSite=Lax; Max-Age=0');
-    return c.json(ok(null));
+    const response = c.json(ok(null));
+    clearSessionCookies(response);
+    return response;
   } catch (e) {
     return c.json(err(e instanceof Error ? e.message : 'Failed to sign out all sessions'), 500);
   }
@@ -1347,8 +1838,9 @@ app.post('/license/activate', requireSession(), async (c) => {
       expiresAt: Date.now() + sessionMaxAge * 1000,
     });
 
-    await setSessionCookies((value) => c.header('Set-Cookie', value), token, sessionMaxAge);
-    return c.json(ok({ tier: 'local' as const, reload: true }));
+    const response = c.json(ok({ tier: 'local' as const, reload: true }));
+    await setSessionCookies(response, token, sessionMaxAge);
+    return response;
   } catch (e) {
     return c.json(err(e instanceof Error ? e.message : 'Failed to activate licence'), 500);
   }
