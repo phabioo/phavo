@@ -21,7 +21,7 @@ type GeoResult = {
 type SessionInfo = {
   userId: string;
   tier: 'free' | 'standard' | 'local';
-  authMode: 'phavo-io' | 'local';
+  authMode: 'phavo-net' | 'local';
   validatedAt: number;
   email: string | null;
 } | null;
@@ -780,7 +780,7 @@ function formatReleaseDate(iso: string): string {
               <span class="setting-label">{en.settings.authMode}</span>
               <p>
                 {#if sessionInfo}
-                  {sessionInfo.authMode === 'phavo-io' ? en.settings.authModePhavoIo : en.settings.authModeLocal}
+                  {sessionInfo.authMode === 'phavo-net' ? en.settings.authModePhavoIo : en.settings.authModeLocal}
                 {:else}
                   —
                 {/if}
@@ -798,7 +798,7 @@ function formatReleaseDate(iso: string): string {
             </div>
           </div>
 
-          {#if sessionInfo?.authMode === 'phavo-io'}
+          {#if sessionInfo?.authMode === 'phavo-net'}
             <div class="setting-group">
               <a class="external-link" href={PHAVO_ACCOUNT_URL} target="_blank" rel="noreferrer">
                 <span>{en.settings.manageAccount}</span>

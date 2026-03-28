@@ -4,7 +4,7 @@
   import { fetchWithCsrf } from '$lib/utils/api';
 
   type Tier = 'free' | 'standard' | 'local';
-  type AuthMode = 'phavo-io' | 'local' | null;
+  type AuthMode = 'phavo-net' | 'local' | null;
 
   interface Props {
     tier: Tier;
@@ -119,7 +119,7 @@
       </div>
     </div>
 
-    {#if authMode === 'phavo-io' && tier !== 'local'}
+    {#if authMode === 'phavo-net' && tier !== 'local'}
       <div class="info-panel">
         <p>{en.settings.manageLicenseHosted}</p>
         <a class="external-link" href={manageUrl} target="_blank" rel="noreferrer">

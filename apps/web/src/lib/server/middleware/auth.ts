@@ -71,7 +71,7 @@ export const authMiddleware: MiddlewareHandler<{ Variables: AppVariables }> = as
   }
 
   // phavo.net grace period check (arch spec "Session Validation" step 2).
-  if (session.authMode === 'phavo-io' && session.graceUntil !== null && session.graceUntil < now) {
+  if (session.authMode === 'phavo-net' && session.graceUntil !== null && session.graceUntil < now) {
     return c.json(err('Grace period expired — please log in again'), 401);
   }
 

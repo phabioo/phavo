@@ -21,7 +21,7 @@ const LicenseActivateResponseSchema = z.object({
 
 export async function validateLicense(
   licenseKey: string,
-  authMode: 'phavo-io' | 'local',
+  authMode: 'phavo-net' | 'local',
 ): Promise<LicenseValidationResult> {
   // Local tier: validate once on activation, fully offline after
   if (authMode === 'local') {

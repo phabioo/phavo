@@ -35,7 +35,7 @@ type FullStep =
   | 'config'
   | 'done';
 type Tier = 'free' | 'standard' | 'local';
-type AuthMode = 'phavo-io' | 'local';
+type AuthMode = 'phavo-net' | 'local';
 type ApiResponse<T> = { ok: true; data: T } | { ok: false; error: string };
 type SessionInfo = { authMode: AuthMode; validatedAt: number; graceUntil: number | null };
 type LoginSuccess = { tier?: Tier; requiresTotp?: boolean; partialToken?: string };
@@ -81,7 +81,7 @@ let quickStep = $state<QuickStep>('auth');
 let fullStep = $state<FullStep>('tier');
 
 // ── AUTH STATE ─────────────────────────────────────────────────────────────
-let quickAuthMethod = $state<'choice' | 'phavo-io' | 'local'>('choice');
+let quickAuthMethod = $state<'choice' | 'phavo-net' | 'local'>('choice');
 let selectedTier = $state<Tier>('free');
 let sessionTier = $state<Tier | null>(null);
 let currentAuthMode = $state<AuthMode | null>(null);
@@ -259,7 +259,7 @@ async function startPhavoOauth(nextMode: 'quick' | 'full') {
     try {
       const resp = await apiRequest<LoginSuccess>('/api/v1/auth/login', {
         method: 'POST',
-        body: { authMode: 'phavo-io', code: 'dev-mock' },
+        body: { authMode: 'phavo-net', code: 'dev-mock' },
       });
       if (!resp.ok) {
         authError = resp.error;
@@ -790,7 +790,7 @@ onMount(() => {
 
         {#if quickAuthMethod === 'choice'}
           <div class="step-content">
-            <button type="button" class="option-card" onclick={() => (quickAuthMethod = 'phavo-io')}>
+            <button type="button" class="option-card" onclick={() => (quickAuthMethod = 'phavo-net')}>
               <h3>{en.setup.auth.phavoIo}</h3>
               <p>Continue with phavo.net to create or validate your account.</p>
             </button>
@@ -803,7 +803,7 @@ onMount(() => {
             <Button variant="ghost" onclick={backToWelcome}>{en.common.back}</Button>
           </div>
 
-        {:else if quickAuthMethod === 'phavo-io'}
+        {:else if quickAuthMethod === 'phavo-net'}
           <div class="step-content">
             <p class="step-description">
               You'll be redirected to phavo.net to authenticate, then returned here automatically.

@@ -263,7 +263,7 @@ function readOrCreateInstanceIdentifier(): string {
 interface PendingSession {
   userId: string;
   tier: 'free' | 'standard' | 'local';
-  authMode: 'phavo-io' | 'local';
+  authMode: 'phavo-net' | 'local';
   graceUntil: number | null;
   expiresMs: number; // absolute timestamp when this partial session expires
 }
@@ -766,7 +766,7 @@ async function collectExportCredentials(): Promise<Record<string, Record<string,
 
 const LoginSchema = z.discriminatedUnion('authMode', [
   z.object({
-    authMode: z.literal('phavo-io'),
+    authMode: z.literal('phavo-net'),
     code: z.string().min(1),
   }),
   z.object({
@@ -1200,7 +1200,7 @@ app.post('/auth/login', async (c) => {
   const body = parsed.data;
   const SESSION_MAX_AGE = 7 * 24 * 60 * 60; // 7 days in seconds
 
-  if (body.authMode === 'phavo-io') {
+  if (body.authMode === 'phavo-net') {
     // ── phavo-io OAuth code exchange ──────────────────────────────────────────
     const phavoIoUrl = process.env.PHAVO_IO_URL ?? 'https://phavo.net';
 
@@ -1283,7 +1283,7 @@ app.post('/auth/login', async (c) => {
       await db.insert(schema.users).values({
         id: dbUserId,
         email: userEmail,
-        authMode: 'phavo-io',
+        authMode: 'phavo-net',
       });
     }
 
@@ -1293,7 +1293,7 @@ app.post('/auth/login', async (c) => {
       id: token,
       userId: dbUserId,
       tier,
-      authMode: 'phavo-io',
+      authMode: 'phavo-net',
       validatedAt: Date.now(),
       graceUntil,
       expiresAt: Date.now() + SESSION_MAX_AGE * 1000,

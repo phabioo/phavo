@@ -40,7 +40,7 @@ export const GET: RequestHandler = async ({ url }) => {
   const loginResponse = await fetch(`${url.origin}/api/v1/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ authMode: 'phavo-io', code }),
+    body: JSON.stringify({ authMode: 'phavo-net', code }),
   });
 
   const json = (await loginResponse.json().catch(() => null)) as

@@ -68,7 +68,7 @@ export const load = async ({ cookies, url }: ServerLoadEvent) => {
       if (
         !row ||
         row.expiresAt < now ||
-        (row.authMode === 'phavo-io' && row.graceUntil !== null && row.graceUntil < now)
+        (row.authMode === 'phavo-net' && row.graceUntil !== null && row.graceUntil < now)
       ) {
         if (row?.expiresAt && row.expiresAt < now) {
           await db.delete(schema.sessions).where(eq(schema.sessions.id, sessionId));

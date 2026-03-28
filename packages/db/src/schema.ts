@@ -13,7 +13,7 @@ export const users = sqliteTable('users', {
   email: text('email').unique(),
   // Argon2id hash. Local users only. Never stored for phavo.net users.
   passwordHash: text('password_hash'),
-  authMode: text('auth_mode', { enum: ['phavo-io', 'local'] }).notNull(),
+  authMode: text('auth_mode', { enum: ['phavo-net', 'local'] }).notNull(),
   // AES-256-GCM encrypted. Set only when user enables 2FA.
   totpSecret: text('totp_secret'),
   // JSON array, AES-256-GCM encrypted. 8 one-time backup codes.
@@ -29,7 +29,7 @@ export const sessions = sqliteTable('sessions', {
     .references(() => users.id),
   // Single source of truth for tier enforcement. Set by server on login only.
   tier: text('tier', { enum: ['free', 'standard', 'local'] }).notNull(),
-  authMode: text('auth_mode', { enum: ['phavo-io', 'local'] }).notNull(),
+  authMode: text('auth_mode', { enum: ['phavo-net', 'local'] }).notNull(),
   // Unix ms. Last successful phavo.net validation.
   validatedAt: integer('validated_at').notNull(),
   // Unix ms. Session valid offline until this time. Null for local tier.
