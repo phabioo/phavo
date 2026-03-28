@@ -267,14 +267,14 @@ a prompt explicitly targets them.
 
 | Debt | Status | Risk |
 |---|---|---|
-| Giant API file (1765 lines) | Known, intentional for now | Low |
-| `tier` in `DashboardConfig` and config table | **Scheduled for fix** | High — security |
-| `+layout.server.ts` fake session fallback | **Scheduled for fix** | Medium |
-| CSRF fallback secret in `csrf.ts` | **Scheduled for fix** | High — security |
+| ~~Giant API file~~ | **Scheduled for split** — Opus god-file split prompt ready | High |
+| ~~`tier` in `DashboardConfig`~~ | ✅ Fixed | — |
+| ~~`+layout.server.ts` fake session fallback~~ | ✅ Fixed | — |
+| ~~CSRF fallback secret~~ | ✅ Fixed | — |
 | Missing plugin loader | Phase 1.x, not a bug | None |
 | `+page.svelte` 1066 lines | Post-v1.0 cleanup | Low |
 | Pre-existing a11y warnings in 5 shared UI components | Known, tracked | None |
-| `configSchemaVersion` not yet in `widgetInstances` schema | Session 8 | Low |
+| ~~`configSchemaVersion` not yet in schema~~ | ✅ Fixed | — |
 
 ---
 
@@ -335,4 +335,4 @@ bun run lint        # must be 0 errors
 
 ---
 
-*PHAVO_CONTRACT v3 · pairs with CLAUDE.md v1.5 · phavo.net*
+*PHAVO_CONTRACT v3.1 · pairs with CLAUDE.md v2.1 · phavo.net*

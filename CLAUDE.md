@@ -8,8 +8,8 @@
 
 | Document | Location | What you need from it |
 |---|---|---|
-| `docs/phavo_PRD_v2.7.md` | repo root/docs/ | Product logic, tier model, feature descriptions, decisions |
-| `docs/phavo_arch_spec_v1.9.html` | repo root/docs/ | DB schema, API contracts, auth flows, types, all implementation details |
+| `docs/phavo_PRD_v2.5.md` | repo root/docs/ | Product logic, tier model, feature descriptions, decisions |
+| `docs/phavo_arch_spec_v1.7.html` | repo root/docs/ | DB schema, API contracts, auth flows, types, all implementation details |
 
 If a prompt names a specific section (e.g. "Setup Wizard"), read exactly that section in the arch spec before you start.
 
@@ -246,6 +246,16 @@ const db = createClient({ url: 'file:/data/phavo.db' })
 - ~~No `/api/v1/license/*` routes~~ — activate + deactivate registered
 - ~~Tab limit not enforced client-side~~ — upgrade prompt shown + server-side 403 enforced
 - ~~Locked widget cards layout broken~~ — flex layout fixed, no absolute positioning
+
+### Resolved — Production Audit Fixes v2 ✅
+- ~~`exec()` in `/update/apply`~~ — replaced with `execFile('docker', ['compose', 'pull'])` chain
+- ~~SSRF in Ollama endpoints~~ — `assertNotCloudMetadata()` shared helper, applied to pihole/test + ai/test-ollama + ai/chat Ollama branch
+- ~~`loginAttempts` Map unbounded~~ — capped at 10000, pruned every 5min + on pressure
+- ~~`X-Forwarded-For` trusted unconditionally~~ — `PHAVO_TRUST_PROXY` env var, `getClientIp()` unified
+- ~~`renderMarkdown` XSS~~ — `escapeHtml()` applied before regex transforms
+- ~~Dockerfile missing HEALTHCHECK~~ — added, probes `/api/v1/health`
+- ~~Expired sessions never pruned~~ — hourly cleanup job in `hooks.server.ts`
+- ~~Session created before TOTP~~ — session inserted only after TOTP verification
 
 ### Resolved — Production Audit Fixes ✅
 - ~~CSRF tokens missing from Settings + Widget store~~ — `fetchWithCsrf()` utility in `utils/api.ts`; all internal fetch calls replaced

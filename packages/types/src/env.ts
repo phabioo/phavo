@@ -13,4 +13,5 @@ export const env = {
   httpsPort: Number(process.env.PHAVO_HTTPS_PORT ?? 3443),
   platform: (process.env.PHAVO_ENV ?? 'docker') as PhavoEnv,
   nodeEnv: process.env.NODE_ENV ?? 'development',
+  trustProxy: process.env.PHAVO_TRUST_PROXY === 'true',
 } as const;

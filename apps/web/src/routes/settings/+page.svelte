@@ -619,8 +619,19 @@ async function copyUpdateCommand() {
   } catch { /* clipboard unavailable */ }
 }
 
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
 function renderMarkdown(md: string): string {
-  return md
+  const escaped = escapeHtml(md);
+
+  return escaped
     .replace(/^## (.+)$/gm, '<strong>$1</strong>')
     .replace(/^# (.+)$/gm, '<strong>$1</strong>')
     .replace(/^[-*] (.+)$/gm, '<span class="cl-item">• $1</span>')

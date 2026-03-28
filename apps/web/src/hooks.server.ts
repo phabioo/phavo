@@ -1,10 +1,11 @@
 // apps/web/src/hooks.server.ts
 // SvelteKit server hooks. Module-level code runs once on server startup.
 
-import { loadOrCreateSecret } from '@phavo/db';
+import { loadOrCreateSecret, schema } from '@phavo/db';
 import { env } from '@phavo/types/env';
 import type { Handle } from '@sveltejs/kit';
-import { dbReady } from '$lib/server/db';
+import { lt } from 'drizzle-orm';
+import { db, dbReady } from '$lib/server/db';
 import { deriveInstallMethod } from '$lib/server/install';
 
 // Reject the default placeholder secret in production.
@@ -29,6 +30,25 @@ dbReady
   .then(() => deriveInstallMethod())
   .catch((e: unknown) => {
     console.error('[phavo] Failed to derive install method:', e);
+  });
+
+dbReady
+  .then(() => {
+    setInterval(
+      async () => {
+        try {
+          const now = Date.now();
+          await db.delete(schema.sessions).where(lt(schema.sessions.expiresAt, now));
+          console.log('[phavo] Pruned expired sessions');
+        } catch (e) {
+          console.error('[phavo] Session pruning failed:', e);
+        }
+      },
+      60 * 60 * 1000,
+    );
+  })
+  .catch((e: unknown) => {
+    console.error('[phavo] Failed to start session pruning:', e);
   });
 
 // Build a Content-Security-Policy header for a given request.

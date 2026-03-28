@@ -24,4 +24,7 @@ VOLUME ["/data"]
 EXPOSE 3000 3443
 # PHAVO_MIGRATIONS_DIR tells runMigrations() where to find the SQL files.
 ENV PHAVO_MIGRATIONS_DIR=/app/migrations
+HEALTHCHECK --interval=30s --timeout=5s \
+	--start-period=10s --retries=3 \
+	CMD bun -e "fetch('http://localhost:' + (process.env.PHAVO_PORT || 3000) + '/api/v1/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
 CMD ["bun", "run", "./build/index.js"]

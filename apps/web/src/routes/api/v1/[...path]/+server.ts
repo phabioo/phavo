@@ -1,3 +1,4 @@
+import { execFile } from 'node:child_process';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import {
   getCpu,
@@ -103,6 +104,32 @@ app.use('*', async (c, next) => {
 });
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
+
+function assertNotCloudMetadata(urlString: string): void {
+  const parsed = new URL(urlString);
+  const hostname = parsed.hostname.toLowerCase().replace(/^\[|\]$/g, '');
+
+  const blockedHostnames = ['169.254.169.254', 'metadata.google.internal', 'metadata.goog'];
+  const blockedPatterns = [/^169\.254\./, /^fd00:ec2:/i, /^::1$/];
+
+  if (blockedHostnames.includes(hostname)) {
+    throw new Error('URL not allowed');
+  }
+
+  for (const pattern of blockedPatterns) {
+    if (pattern.test(hostname)) {
+      throw new Error('URL not allowed');
+    }
+  }
+
+  if (parsed.username || parsed.password) {
+    throw new Error('URL not allowed');
+  }
+
+  if (!['http:', 'https:'].includes(parsed.protocol)) {
+    throw new Error('URL not allowed');
+  }
+}
 
 function parseConfigEntries(rows: Array<{ key: string; value: string }>) {
   const entries: Record<string, string> = {};
@@ -1149,10 +1176,7 @@ app.post('/auth/login', async (c) => {
     return response;
   }
 
-  const ip =
-    c.req.header('x-forwarded-for')?.split(',')[0]?.trim() ??
-    c.req.header('x-real-ip') ??
-    'unknown';
+  const ip = getClientIp(c.req);
 
   const rateCheck = checkRateLimit(ip);
   if (!rateCheck.allowed) {
@@ -1327,6 +1351,27 @@ app.post('/auth/login', async (c) => {
       instanceIdentifier,
     });
 
+    const localUserRows = await db
+      .select()
+      .from(schema.users)
+      .where(eq(schema.users.id, localUserId));
+    const localUser = localUserRows[0];
+
+    if (localUser?.totpSecret) {
+      const partialToken = generateSessionToken();
+      if (partialSessions.size >= 1000) {
+        return c.json(err('Too many pending sessions'), 429);
+      }
+      partialSessions.set(partialToken, {
+        userId: localUserId,
+        tier: 'local',
+        authMode: 'local',
+        graceUntil: null,
+        expiresMs: Date.now() + 5 * 60 * 1000,
+      });
+      return c.json(ok({ requiresTotp: true as const, partialToken }));
+    }
+
     const token = generateSessionToken();
     await db.insert(schema.sessions).values({
       id: token,
@@ -1382,17 +1427,6 @@ app.post('/auth/login', async (c) => {
   }
   // If PHAVO_IO_PUBLIC_KEY is not set, skip JWT verification (dev/test scenario).
 
-  const token = generateSessionToken();
-  await db.insert(schema.sessions).values({
-    id: token,
-    userId: user.id,
-    tier: 'local',
-    authMode: 'local',
-    validatedAt: Date.now(),
-    graceUntil: null,
-    expiresAt: Date.now() + SESSION_MAX_AGE * 1000,
-  });
-
   // Check if TOTP is enabled for this user.
   if (user.totpSecret) {
     const partialToken = generateSessionToken();
@@ -1406,10 +1440,19 @@ app.post('/auth/login', async (c) => {
       graceUntil: null,
       expiresMs: Date.now() + 5 * 60 * 1000,
     });
-    // Delete the full session we just created — user must complete TOTP first.
-    await db.delete(schema.sessions).where(eq(schema.sessions.id, token));
     return c.json(ok({ requiresTotp: true as const, partialToken }));
   }
+
+  const token = generateSessionToken();
+  await db.insert(schema.sessions).values({
+    id: token,
+    userId: user.id,
+    tier: 'local',
+    authMode: 'local',
+    validatedAt: Date.now(),
+    graceUntil: null,
+    expiresAt: Date.now() + SESSION_MAX_AGE * 1000,
+  });
 
   recordLoginAttempt(ip, true);
   const response = c.json(ok({ tier: 'local' as const }));
@@ -1671,19 +1714,10 @@ app.post('/pihole/test', requireTier('standard'), async (c) => {
       return c.json(err('Valid URL and token required'), 400);
     }
 
-    // Block cloud metadata endpoints (SSRF) and credential-embedded URLs.
-    const parsedUrl = new URL(parsed.data.url);
-    if (parsedUrl.username || parsedUrl.password) {
-      return c.json(err('URLs with embedded credentials are not allowed'), 400);
-    }
-    const hostname = parsedUrl.hostname;
-    if (
-      hostname === '169.254.169.254' ||
-      hostname === '[fd00:ec2::254]' ||
-      hostname === 'fd00:ec2::254' ||
-      hostname === 'metadata.google.internal'
-    ) {
-      return c.json(err('Cloud metadata endpoints are not allowed'), 400);
+    try {
+      assertNotCloudMetadata(parsed.data.url);
+    } catch {
+      return c.json(err('URL not allowed'), 400);
     }
 
     const data = await getPihole(parsed.data.url, parsed.data.token);
@@ -2043,9 +2077,19 @@ app.post('/update/apply', requireSession(), async (c) => {
   try {
     const { access } = await import('node:fs/promises');
     await access('/var/run/docker.sock');
-    const { exec } = await import('node:child_process');
-    // Fire-and-forget: the container will stop mid-request
-    exec('docker compose pull && docker compose up -d');
+    // Fire-and-forget: the container may stop mid-request once the update starts.
+    execFile('docker', ['compose', 'pull'], (pullErr) => {
+      if (pullErr) {
+        console.error('[phavo] docker compose pull failed:', pullErr.message);
+        return;
+      }
+
+      execFile('docker', ['compose', 'up', '-d'], (upErr) => {
+        if (upErr) {
+          console.error('[phavo] docker compose up failed:', upErr.message);
+        }
+      });
+    });
     return c.json(ok({ started: true }));
   } catch {
     return c.json(ok({ started: false, reason: 'Docker socket not available' }));
@@ -2442,6 +2486,12 @@ app.post('/ai/test-ollama', requireSession(), async (c) => {
     return c.json(err('Invalid URL'), 400);
   }
   try {
+    try {
+      assertNotCloudMetadata(parsed.data.url);
+    } catch {
+      return c.json(err('Invalid Ollama URL'), 400);
+    }
+
     let tagUrl: URL;
     try {
       tagUrl = new URL('/api/tags', parsed.data.url);
@@ -2485,7 +2535,13 @@ app.post('/ai/chat', requireSession(), async (c) => {
       if (!ollamaUrl) {
         return c.json(err('Ollama URL not configured'), 400);
       }
-      // Validate URL — only allow http/https to prevent SSRF
+
+      try {
+        assertNotCloudMetadata(ollamaUrl);
+      } catch {
+        return c.json(err('Invalid Ollama URL'), 400);
+      }
+
       let parsedUrl: URL;
       try {
         parsedUrl = new URL('/api/generate', ollamaUrl);

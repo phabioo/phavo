@@ -9,20 +9,59 @@ interface AuthConfig {
 }
 
 const MAX_LOGIN_ATTEMPTS = 10;
+const MAX_LOGIN_ATTEMPTS_MAP = 10000;
 const LOCKOUT_DURATION_MS = 5 * 60 * 1000; // 5 minutes
 
 interface AttemptRecord {
   count: number;
+  firstAttempt: number;
   lockedUntil: number;
 }
 
 const loginAttempts = new Map<string, AttemptRecord>();
 
+function isAttemptExpired(record: AttemptRecord, now: number): boolean {
+  return now - record.firstAttempt > LOCKOUT_DURATION_MS;
+}
+
+function pruneExpiredLoginAttempts(now = Date.now()): void {
+  for (const [identifier, record] of loginAttempts) {
+    if (isAttemptExpired(record, now)) {
+      loginAttempts.delete(identifier);
+    }
+  }
+}
+
+function ensureLoginAttemptsCapacity(now: number): boolean {
+  if (loginAttempts.size < MAX_LOGIN_ATTEMPTS_MAP) {
+    return true;
+  }
+
+  pruneExpiredLoginAttempts(now);
+  return loginAttempts.size < MAX_LOGIN_ATTEMPTS_MAP;
+}
+
+setInterval(
+  () => {
+    pruneExpiredLoginAttempts();
+  },
+  5 * 60 * 1000,
+);
+
 export function checkRateLimit(identifier: string): { allowed: boolean; retryAfter?: number } {
-  const record = loginAttempts.get(identifier);
   const now = Date.now();
+  if (!ensureLoginAttemptsCapacity(now)) {
+    return { allowed: false, retryAfter: Math.ceil(LOCKOUT_DURATION_MS / 1000) };
+  }
+
+  const record = loginAttempts.get(identifier);
 
   if (record) {
+    if (isAttemptExpired(record, now)) {
+      loginAttempts.delete(identifier);
+      return { allowed: true };
+    }
+
     if (record.lockedUntil > now) {
       return { allowed: false, retryAfter: Math.ceil((record.lockedUntil - now) / 1000) };
     }
@@ -42,11 +81,22 @@ export function recordLoginAttempt(identifier: string, success: boolean): void {
     return;
   }
 
-  const record = loginAttempts.get(identifier) ?? { count: 0, lockedUntil: 0 };
+  const now = Date.now();
+  if (!ensureLoginAttemptsCapacity(now)) {
+    return;
+  }
+
+  const existingRecord = loginAttempts.get(identifier);
+  const record =
+    !existingRecord || isAttemptExpired(existingRecord, now)
+      ? { count: 0, firstAttempt: now, lockedUntil: 0 }
+      : existingRecord;
+
   record.count += 1;
 
   if (record.count >= MAX_LOGIN_ATTEMPTS) {
-    record.lockedUntil = Date.now() + LOCKOUT_DURATION_MS;
+    record.firstAttempt = now;
+    record.lockedUntil = now + LOCKOUT_DURATION_MS;
   }
 
   loginAttempts.set(identifier, record);

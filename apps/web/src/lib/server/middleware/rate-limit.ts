@@ -2,6 +2,9 @@
 // In-memory, per-IP rate limiter (sliding window via token bucket approximation).
 // Stored in a Map that is pruned automatically to prevent unbounded growth.
 
+import { env } from '@phavo/types/env';
+import type { HonoRequest } from 'hono';
+
 interface BucketEntry {
   count: number;
   windowStart: number;
@@ -69,13 +72,17 @@ export const IMPORT_RULE: RateLimitRule = { maxRequests: 5, windowMs: 10 * 60 * 
 export const DEFAULT_RULE: RateLimitRule = { maxRequests: 120, windowMs: 60 * 1000 };
 
 /**
- * Extracts the client IP from a Hono request context.
- * Prefers x-forwarded-for (first value) then x-real-ip then 'unknown'.
+ * Extracts the client IP from a Hono request.
+ * Trust x-forwarded-for only when PHAVO_TRUST_PROXY=true.
  */
-export function getClientIp(headers: { header: (name: string) => string | undefined }): string {
-  return (
-    headers.header('x-forwarded-for')?.split(',')[0]?.trim() ??
-    headers.header('x-real-ip') ??
-    'unknown'
-  );
+export function getClientIp(req: HonoRequest): string {
+  if (env.trustProxy) {
+    const forwarded = req.header('x-forwarded-for');
+    if (forwarded) {
+      // split(',')[0] is always defined when the source string is non-empty
+      return (forwarded.split(',')[0] ?? forwarded).trim();
+    }
+  }
+
+  return req.header('x-real-ip') ?? 'unknown';
 }

@@ -13,6 +13,9 @@ services:
       # Phavo auto-generates and persists a secret in the data volume on first start.
       # Never use 'change-me'. Back up your data volume to preserve encrypted data.
       # - PHAVO_SECRET=your-random-string-here
+      # Set to true if running behind a reverse proxy
+      # (nginx, Caddy, Traefik) that sets X-Forwarded-For
+      # - PHAVO_TRUST_PROXY=true
       - PHAVO_TLS_MODE=${PHAVO_TLS_MODE:-self-signed}
       - PHAVO_DOMAIN=${PHAVO_DOMAIN:-}
     restart: unless-stopped
