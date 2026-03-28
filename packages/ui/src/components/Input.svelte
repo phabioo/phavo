@@ -1,6 +1,7 @@
 <script lang="ts">
 interface Props {
   label?: string;
+  ariaLabel?: string;
   placeholder?: string;
   error?: string | undefined;
   type?: 'text' | 'password' | 'email' | 'url' | 'number';
@@ -10,21 +11,26 @@ interface Props {
 
 let {
   label,
+  ariaLabel,
   placeholder = '',
   error,
   type = 'text',
   value = $bindable(''),
   oninput,
 }: Props = $props();
+
+const inputId = `input-${Math.random().toString(36).slice(2, 9)}`;
 </script>
 
 <div class="input-wrapper">
   {#if label}
-    <label class="input-label">{label}</label>
+    <label class="input-label" for={inputId}>{label}</label>
   {/if}
   <input
+    id={inputId}
     class="input"
     class:has-error={!!error}
+    aria-label={ariaLabel ?? (label ? undefined : (placeholder || undefined))}
     {type}
     {placeholder}
     bind:value

@@ -13,6 +13,8 @@ interface Props {
 
 let { label, options, value = $bindable(''), onchange }: Props = $props();
 
+const selectId = `select-${Math.random().toString(36).slice(2, 9)}`;
+
 function handleChange(e: Event) {
   const target = e.target as HTMLSelectElement;
   value = target.value;
@@ -22,9 +24,9 @@ function handleChange(e: Event) {
 
 <div class="select-wrapper">
   {#if label}
-    <label class="select-label">{label}</label>
+    <label class="select-label" for={selectId}>{label}</label>
   {/if}
-  <select class="select" bind:value onchange={handleChange}>
+  <select id={selectId} class="select" bind:value onchange={handleChange}>
     {#each options as opt}
       <option value={opt.value}>{opt.label}</option>
     {/each}

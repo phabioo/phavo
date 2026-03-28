@@ -149,7 +149,7 @@
 
 <svelte:window onclick={closeContext} />
 
-<nav class="tab-bar" role="tablist">
+<div class="tab-bar" role="tablist">
   {#each tabs as tab (tab.id)}
     {#if editingTabId === tab.id}
       <input
@@ -208,24 +208,27 @@
       {@html icons.plus()}
     </button>
   {/if}
-</nav>
+</div>
 
 {#if contextTabId}
-  <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
   <div
     class="tab-ctx"
+    role="menu"
+    aria-label="Tab options"
+    tabindex="-1"
     style="left:{contextAnchorRect ? contextAnchorRect.left : contextPos.x}px;top:{contextAnchorRect ? contextAnchorRect.bottom + 4 : contextPos.y}px"
     onclick={(e) => e.stopPropagation()}
+    onkeydown={(e) => { if (e.key === 'Escape') closeContext(); e.stopPropagation(); }}
   >
     {#if confirmingDeleteId}
       <span class="tab-ctx-confirm-text">{labels.deleteConfirm ?? 'Delete this tab?'}</span>
-      <button class="tab-ctx-item tab-ctx-danger" onclick={handleDeleteConfirm}>
+      <button class="tab-ctx-item tab-ctx-danger" role="menuitem" onclick={handleDeleteConfirm}>
         {labels.delete ?? 'Delete'}
       </button>
     {:else}
-      <button class="tab-ctx-item" onclick={handleRenameClick}>{labels.rename ?? 'Rename'}</button>
+      <button class="tab-ctx-item" role="menuitem" onclick={handleRenameClick}>{labels.rename ?? 'Rename'}</button>
       {#if tabs.length > 1}
-        <button class="tab-ctx-item tab-ctx-danger" onclick={handleDeleteClick}>{labels.delete ?? 'Delete'}</button>
+        <button class="tab-ctx-item tab-ctx-danger" role="menuitem" onclick={handleDeleteClick}>{labels.delete ?? 'Delete'}</button>
       {/if}
     {/if}
   </div>

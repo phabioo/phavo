@@ -3,9 +3,10 @@ import '@phavo/ui/src/theme.css';
 import { onMount, type Snippet } from 'svelte';
 import { goto } from '$app/navigation';
 import { icons, Sidebar, Header, NotificationPanel } from '@phavo/ui';
-import type { SearchEntry, AiProviders } from '@phavo/ui';
+import type { SearchEntry } from '@phavo/ui';
 import type { DashboardConfig, Notification, Session } from '@phavo/types';
 import en from '$lib/i18n/en.json';
+import { getAiStatus, updateAiStatusFromPayload } from '$lib/stores/ai.svelte';
 import { getConfig, setConfig } from '$lib/stores/config.svelte';
 import { getSession, setSession } from '$lib/stores/session.svelte';
 import {
@@ -36,10 +37,6 @@ let panelOpen = $state(false);
 let updateAvailable = $state(false);
 let latestUpdateVersion = $state('');
 let currentPathname = $state('/');
-
-// Search
-let searchEngineUrl = $state('https://duckduckgo.com/?q={query}');
-let aiProviders = $state<AiProviders>({ ollama: false, openai: false, anthropic: false });
 
 const sidebarItems = [
   { id: 'home', label: 'Dashboard', icon: icons.cpu() },
@@ -72,6 +69,8 @@ const headerTitle = $derived(
 const headerBrandingLabel = $derived(
   getSession()?.tier === 'free' ? en.dashboard.poweredBy : undefined,
 );
+
+const aiStatus = $derived(getAiStatus());
 
 function navigate(id: string) {
   goto(id === 'home' ? '/' : `/${id}`);
@@ -190,8 +189,7 @@ async function loadAiStatus() {
       };
     };
     if (json.ok && json.data) {
-      aiProviders = { ollama: json.data.ollama, openai: json.data.openai, anthropic: json.data.anthropic };
-      searchEngineUrl = json.data.searchEngineUrl;
+      updateAiStatusFromPayload(json.data);
     }
   } catch { /* AI status is optional — degrade gracefully */ }
 }
@@ -335,8 +333,8 @@ function handleNotificationClick(n: Notification) {
         addWidgetLabel={en.dashboard.addWidget}
         {updateBadge}
         {searchIndex}
-        {searchEngineUrl}
-        {aiProviders}
+        searchEngineUrl={aiStatus.searchEngineUrl}
+        aiProviders={aiStatus.providers}
         tier={data.session?.tier ?? 'free'}
         onAiChat={handleAiChat}
       />

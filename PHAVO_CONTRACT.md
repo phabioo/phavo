@@ -18,20 +18,36 @@ packages/ui/       @phavo/ui — shared UI shells (NOT widgets)
 ```
 
 Domain: **phavo.net** (not phavo.io)
+DB authMode values: `'phavo-net'` | `'local'` (migrated from `'phavo-io'`)
 
 ---
 
 ## CRITICAL ARCHITECTURE TRUTHS
 
-### 1. API IS ONE FILE
+### 1. API USES ROUTE MODULES (after god-file split)
 
-ALL API logic lives in:
+API routes live in route modules under:
 ```
-apps/web/src/routes/api/v1/[...path]/+server.ts
+apps/web/src/lib/server/routes/
+  auth.ts          — POST /auth/login, /totp, /logout etc.
+  metrics.ts       — GET /cpu, /memory, /disk etc.
+  integrations.ts  — GET /pihole, /rss, /links
+  widgets.ts       — GET /widgets, POST/DELETE /widget-instances etc.
+  tabs.ts          — GET/POST/PATCH/DELETE /tabs
+  config.ts        — GET/POST /config, export/import
+  ai.ts            — POST /ai/chat, GET /ai/status etc.
+  license.ts       — POST /license/activate, /deactivate
+  notifications.ts — GET /notifications, POST /notifications/read
+  system.ts        — GET /health, /about, /update/check, POST /update/apply
 ```
-- Add routes here only
-- Follow existing patterns exactly
-- Do NOT create new +server.ts files for API routes
+
+The orchestrator file `apps/web/src/routes/api/v1/[...path]/+server.ts`
+remains but is now <150 lines — only app creation, global middleware,
+and `registerXxxRoutes(app)` calls.
+
+- Add new routes to the appropriate module file
+- Never add route handlers directly to +server.ts
+- Each module exports `registerXxxRoutes(app: Hono<...>): void`
 
 ### 2. WIDGET COMPONENTS ARE APP-LOCAL
 
@@ -234,7 +250,7 @@ Tier must only come from `session.tier` via `authMiddleware`.
 
 ### ❌ FAIL: LAYOUT/API AUTH MISMATCH
 `+layout.server.ts` must NOT synthesize a session for a missing DB record.
-If cookie exists but no DB session → redirect to `/auth/login`, same as API 401.
+If cookie exists but no DB session → clear cookies and redirect to `/setup`. This matches API 401 behavior — no fake session synthesis.
 
 ### ❌ FAIL: WIDGET DATA BYPASS
 Widget component fetches its own data directly.
@@ -254,6 +270,14 @@ Must go to `credentials` table with AES-256-GCM encryption.
 ### ❌ FAIL: HYDRATION VIOLATION
 Any of the three Svelte 5 hydration rules violated (see above).
 
+### ❌ FAIL: SHELL INJECTION
+Using `exec()` with a shell string for subprocess calls.
+Always use `execFile()` with an explicit args array.
+
+### ❌ FAIL: SSRF
+Fetching a user-supplied URL without calling `assertNotCloudMetadata()`.
+All user-supplied URLs must be validated before `fetch()`.
+
 ### ❌ FAIL: HARDCODED VALUES
 `/data/` literals, port `3000`, or hex color values in component code.
 Use `env.*`, `paths.*`, and CSS variables only.
@@ -267,7 +291,7 @@ a prompt explicitly targets them.
 
 | Debt | Status | Risk |
 |---|---|---|
-| ~~Giant API file~~ | **Scheduled for split** — Opus god-file split prompt ready | High |
+| ~~Giant API file~~ | ✅ Split complete — 10 route modules + 3 helpers; +server.ts = 99 lines | — |
 | ~~`tier` in `DashboardConfig`~~ | ✅ Fixed | — |
 | ~~`+layout.server.ts` fake session fallback~~ | ✅ Fixed | — |
 | ~~CSRF fallback secret~~ | ✅ Fixed | — |
@@ -285,7 +309,7 @@ a prompt explicitly targets them.
 2. Implement metric function in packages/agent/src/metrics/
 3. Re-export from packages/agent/src/index.ts
 4. Register in apps/web/src/lib/server/widget-registry.ts
-5. Add API endpoint in apps/web/src/routes/api/v1/[...path]/+server.ts
+5. Add API endpoint in the appropriate route module under apps/web/src/lib/server/routes/
 6. Create presentational component in apps/web/src/lib/widgets/
 7. Wire rendering in apps/web/src/routes/+page.svelte
 8. If configurable: add Zod configSchema in widget-registry.ts
@@ -297,15 +321,20 @@ a prompt explicitly targets them.
 ## API ROUTE TEMPLATE
 
 ```typescript
-app.get('/example', requireSession(), async (c) => {
-  try {
-    await dbReady
-    const data = await cachedAgentFunction()
-    return c.json(ok(data))
-  } catch {
-    return c.json(err('Failed to fetch example'), 500)
-  }
-})
+// In apps/web/src/lib/server/routes/metrics.ts
+export function registerMetricsRoutes(
+  app: Hono<{ Variables: AppVariables }>
+): void {
+  app.get('/example', requireSession(), async (c) => {
+    try {
+      // No await dbReady needed — hooks.server.ts guarantees DB ready
+      const data = await cachedAgentFunction()
+      return c.json(ok(data))
+    } catch {
+      return c.json(err('Failed to fetch example'), 500)
+    }
+  })
+}
 ```
 
 ---
@@ -335,4 +364,4 @@ bun run lint        # must be 0 errors
 
 ---
 
-*PHAVO_CONTRACT v3.1 · pairs with CLAUDE.md v2.1 · phavo.net*
+*PHAVO_CONTRACT v3.2 · pairs with CLAUDE.md v2.3 · phavo.net*

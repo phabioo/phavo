@@ -26,13 +26,13 @@ jobs:
 
             ### Docker
             ```bash
-            docker pull phavo/phavo:${{ steps.version.outputs.VERSION }}
+            docker pull getphavo/phavo:${{ steps.version.outputs.VERSION }}
             ```
 
             ### Docker Compose
             Update your `docker-compose.yml`:
             ```yaml
-            image: phavo/phavo:${{ steps.version.outputs.VERSION }}
+            image: getphavo/phavo:${{ steps.version.outputs.VERSION }}
             ```
 
             See [CHANGELOG.md](CHANGELOG.md) for details.

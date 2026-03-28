@@ -89,7 +89,7 @@
     "categoryUtility": "Utility",
     "alreadyAdded": "Added",
     "remove": "Remove",
-    "locked": "Standard",
+    "locked": "LOCKED",
     "sizeLabel": "Size"
   },
   "widgets": {
@@ -189,9 +189,9 @@
     "sessionExpired": "Your session has expired. Please sign in again."
   },
   "upgrade": {
-    "prompt": "Upgrade to Standard to unlock all widgets — €7.99 one-time.",
-    "tabLimit": "Upgrade to Standard to add unlimited tabs — €7.99 one-time",
-    "widgetLocked": "Upgrade to Standard to unlock this widget — €7.99 one-time"
+    "prompt": "Upgrade to Standard to unlock all widgets — €8.99 one-time.",
+    "tabLimit": "Upgrade to Standard to add unlimited tabs — €8.99 one-time",
+    "widgetLocked": "Upgrade to Standard to unlock this widget — €8.99 one-time"
   },
   "errors": {
     "generic": "Something went wrong. Please try again.",

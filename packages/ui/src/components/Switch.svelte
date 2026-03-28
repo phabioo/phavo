@@ -18,6 +18,7 @@ function toggle() {
     type="button"
     role="switch"
     aria-checked={checked}
+    aria-label={label}
     class="switch"
     class:active={checked}
     onclick={toggle}

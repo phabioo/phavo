@@ -4,7 +4,7 @@ interface Props {
   price?: string;
 }
 
-let { feature, price = '€7.99' }: Props = $props();
+let { feature, price = '€8.99' }: Props = $props();
 </script>
 
 <div class="upgrade-banner">

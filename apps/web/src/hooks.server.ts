@@ -7,6 +7,25 @@ import type { Handle } from '@sveltejs/kit';
 import { lt } from 'drizzle-orm';
 import { db, dbReady } from '$lib/server/db';
 import { deriveInstallMethod } from '$lib/server/install';
+import { paths } from '$lib/server/paths';
+
+let shutdownRegistered = false;
+
+async function shutdown(signal: string): Promise<void> {
+  console.log(`[phavo] Received ${signal}, shutting down...`);
+
+  try {
+    // Drizzle keeps the underlying libSQL client on $client, but it is not surfaced
+    // in the app-level wrapper type, so shutdown uses a narrow structural access here.
+    const client = (db as typeof db & { $client?: { close?: () => Promise<void> | void } }).$client;
+    await client?.close?.();
+    console.log('[phavo] Shutdown complete');
+  } catch (e) {
+    console.error('[phavo] Shutdown error:', e);
+  }
+
+  process.exit(0);
+}
 
 // Reject the default placeholder secret in production.
 if (env.nodeEnv === 'production' && process.env.PHAVO_SECRET === 'change-me') {
@@ -20,6 +39,14 @@ if (env.nodeEnv === 'production' && process.env.PHAVO_SECRET === 'change-me') {
 // falls back to the persisted data/secret.key, or auto-generates one on first start.
 dbReady
   .then(() => loadOrCreateSecret())
+  .then(() => {
+    console.log(`[phavo] Phavo v${PHAVO_VERSION} starting`);
+    console.log(`[phavo] Platform: ${env.platform}`);
+    console.log(`[phavo] Port: ${env.port}`);
+    console.log(`[phavo] Data dir: ${env.dataDir}`);
+    console.log(`[phavo] DB: ${paths.db}`);
+    console.log(`[phavo] Ready`);
+  })
   .catch((e: unknown) => {
     console.error('[phavo] Failed to initialise encryption secret:', e);
     process.exit(1);
@@ -30,6 +57,17 @@ dbReady
   .then(() => deriveInstallMethod())
   .catch((e: unknown) => {
     console.error('[phavo] Failed to derive install method:', e);
+  });
+
+dbReady
+  .then(() => {
+    if (shutdownRegistered) return;
+    shutdownRegistered = true;
+    process.on('SIGTERM', () => void shutdown('SIGTERM'));
+    process.on('SIGINT', () => void shutdown('SIGINT'));
+  })
+  .catch((e: unknown) => {
+    console.error('[phavo] Failed to register shutdown handlers:', e);
   });
 
 dbReady
@@ -60,6 +98,9 @@ function buildCsp(nonce: string | undefined): string {
   return [
     "default-src 'self'",
     `script-src ${scriptSrc}`,
+    // 'unsafe-inline' required for Svelte's runtime
+    // style injection. Nonce-based styles are not yet
+    // supported by SvelteKit. Tracked for future removal.
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "font-src 'self' https://fonts.gstatic.com",
     "img-src 'self' data: https:",

@@ -1056,7 +1056,7 @@ onMount(() => {
                 </button>
               {:else}
                 <div class="widget-card widget-locked">
-                  <span class="widget-tier-badge">Standard</span>
+                  <span class="widget-tier-badge">LOCKED</span>
                   <strong>{entry.name}</strong>
                   <p>{entry.description}</p>
                   <span class="lock-icon" aria-hidden="true">🔒</span>

@@ -1,11 +1,13 @@
 version: '3.8'
 services:
   phavo:
-    image: phavo/phavo:latest
+    image: getphavo/phavo:latest
     build: .
     ports:
-      - "3000:3000"
-      - "3443:3443"
+      - "${PHAVO_PORT:-3000}:3000"
+      # HTTPS: configure a reverse proxy (nginx, Caddy)
+      # in front of Phavo for TLS termination.
+      # Direct TLS support is planned for a future release.
     volumes:
       - phavo-data:/data
     environment:

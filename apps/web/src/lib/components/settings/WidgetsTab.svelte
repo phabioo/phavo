@@ -348,7 +348,7 @@
   <div class="widgets-tab">
     <aside class="widgets-list" class:widgets-list-hidden={isMobile && selectedWidget !== null}>
       <div class="widgets-list-toolbar">
-        <Input label="Search" placeholder="Search widgets..." bind:value={search} />
+        <Input ariaLabel="Search widgets" placeholder="Search widgets..." bind:value={search} />
         <div class="filter-chips">
           {#each filterOptions as option (option.value)}
             <button

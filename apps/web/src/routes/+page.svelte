@@ -84,19 +84,19 @@ function showUpgradePrompt(message: string) {
 
 async function handleAddTab(label: string) {
   if (freeTabLimitReached) {
-    showUpgradePrompt('Upgrade to Standard to add unlimited tabs — €7.99 one-time');
+    showUpgradePrompt('Upgrade to Standard to add unlimited tabs — €8.99 one-time');
     return;
   }
 
   const result = await createTab(label);
   if (!result.ok && result.error === 'Tab limit reached — upgrade to Standard') {
-    showUpgradePrompt('Upgrade to Standard to add unlimited tabs — €7.99 one-time');
+    showUpgradePrompt('Upgrade to Standard to add unlimited tabs — €8.99 one-time');
   }
 }
 
 function handleLockedAddTab() {
   if (!freeTabLimitReached) return;
-  showUpgradePrompt('Upgrade to Standard to add unlimited tabs — €7.99 one-time');
+  showUpgradePrompt('Upgrade to Standard to add unlimited tabs — €8.99 one-time');
 }
 
 function handleRenameTab(id: string, newLabel: string) {

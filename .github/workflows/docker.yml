@@ -29,7 +29,7 @@ jobs:
           platforms: linux/amd64,linux/arm64
           push: true
           tags: |
-            phavo/phavo:latest
-            phavo/phavo:${{ steps.version.outputs.VERSION }}
+            getphavo/phavo:latest
+            getphavo/phavo:${{ steps.version.outputs.VERSION }}
           build-args: |
             PHAVO_VERSION=${{ steps.version.outputs.VERSION }}

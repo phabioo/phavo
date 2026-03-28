@@ -525,7 +525,7 @@ pre {
 <nav id="nav">
   <div class="nav-logo">
     <div class="name">Phavo</div>
-    <div class="sub">arch-spec · v1.8</div>
+    <div class="sub">arch-spec · v1.9</div>
   </div>
 
   <div class="nav-group">
@@ -613,7 +613,7 @@ pre {
   <h1>Phavo — Technical Architecture Specification</h1>
   <div class="doc-meta">
     <span><b>Version</b> 1.0</span>
-    <span><b>PRD ref</b> v1.8</span>
+    <span><b>PRD ref</b> v2.8</span>
     <span><b>Phase</b> 1 · Web Dashboard</span>
     <span><b>Stack</b> SvelteKit · Hono · libSQL · Better Auth · Bun</span>
   </div>
@@ -718,7 +718,7 @@ pre {
       <tr><td class="pk">id</td><td class="type">text PK</td><td class="nn">NOT NULL</td><td class="note">UUID, auto-generated</td></tr>
       <tr><td>email</td><td class="type">text</td><td>nullable</td><td class="note">phavo.net users only. Unique if present.</td></tr>
       <tr><td>passwordHash</td><td class="type">text</td><td>nullable</td><td class="note">Argon2id. Local users only. Never stored for phavo.net users.</td></tr>
-      <tr><td>authMode</td><td class="type">text</td><td class="nn">NOT NULL</td><td class="note">'phavo-io' | 'local'</td></tr>
+      <tr><td>authMode</td><td class="type">text</td><td class="nn">NOT NULL</td><td class="note">'phavo-net' | 'local' <em>(migrated from 'phavo-io')</em></td></tr>
       <tr><td>totpSecret</td><td class="type">text</td><td>nullable</td><td class="note">AES-256-GCM encrypted. Set when user enables 2FA.</td></tr>
       <tr><td>totpBackupCodes</td><td class="type">text</td><td>nullable</td><td class="note">JSON array, AES-256-GCM encrypted. 8 one-time codes.</td></tr>
       <tr><td>createdAt</td><td class="type">integer</td><td class="nn">NOT NULL</td><td class="note">Unix timestamp ms</td></tr>
@@ -737,7 +737,7 @@ pre {
       <tr><td class="pk">id</td><td class="type">text PK</td><td class="nn">NOT NULL</td><td class="note">32-byte random, base64url — the cookie value</td></tr>
       <tr><td class="fk">userId</td><td class="type">text FK</td><td class="nn">NOT NULL</td><td class="note">→ users.id</td></tr>
       <tr><td>tier</td><td class="type">text</td><td class="nn">NOT NULL</td><td class="note">'free' | 'standard' | 'local' — set by server on login only</td></tr>
-      <tr><td>authMode</td><td class="type">text</td><td class="nn">NOT NULL</td><td class="note">'phavo-io' | 'local'</td></tr>
+      <tr><td>authMode</td><td class="type">text</td><td class="nn">NOT NULL</td><td class="note">'phavo-net' | 'local' <em>(migrated from 'phavo-io')</em></td></tr>
       <tr><td>validatedAt</td><td class="type">integer</td><td class="nn">NOT NULL</td><td class="note">Unix ms. Last successful phavo.net validation.</td></tr>
       <tr><td>graceUntil</td><td class="type">integer</td><td>nullable</td><td class="note">Unix ms. Session valid offline until this time. Free: +24h, Std: +72h from validatedAt.</td></tr>
       <tr><td>expiresAt</td><td class="type">integer</td><td class="nn">NOT NULL</td><td class="note">Unix ms. Hard expiry — default 7 days from creation.</td></tr>
@@ -960,7 +960,7 @@ pre {
 <span class="acc">2.</span>          ─── SELECT * FROM sessions WHERE id = token ─────────────────────►  libSQL
           <span class="cm">  ↳ not found? → 401 Unauthorized</span>
           <span class="cm">  ↳ expiresAt &lt; now? → 401, delete session</span>
-          <span class="cm">  ↳ authMode = 'phavo-io' AND graceUntil &lt; now? → 401 "grace period expired"</span>
+          <span class="cm">  ↳ authMode = 'phavo-net' AND graceUntil &lt; now? → 401 "grace period expired"</span>
 <span class="acc">3.</span>          ─── c.set('session', sessionRecord) <span class="cm">[stored in Hono context]</span>
 <span class="acc">4.</span>          ─── call next() → requireTier() → route handler</pre>
 </div>
@@ -1049,7 +1049,7 @@ pre {
   <div class="endpoint-body">
     <div class="ep-label">Request</div>
     <pre><span class="cm">// phavo.net auth</span>
-{ <span class="str">"authMode"</span>: <span class="str">"phavo-io"</span>, <span class="str">"code"</span>: <span class="str">string</span> }          <span class="cm">// OAuth code from callback</span>
+{ <span class="str">"authMode"</span>: <span class="str">"phavo-net"</span>, <span class="str">"code"</span>: <span class="str">string</span> }          <span class="cm">// OAuth code from callback</span>
 
 <span class="cm">// Local auth (login)</span>
 { <span class="str">"authMode"</span>: <span class="str">"local"</span>, <span class="str">"username"</span>: <span class="ty">string</span>, <span class="str">"password"</span>: <span class="ty">string</span> }
@@ -1089,7 +1089,7 @@ pre {
   <div class="endpoint-body">
     <div class="ep-label">Response 200</div>
     <pre>{ <span class="str">"ok"</span>: <span class="kw">true</span>, <span class="str">"data"</span>: {
-  <span class="str">"authMode"</span>: <span class="str">"phavo-io"</span> | <span class="str">"local"</span>,
+  <span class="str">"authMode"</span>: <span class="str">"phavo-net"</span> | <span class="str">"local"</span>,
   <span class="str">"validatedAt"</span>: <span class="ty">number</span>,          <span class="cm">// unix ms</span>
   <span class="str">"graceUntil"</span>: <span class="ty">number</span> | <span class="kw">null</span>       <span class="cm">// null for local tier</span>
   <span class="cm">// NOTE: tier is intentionally excluded — never sent to client</span>
@@ -1566,7 +1566,7 @@ registry.<span class="fn">register</span>({ id: <span class="str">'io.phavo.piho
   name:            <span class="str">'My Widget'</span>,
   description:     <span class="str">'Fetches data from example.com'</span>,
   version:         <span class="str">'1.0.0'</span>,
-  author:          <span class="str">'your-phavo-io-username'</span>,
+  author:          <span class="str">'your-phavo-net-username'</span>,
   schemaVersion:   <span class="str">'1'</span>,
   category:        <span class="str">'integration'</span>,
   tier:            <span class="str">'standard'</span>,
@@ -1730,7 +1730,7 @@ cp -r dist/ /path/to/phavo-data/plugins/my-widget/
 <thead><tr><th>installMethod</th><th>Update panel shows</th></tr></thead>
 <tbody>
   <tr><td><code>docker-compose</code></td><td class="note"><code>docker compose pull && docker compose up -d</code></td></tr>
-  <tr><td><code>docker-run</code></td><td class="note"><code>docker pull phavo/phavo && docker run ...</code></td></tr>
+  <tr><td><code>docker-run</code></td><td class="note"><code>docker pull getphavo/phavo && docker run ...</code></td></tr>
   <tr><td><code>bun-direct</code></td><td class="note"><code>bun upgrade && bun run build && bun run start</code></td></tr>
   <tr><td><code>tauri</code></td><td class="note">"Updates werden automatisch durch die App verwaltet." — no command shown</td></tr>
 </tbody>
@@ -2082,8 +2082,8 @@ bun run release:major   <span class="cm"># 1.0.0 → 2.0.0</span></pre>
 <div class="tbl-wrap"><table>
 <thead><tr><th>Trigger</th><th>Action</th><th>Docker tags</th></tr></thead>
 <tbody>
-  <tr><td>push to <code>main</code></td><td class="note">Build amd64+arm64</td><td class="note"><code>phavo/phavo:latest</code></td></tr>
-  <tr><td>push tag <code>v*.*.*</code></td><td class="note">Build + GitHub Release</td><td class="note"><code>phavo/phavo:1.0.0</code> + <code>:latest</code></td></tr>
+  <tr><td>push to <code>main</code></td><td class="note">Build amd64+arm64</td><td class="note"><code>getphavo/phavo:latest</code></td></tr>
+  <tr><td>push tag <code>v*.*.*</code></td><td class="note">Build + GitHub Release</td><td class="note"><code>getphavo/phavo:1.0.0</code> + <code>:latest</code></td></tr>
 </tbody>
 </table></div>
 </section>
@@ -2109,20 +2109,20 @@ bun run release:major   <span class="cm"># 1.0.0 → 2.0.0</span></pre>
 <div class="tbl-wrap"><table>
 <thead><tr><th>Address</th><th>Purpose</th></tr></thead>
 <tbody>
-  <tr><td><code>docker@phavo.net</code></td><td class="note">Docker Hub account, automated system mail</td></tr>
-  <tr><td><code>security@phavo.net</code></td><td class="note">Vulnerability reports (SECURITY.md)</td></tr>
-  <tr><td><code>hello@phavo.net</code></td><td class="note">General contact on landing page</td></tr>
-  <tr><td><code>noreply@phavo.net</code></td><td class="note">Transactional mail (future)</td></tr>
+  <tr><td><code><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="90f4fff3fbf5e2d0e0f8f1e6ffbefef5e4">[email&#160;protected]</a></code></td><td class="note">Docker Hub account, automated system mail</td></tr>
+  <tr><td><code><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="a4d7c1c7d1d6cdd0dde4d4ccc5d2cb8acac1d0">[email&#160;protected]</a></code></td><td class="note">Vulnerability reports (SECURITY.md)</td></tr>
+  <tr><td><code><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="ff979a939390bf8f979e8990d1919a8b">[email&#160;protected]</a></code></td><td class="note">General contact on landing page</td></tr>
+  <tr><td><code><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="9bf5f4e9feebf7e2dbebf3faedf4b5f5feef">[email&#160;protected]</a></code></td><td class="note">Transactional mail (future)</td></tr>
 </tbody>
 </table></div>
 
 <h3>Docker Hub</h3>
 <pre><span class="cm"># Public repository</span>
-docker pull phavo/phavo:latest
-docker pull phavo/phavo:1.0.0
+docker pull getphavo/phavo:latest
+docker pull getphavo/phavo:1.0.0
 
 <span class="cm"># GitHub Secrets required for CI:</span>
-DOCKERHUB_USERNAME = docker@phavo.net username
+DOCKERHUB_USERNAME = <a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="aacec5c9c1cfd8eadac2cbdcc584c4cfde">[email&#160;protected]</a> username
 DOCKERHUB_TOKEN    = Docker Hub access token</pre>
 
 <h3>Dashboard auto-update flow</h3>
@@ -2154,7 +2154,7 @@ DOCKERHUB_TOKEN    = Docker Hub access token</pre>
 <span class="kw">type</span> <span class="ty">SetupStep</span> =
   | <span class="str">'welcome'</span>           <span class="cm">// 1</span>
   | <span class="str">'tier-select'</span>       <span class="cm">// 2</span>
-  | <span class="str">'auth'</span>              <span class="cm">// 3  — branches: phavo-io | local-new | local-activate</span>
+  | <span class="str">'auth'</span>              <span class="cm">// 3  — branches: phavo-net | local-new | local-activate</span>
   | <span class="str">'dashboard-name'</span>    <span class="cm">// 4</span>
   | <span class="str">'location'</span>          <span class="cm">// 5  — skippable</span>
   | <span class="str">'tabs'</span>              <span class="cm">// 6</span>
@@ -2166,7 +2166,7 @@ DOCKERHUB_TOKEN    = Docker Hub access token</pre>
 <span class="kw">interface</span> <span class="ty">SetupState</span> {
   step:          <span class="ty">SetupStep</span>
   tier:          <span class="ty">Tier</span> | <span class="kw">null</span>
-  authMode:      <span class="str">'phavo-io'</span> | <span class="str">'local'</span> | <span class="kw">null</span>
+  authMode:      <span class="str">'phavo-net'</span> | <span class="str">'local'</span> | <span class="kw">null</span>
   dashboardName: <span class="ty">string</span>
   location:      <span class="ty">GeoLocation</span> | <span class="kw">null</span>
   tabs:          <span class="ty">string</span>[]                  <span class="cm">// tab labels in order</span>
@@ -2227,7 +2227,7 @@ DOCKERHUB_TOKEN    = Docker Hub access token</pre>
 <span class="kw">export async function</span> <span class="fn">checkForUpdate</span>(): <span class="ty">Promise</span>&lt;<span class="ty">UpdateCheckResult</span>&gt; {
   <span class="kw">if</span> (cachedResult && Date.<span class="fn">now</span>() - cachedAt &lt; UPDATE_CACHE_TTL) <span class="kw">return</span> cachedResult
 
-  <span class="kw">const</span> res = <span class="kw">await</span> <span class="fn">fetch</span>(<span class="str">'https://api.github.com/repos/phabioo/phavo/releases/latest'</span>, {
+  <span class="kw">const</span> res = <span class="kw">await</span> <span class="fn">fetch</span>(<span class="str">'https://api.github.com/repos/getphavo/phavo/releases/latest'</span>, {
     headers: { <span class="str">'User-Agent'</span>: <span class="str">'phavo-self-hosted'</span> }
   })
   <span class="kw">if</span> (!res.ok) <span class="kw">return</span> { updateAvailable: <span class="kw">false</span>, current: PHAVO_VERSION, latest: PHAVO_VERSION }
@@ -2251,7 +2251,7 @@ DOCKERHUB_TOKEN    = Docker Hub access token</pre>
 }</pre>
 
 <div class="callout warn">
-  <code>PHAVO_VERSION</code> is injected at build time via <code>Bun.env.npm_package_version</code> from <code>package.json</code>. It is never configurable at runtime.
+  <code>PHAVO_VERSION</code> is injected at build time by reading root <code>package.json</code> via <code>readFileSync</code> in <code>vite.config.ts</code>. It is never configurable at runtime.
 </div>
 
 <h3>Frontend — Header Badge</h3>
@@ -2310,7 +2310,7 @@ bun upgrade && bun run build && bun run start
 <pre><span class="cm">┌─────────────────────────────────────────────────────┐
 │  Current plan   [STANDARD]                          │
 │  Licence key    XXXX-XXXX-••••-••••  [Copy]         │
-│  Account        user@example.com (phavo.net)         │
+│  Account        <a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="b0c5c3d5c2f0d5c8d1ddc0dcd59ed3dfdd">[email&#160;protected]</a> (phavo.net)         │
 │  Validated      3 minutes ago  (grace: 71h 57m)     │
 │                                                     │
 │  [Upgrade to Local — pay €12.00 difference]         │
@@ -2472,7 +2472,7 @@ bun upgrade && bun run build && bun run start
 <span class="str">'search_engine'</span>   → <span class="str">'https://duckduckgo.com/?q={query}'</span></pre>
 
 <h3>AI chat endpoint</h3>
-<pre><span class="cm">// POST /api/v1/ai/chat — requireSession()</span>
+<pre><span class="cm">// POST /api/v1/ai/chat — requireTier('standard') — Standard+ only</span>
 <span class="cm">// Request:</span>
 { provider: <span class="str">'ollama'</span> | <span class="str">'openai'</span> | <span class="str">'claude'</span>, query: <span class="ty">string</span> }
 
@@ -2618,28 +2618,4 @@ Focus rings: visible on keyboard navigation (never removed with outline: none wi
 </table></div>
 
 <p style="margin-top:24px;font-size:12px;color:var(--text-3)">
-  Architecture Spec v1.9 · Phavo PRD ref v2.7 · Sessions 1–8 complete · Command Palette + .phavo/.phwidget formats added · <em>github.com/phabioo/phavo</em>
-</p>
-</section>
-
-</main>
-
-<script>
-// Active nav link on scroll
-const sections = document.querySelectorAll('section[id]')
-const links = document.querySelectorAll('nav a')
-
-const obs = new IntersectionObserver(entries => {
-  entries.forEach(e => {
-    if (e.isIntersecting) {
-      links.forEach(l => l.classList.remove('active'))
-      const active = document.querySelector(`nav a[href="#${e.target.id}"]`)
-      if (active) active.classList.add('active')
-    }
-  })
-}, { rootMargin: '-20% 0px -70% 0px' })
-
-sections.forEach(s => obs.observe(s))
-</script>
-</body>
-</html>
+  Architecture Spec

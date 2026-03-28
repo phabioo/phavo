@@ -26,7 +26,7 @@ Phavo is the successor to **phaboard**, rebuilt from scratch with a production-g
 docker run -p 3000:3000 \
   -v phavo-data:/data \
   -e PHAVO_SECRET=your-secret-here \
-  phavo/phavo
+  getphavo/phavo
 ```
 
 Then open [http://localhost:3000](http://localhost:3000) in your browser. The setup wizard guides you through the rest.
@@ -36,7 +36,7 @@ Then open [http://localhost:3000](http://localhost:3000) in your browser. The se
 ```yaml
 services:
   phavo:
-    image: phavo/phavo:latest
+    image: getphavo/phavo:latest
     ports:
       - "3000:3000"
     volumes:
@@ -226,8 +226,8 @@ A self-compiled AGPL build without a phavo.net account defaults to Free tier beh
 
 - Website: [phavo.net](https://phavo.net)
 - Docs: [docs.phavo.net](https://docs.phavo.net)
-- Issues: [github.com/phabioo/phavo/issues](https://github.com/phabioo/phavo/issues)
+- Issues: [github.com/getphavo/phavo/issues](https://github.com/getphavo/phavo/issues)
 
 ---
 
-*Phavo · phavo.net · github.com/phabioo/phavo*
+*Phavo · phavo.net · github.com/getphavo/phavo*

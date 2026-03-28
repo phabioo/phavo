@@ -824,7 +824,7 @@ CMD ["bun", "run", "./build/index.js"]
 version: '3.8'
 services:
   phavo:
-    image: phavo/phavo:latest
+    image: getphavo/phavo:latest
     build: .
     ports:
       - "3000:3000"
@@ -882,8 +882,8 @@ jobs:
           platforms: linux/amd64,linux/arm64
           push: true
           tags: |
-            phavo/phavo:latest
-            phavo/phavo:${{ github.ref_name }}
+            getphavo/phavo:latest
+            getphavo/phavo:${{ github.ref_name }}
 ```
 
 ---

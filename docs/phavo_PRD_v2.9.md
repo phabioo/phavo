@@ -1,11 +1,11 @@
 # Phavo — Product Requirements Document
 
-**Version:** 2.7  
+**Version:** 2.9  
 **Date:** 2026-03-26  
 **Status:** Active — Sessions 1–9 planned · Feature-complete · Pre-Launch  
-**Owner:** phabioo
+**Owner:** getphavo
 
-**Changelog v2.7:** Version management (single source of truth, release scripts, CHANGELOG.md, Docker CI). Web presence plan (phavo.net landing, docs.phavo.net, email addresses). Docker Hub setup documented. Infrastructure decisions added. CLAUDE.md v2.0 reference.
+**Changelog v2.9:** GitHub org → getphavo, Docker Hub → getphavo/phavo. Pricing corrections (upgrade €16.00, Ultra deferred to post-v1.0). authMode migrated to 'phavo-net'. Contract + Arch Spec coherence pass. CLAUDE.md v2.2 reference.
 
 **Changelog v2.5 (archived):** Decisions 33–41 merged into main decisions table (no more split). SRI section updated to Geist font. `WidgetDefinition.version` vs `schemaVersion` clarified. `configSchemaVersion` column added to `widgetInstances` schema. CLAUDE.md references corrected.
 
@@ -23,7 +23,7 @@ The core promise: **beautiful by default, infinitely extensible, yours to own �
 
 | | Phavo Free | Phavo Standard | Phavo Local |
 |---|---|---|---|
-| Price | €0 | €8.99 one-time | €24.99 one-time | €39.99 one-time |
+| Price | €0 | €8.99 one-time | €24.99 one-time |
 | Widgets | Core system + weather | All launch widgets | All launch widgets |
 | Tabs | 1 | Unlimited | Unlimited |
 | Auth | phavo.net account | phavo.net account | Local user account |
@@ -383,7 +383,7 @@ A single dedicated tab for all widget configuration. Never one tab per widget. L
 **Tab: Licence**
 - Current tier badge (Free / Standard / Local)
 - **Free tier:** Upgrade banner — "Unlock all widgets for €8.99 one-time" with direct link to phavo.net checkout
-- **Standard tier:** Licence key (masked), linked phavo.net account email, "Upgrade to Local (€12.00)" link, deactivate button
+- **Standard tier:** Licence key (masked), linked phavo.net account email, "Upgrade to Local (€16.00)" link, deactivate button
 - **Local tier:** Licence key (masked), instance ID, activation date, deactivate button (requires online connection)
 - Re-enter / replace licence key field for key transfers
 
@@ -499,7 +499,7 @@ The Free tier is the primary acquisition channel. Conversion levers built into t
 - **Tab limit prompt:** Attempting to add a second tab on Free shows the upgrade prompt.
 - **Phavo branding:** Small "Powered by Phavo" badge in dashboard footer on Free. Removable on Standard and Local.
 - **No feature degradation:** Free tier stays free indefinitely. Phavo does not reduce the Free offering to force upgrades.
-- **Standard → Local upgrade path:** Pay the €12.00 difference via the phavo.net account portal. No repurchase.
+- **Standard → Local upgrade path:** Pay the €16.00 difference via the phavo.net account portal. No repurchase.
 
 ---
 
@@ -620,7 +620,7 @@ font-family: 'Geist', sans-serif;
 
 ### 6.7 Docker
 
-Target: `docker run -p 3000:3000 -p 3443:3443 -v phavo-data:/data phavo/phavo`
+Target: `docker run -p 3000:3000 -p 3443:3443 -v phavo-data:/data getphavo/phavo`
 
 - Single-container
 - Multi-arch: amd64 + arm64 (Raspberry Pi 4/5)
@@ -767,8 +767,8 @@ Tauri 2.0 Mobile — same `@phavo/ui` components rendered via Tauri's mobile Web
 | Free | €0 | Forever free — core system widgets, weather, 1 tab, Phavo branding |
 | Standard | €8.99 | One-time — all widgets, unlimited tabs, no branding |
 | Local | €24.99 | One-time — all widgets, unlimited tabs, fully offline, no branding |
-| Ultra | €39.99 | One-time — all widgets + exclusive Ultra, unlimited tabs, fully offline, 1yr feature updates |
-| Standard → Local upgrade | €12.00 | Pay the difference, no repurchase |
+| ~~Ultra~~ | ~~€39.99~~ | *Post-v1.0 — planned premium tier with exclusive widgets and 1-year feature update guarantee. Not available at launch.* |
+| Standard → Local upgrade | €16.00 | Pay the difference, no repurchase |
 | Phase 2 Desktop | TBD | Bundled or small upgrade fee for existing licence holders |
 | Phase 4 Cloud | ~€4.99/month | Subscription — sync, marketplace, multi-device |
 | Marketplace | Free listing | Optional Pro widgets, rev-share TBD |
@@ -1026,7 +1026,7 @@ A universal search and action interface accessible from anywhere in the dashboar
 | 59 | **Widget package format:** Third-party widget packages use `.phwidget` extension. ZIP-based bundle containing `manifest.json`, Svelte component, and optional assets. Defined in Phase 1.x when plugin system ships. |
 | 60 | **Command Palette:** Cmd+K global shortcut. Three modes: local dashboard search, web search (configurable engine), AI chat (Ollama/OpenAI/Claude). API keys server-side only, never in frontend. |
 | 61 | **AI chat server-side:** All AI API calls go through `POST /api/v1/ai/chat`. API keys stored in `credentials` table. Client never sees keys. Ollama at localhost:11434 for Local tier offline use. |
-| 62 | **Pricing model revision:** Four tiers — Free (€0), Standard (€8.99 one-time), Local (€24.99 one-time), Ultra (€39.99 one-time). Standard adds unlimited tabs + all widgets + no branding. Local adds full offline + local account. Ultra adds exclusive widgets + 1yr feature updates. |
+| 62 | **Pricing model (v1.0):** Three active tiers — Free (€0), Standard (€8.99 one-time), Local (€24.99 one-time). Standard→Local upgrade: €16.00. Ultra (€39.99) is planned as a post-v1.0 tier with exclusive widgets and 1-year feature update guarantee — not available at launch. |
 | 63 | **Domain:** phavo.net (registered via Cloudflare). All references to phavo.net are invalid. |
 | 64 | **Production audit:** 13 issues fixed before v1.0 — CSRF gap, SSRF, missing Secure flag, unvalidated POST /config, non-transactional import, missing external API Zod validation, unbounded notification queue, default secret acceptance, missing configSchemaVersion, health check without DB verify, unbounded TOTP map, redundant dbReady awaits, wrong docker tmpfs path. |
 | 65 | **fetchWithCsrf utility:** All client-side mutation requests use `fetchWithCsrf()` from `apps/web/src/lib/utils/api.ts`. Automatically injects X-CSRF-Token on POST/PUT/DELETE/PATCH. GET requests unaffected. |
@@ -1374,11 +1374,11 @@ Phavo does not attempt to prevent:
 
 
 | 61 | **Version management:** Single source of truth in root `package.json`. Vite injects `PHAVO_VERSION` at build time. Release scripts (`release:patch/minor/major`) bump version, commit, tag, push — triggering Docker CI and GitHub Release automatically. |
-| 62 | **Docker Hub:** Public repository `phavo/phavo`. Tagged as `:latest` on every main push and `:VERSION` on every release tag. Multi-arch (amd64 + arm64) via GitHub Actions buildx. Docker Hub account uses `docker@phavo.net`. |
+| 62 | **Docker Hub:** Public repository `getphavo/phavo`. Tagged as `:latest` on every main push and `:VERSION` on every release tag. Multi-arch (amd64 + arm64) via GitHub Actions buildx. Docker Hub account uses `docker@phavo.net`. |
 | 63 | **Email infrastructure:** Hetzner Webhosting S for mail hosting. MX records via Cloudflare. Addresses: `docker@`, `security@`, `hello@`, `noreply@` phavo.net. |
 | 64 | **Web presence:** phavo.net (landing) on Hetzner Webhosting. docs.phavo.net on GitHub Pages or Netlify. DNS and CDN via Cloudflare. www.phavo.net CNAME redirects to apex. |
 | 65 | **Dashboard auto-update:** `GET /api/v1/update/check` polls GitHub Releases API (1h cache). Header badge appears on new version. Update panel shows changelog. `POST /api/v1/update/apply` runs `docker compose pull && docker compose up -d` for docker-compose installs. |
 
 ---
 
-*Phavo · phavo.net · github.com/phabioo/phavo*
+*Phavo · phavo.net · github.com/getphavo/phavo*

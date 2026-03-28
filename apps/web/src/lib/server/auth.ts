@@ -102,6 +102,10 @@ export function recordLoginAttempt(identifier: string, success: boolean): void {
   loginAttempts.set(identifier, record);
 }
 
+export function getLoginAttemptCount(identifier: string): number {
+  return loginAttempts.get(identifier)?.count ?? 0;
+}
+
 export function createAuth(_config: AuthConfig) {
   // Better Auth setup will be fully configured when dependencies are installed
   // Phase 1: local email/password with Argon2id + phavo.net OAuth

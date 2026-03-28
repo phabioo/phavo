@@ -6,6 +6,8 @@ import en from '$lib/i18n/en.json';
 import ImportExportTab from '$lib/components/settings/ImportExportTab.svelte';
 import LicenceTab from '$lib/components/settings/LicenceTab.svelte';
 import WidgetsTab from '$lib/components/settings/WidgetsTab.svelte';
+import type { AiStatusResponseData } from '$lib/stores/ai.svelte';
+import { updateAiStatusFromPayload } from '$lib/stores/ai.svelte';
 import { setConfig, updateConfig } from '$lib/stores/config.svelte';
 import { fetchWithCsrf } from '$lib/utils/api';
 
@@ -51,6 +53,15 @@ type ConfigResponse = {
   };
 };
 
+type AiSettingsResponseData = AiStatusResponseData & {
+  searchEngine: string;
+  customSearchUrl: string;
+  ollamaUrl: string;
+  ollamaModel: string;
+  hasOpenaiKey: boolean;
+  hasAnthropicKey: boolean;
+};
+
 const settingsTabs = [
   { id: 'general', label: en.settings.general },
   { id: 'account', label: en.settings.account },
@@ -69,7 +80,7 @@ const sessionTimeoutOptions = [
 ];
 
 const DOCS_URL = 'https://docs.phavo.net';
-const GITHUB_URL = 'https://github.com/phabioo/phavo';
+const GITHUB_URL = 'https://github.com/getphavo/phavo';
 const DISCORD_URL = 'https://discord.gg/phavo';
 const PHAVO_ACCOUNT_URL = 'https://phavo.net/account';
 const PHAVO_LICENSE_URL = 'https://phavo.net/account/license';
@@ -303,16 +314,10 @@ async function loadAiSettings() {
     const resp = await fetchWithCsrf('/api/v1/ai/status');
     const json = (await resp.json()) as {
       ok: boolean;
-      data?: {
-        searchEngine: string;
-        customSearchUrl: string;
-        ollamaUrl: string;
-        ollamaModel: string;
-        hasOpenaiKey: boolean;
-        hasAnthropicKey: boolean;
-      };
+      data?: AiSettingsResponseData;
     };
     if (json.ok && json.data) {
+      updateAiStatusFromPayload(json.data);
       searchEngine = json.data.searchEngine || 'duckduckgo';
       customSearchUrl = json.data.customSearchUrl || '';
       ollamaUrl = json.data.ollamaUrl || '';
@@ -356,17 +361,7 @@ async function saveAiSettings() {
     });
     const json = (await resp.json()) as { ok: boolean; error?: string };
     if (!json.ok) throw new Error(json.error ?? 'Failed to save AI settings');
-    // Update the initial state so dirty check resets
-    aiInitial = {
-      searchEngine,
-      customSearchUrl: customSearchUrl.trim(),
-      ollamaUrl: ollamaUrl.trim(),
-      ollamaModel: ollamaModel.trim(),
-      openaiKey: openaiKey === '••••••••' ? openaiKey : (openaiKey ? '••••••••' : ''),
-      anthropicKey: anthropicKey === '••••••••' ? anthropicKey : (anthropicKey ? '••••••••' : ''),
-    };
-    if (openaiKey && openaiKey !== '••••••••') openaiKey = '••••••••';
-    if (anthropicKey && anthropicKey !== '••••••••') anthropicKey = '••••••••';
+    await loadAiSettings();
   } catch (error) {
     throw error;
   }
@@ -703,10 +698,12 @@ function formatReleaseDate(iso: string): string {
         <div class="settings-card-content">
           <h3 class="settings-section-heading">Search & AI</h3>
 
-          <div class="setting-group">
-            <Select label="Search Engine" options={searchEngineOptions} bind:value={searchEngine} />
+          <div class="search-ai-fields">
+            <div class="settings-field">
+              <Select label="Search Engine" options={searchEngineOptions} bind:value={searchEngine} />
+            </div>
             {#if searchEngine === 'custom'}
-              <div class="stack-sm" style="margin-top: var(--space-2)">
+              <div class="settings-field">
                 <Input
                   label="Custom Search URL"
                   placeholder="https://example.com/search?q=&#123;query&#125;"
@@ -715,45 +712,48 @@ function formatReleaseDate(iso: string): string {
                 <p class="setting-description">Use <code>{'{query}'}</code> as a placeholder for the search term.</p>
               </div>
             {/if}
-          </div>
 
-          <div class="setting-group">
-            <div class="setting-row">
-              <Input
-                label="Ollama URL"
-                placeholder="http://localhost:11434"
-                bind:value={ollamaUrl}
-              />
-              <div class="test-btn-wrap">
-                <button class="btn-secondary" type="button" onclick={testOllamaConnection} disabled={!ollamaUrl.trim() || ollamaTestResult === 'testing'}>
-                  {ollamaTestResult === 'testing' ? 'Testing…' : ollamaTestResult === 'ok' ? 'Connected' : ollamaTestResult === 'fail' ? 'Failed' : 'Test'}
-                </button>
+            <div class="settings-field">
+              <div class="setting-row">
+                <Input
+                  label="Ollama URL"
+                  placeholder="http://localhost:11434"
+                  bind:value={ollamaUrl}
+                />
+                <div class="test-btn-wrap">
+                  <button class="btn-secondary" type="button" onclick={testOllamaConnection} disabled={!ollamaUrl.trim() || ollamaTestResult === 'testing'}>
+                    {ollamaTestResult === 'testing' ? 'Testing…' : ollamaTestResult === 'ok' ? 'Connected' : ollamaTestResult === 'fail' ? 'Failed' : 'Test'}
+                  </button>
+                </div>
               </div>
             </div>
-            <Input
-              label="Ollama Model"
-              placeholder="llama3.2"
-              bind:value={ollamaModel}
-            />
-            <p class="setting-description">Leave empty to use the default model (llama3.2).</p>
-          </div>
 
-          <div class="setting-group">
-            <Input
-              label="OpenAI API Key"
-              type="password"
-              placeholder="sk-…"
-              bind:value={openaiKey}
-            />
-          </div>
+            <div class="settings-field">
+              <Input
+                label="Ollama Model"
+                placeholder="llama3.2"
+                bind:value={ollamaModel}
+              />
+              <p class="setting-description">Leave empty to use the default model (llama3.2).</p>
+            </div>
 
-          <div class="setting-group">
-            <Input
-              label="Anthropic API Key"
-              type="password"
-              placeholder="sk-ant-…"
-              bind:value={anthropicKey}
-            />
+            <div class="settings-field">
+              <Input
+                label="OpenAI API Key"
+                type="password"
+                placeholder="sk-…"
+                bind:value={openaiKey}
+              />
+            </div>
+
+            <div class="settings-field">
+              <Input
+                label="Anthropic API Key"
+                type="password"
+                placeholder="sk-ant-…"
+                bind:value={anthropicKey}
+              />
+            </div>
           </div>
         </div>
       </Card>
@@ -1277,6 +1277,26 @@ function formatReleaseDate(iso: string): string {
     margin-bottom: var(--space-2);
   }
 
+  .search-ai-fields {
+    padding-top: var(--space-4);
+  }
+
+  .settings-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 20px;
+  }
+
+  .settings-field:last-child {
+    margin-bottom: 0;
+  }
+
+  .settings-field :global(.input-wrapper),
+  .settings-field :global(.select-wrapper) {
+    width: 100%;
+  }
+
   .setting-row {
     display: flex;
     align-items: flex-end;
@@ -1341,6 +1361,15 @@ function formatReleaseDate(iso: string): string {
     .about-version-row {
       align-items: flex-start;
       flex-direction: column;
+    }
+
+    .setting-row {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .test-btn-wrap {
+      padding-bottom: 0;
     }
 
     /* Tabs: horizontal scroll on mobile (7 tabs too many to stack cleanly) */

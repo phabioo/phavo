@@ -385,7 +385,7 @@ function isSizeAvailable(s: WidgetSize): boolean {
 
   .size-active {
     background: var(--color-accent);
-    color: var(--color-text-inverse);
+    color: var(--color-bg);
   }
 
   .size-active:hover:not(:disabled) {

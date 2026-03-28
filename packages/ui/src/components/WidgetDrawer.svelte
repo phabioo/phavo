@@ -341,120 +341,130 @@
     {/each}
   </div>
 
+{#snippet drawerCardInner(w: WidgetManifestEntry, inst: WidgetInstance | undefined, locked: boolean)}
+  <!-- Preview area -->
+  <div class="drawer-card-preview" class:drawer-card-preview-locked={locked}>
+    {#if locked}
+      <div class="locked-preview-content">
+        <span class="lock-icon">{@html icons.lock()}</span>
+        <span class="lock-text">{labels.locked ?? 'LOCKED'}</span>
+      </div>
+    {:else if preview && isWidgetDefinition(w)}
+      <div class="drawer-preview-scale">
+        {@render preview(
+          w.id,
+          previewData[w.id],
+          previewLoading[w.id] === true,
+          (previewErrors[w.id] ?? null) !== null,
+        )}
+      </div>
+    {:else}
+      <div class="preview-placeholder">
+        <span class="preview-name">{w.name}</span>
+      </div>
+    {/if}
+  </div>
+
+  <!-- Card footer -->
+  <div class="drawer-card-footer">
+    <div class="drawer-card-info">
+      <span class="drawer-card-name">{w.name}</span>
+      <span class="drawer-card-desc">{w.description}</span>
+    </div>
+
+    <!-- Size selector -->
+    <div class="drawer-card-controls">
+      {#if isWidgetDefinition(w)}
+        <div class="size-selector">
+          {#each w.sizes as s (s)}
+            <button
+              class="size-pill"
+              class:size-active={getSelectedSize(w) === s}
+              onclick={() => handleSizeSelect(w.id, s)}
+              disabled={locked}
+            >
+              {s}
+            </button>
+          {/each}
+        </div>
+      {/if}
+
+      <!-- Action button -->
+      {#if locked}
+        {#if activeLockedId === w.id}
+          <div class="locked-prompt">
+            <span class="locked-prompt-icon">{@html icons.lock()}</span>
+            <span>{labels.upgradePrompt ?? 'Upgrade to Standard to unlock this widget — €8.99 one-time'}</span>
+            <a
+              class="locked-prompt-link"
+              href="https://phavo.net/upgrade"
+              target="_blank"
+              rel="noreferrer"
+              onclick={(event) => event.stopPropagation()}
+            >
+              phavo.net/upgrade
+            </a>
+          </div>
+        {/if}
+      {:else if inst}
+        {#if confirmRemoveId === inst.id}
+          <button class="action-btn action-remove-confirm" onclick={() => handleRemoveConfirm(inst.id)}>
+            {labels.removeConfirm ?? 'Remove?'}
+          </button>
+        {:else}
+          <button class="action-btn action-added" onclick={() => handleRemoveClick(inst.id)}>
+            {@html icons.check()}
+            <span>{labels.alreadyAdded ?? 'Added'}</span>
+          </button>
+        {/if}
+      {:else}
+        {#if isWidgetDefinition(w)}
+          <button class="action-btn action-add" onclick={() => handleAdd(w)}>
+            {@html icons.plus()}
+            <span>{labels.addToBoard ?? 'Add'}</span>
+          </button>
+        {/if}
+      {/if}
+    </div>
+  </div>
+{/snippet}
+
   <!-- Widget grid -->
   <div class="sheet-body drawer-content">
-    <div class="widget-grid-drawer">
+    <div class="widget-grid-drawer" role="list">
       {#each filteredWidgets as w (w.id)}
         {@const inst = getInstanceForWidget(w.id)}
         {@const locked = isLocked(w)}
-        <div
-          class="drawer-card"
-          class:drawer-card-locked={locked}
-          class:drawer-card-added={!!inst}
-          draggable={!locked && !inst ? 'true' : 'false'}
-          role={locked ? 'button' : undefined}
-          tabindex={locked ? 0 : undefined}
-          aria-label={locked ? `${w.name} locked` : undefined}
-          onclick={locked ? () => handleLockedClick(w.id) : undefined}
-          onkeydown={
-            locked
-              ? (event) => {
-                  if (event.key === 'Enter' || event.key === ' ') {
-                    event.preventDefault();
-                    handleLockedClick(w.id);
-                  }
-                }
-              : undefined
-          }
-          ondragstart={(e) => handleDragStart(e, w)}
-          ondragend={handleDragEnd}
-        >
-          <!-- Preview area -->
-          <div class="drawer-card-preview" class:drawer-card-preview-locked={locked}>
-            {#if locked}
-              <div class="locked-preview-content">
-                <span class="lock-icon">{@html icons.lock()}</span>
-                <span class="lock-text">{labels.locked ?? 'Standard'}</span>
-              </div>
-            {:else if preview && isWidgetDefinition(w)}
-              <div class="drawer-preview-scale">
-                {@render preview(
-                  w.id,
-                  previewData[w.id],
-                  previewLoading[w.id] === true,
-                  (previewErrors[w.id] ?? null) !== null,
-                )}
-              </div>
-            {:else}
-              <div class="preview-placeholder">
-                <span class="preview-name">{w.name}</span>
-              </div>
-            {/if}
+        {#if locked}
+          <div
+            class="drawer-card drawer-card-locked"
+            role="button"
+            tabindex="0"
+            aria-label="{w.name} locked"
+            onclick={() => handleLockedClick(w.id)}
+            onkeydown={(event) => {
+              if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                handleLockedClick(w.id);
+              }
+            }}
+            ondragstart={(e) => handleDragStart(e, w)}
+            ondragend={handleDragEnd}
+          >
+            {@render drawerCardInner(w, inst, locked)}
           </div>
-
-          <!-- Card footer -->
-          <div class="drawer-card-footer">
-            <div class="drawer-card-info">
-              <span class="drawer-card-name">{w.name}</span>
-              <span class="drawer-card-desc">{w.description}</span>
-            </div>
-
-            <!-- Size selector -->
-            <div class="drawer-card-controls">
-              {#if isWidgetDefinition(w)}
-                <div class="size-selector">
-                  {#each w.sizes as s (s)}
-                    <button
-                      class="size-pill"
-                      class:size-active={getSelectedSize(w) === s}
-                      onclick={() => handleSizeSelect(w.id, s)}
-                      disabled={locked}
-                    >
-                      {s}
-                    </button>
-                  {/each}
-                </div>
-              {/if}
-
-              <!-- Action button -->
-              {#if locked}
-                {#if activeLockedId === w.id}
-                  <div class="locked-prompt">
-                    <span class="locked-prompt-icon">{@html icons.lock()}</span>
-                    <span>{labels.upgradePrompt ?? 'Upgrade to Standard to unlock this widget — €7.99 one-time'}</span>
-                    <a
-                      class="locked-prompt-link"
-                      href="https://phavo.net/upgrade"
-                      target="_blank"
-                      rel="noreferrer"
-                      onclick={(event) => event.stopPropagation()}
-                    >
-                      phavo.net/upgrade
-                    </a>
-                  </div>
-                {/if}
-              {:else if inst}
-                {#if confirmRemoveId === inst.id}
-                  <button class="action-btn action-remove-confirm" onclick={() => handleRemoveConfirm(inst.id)}>
-                    {labels.removeConfirm ?? 'Remove?'}
-                  </button>
-                {:else}
-                  <button class="action-btn action-added" onclick={() => handleRemoveClick(inst.id)}>
-                    {@html icons.check()}
-                    <span>{labels.alreadyAdded ?? 'Added'}</span>
-                  </button>
-                {/if}
-              {:else}
-                {#if isWidgetDefinition(w)}
-                  <button class="action-btn action-add" onclick={() => handleAdd(w)}>
-                    {@html icons.plus()}
-                    <span>{labels.addToBoard ?? 'Add'}</span>
-                  </button>
-                {/if}
-              {/if}
-            </div>
+        {:else}
+          <div
+            class="drawer-card"
+            class:drawer-card-added={!!inst}
+            role="listitem"
+            draggable={!inst ? 'true' : 'false'}
+            ondragstart={(e) => handleDragStart(e, w)}
+            ondragend={handleDragEnd}
+          >
+            {@render drawerCardInner(w, inst, locked)}
           </div>
-        </div>
+        {/if}
       {/each}
     </div>
   </div>
@@ -611,13 +621,13 @@
 
   .filter-active {
     background: var(--color-accent);
-    color: var(--color-bg, #fff);
+    color: var(--color-bg);
     border-color: var(--color-accent);
   }
 
   .filter-active:hover {
     background: var(--color-accent);
-    color: var(--color-bg, #fff);
+    color: var(--color-bg);
     border-color: var(--color-accent);
   }
 
@@ -742,7 +752,7 @@
     padding: 4px 8px;
     border-radius: var(--radius-sm, 4px);
     background: var(--color-accent-subtle);
-    color: var(--color-accent-text);
+    color: var(--color-bg);
     font-size: 11px;
     font-weight: 600;
     line-height: 1.4;
@@ -754,7 +764,7 @@
   }
 
   .locked-prompt-link {
-    color: var(--color-accent-text);
+    color: var(--color-bg);
     font-weight: 700;
     text-decoration: underline;
   }
@@ -832,7 +842,7 @@
 
   .size-active {
     background: var(--color-accent);
-    color: var(--color-bg, #fff);
+    color: var(--color-bg);
     border-color: var(--color-accent);
   }
 
@@ -858,7 +868,7 @@
 
   .action-add:hover {
     background: var(--color-accent);
-    color: var(--color-bg, #fff);
+    color: var(--color-bg);
   }
 
   .action-added {
