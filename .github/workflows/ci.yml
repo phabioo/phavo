@@ -7,5 +7,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v1
       - run: bun install --frozen-lockfile
+      - name: Sync SvelteKit
+        run: cd apps/web && bunx svelte-kit sync
       - run: bun run typecheck
       - run: bun run lint
