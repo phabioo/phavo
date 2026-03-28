@@ -33,3 +33,4 @@ jobs:
             getphavo/phavo:${{ steps.version.outputs.VERSION }}
           build-args: |
             PHAVO_VERSION=${{ steps.version.outputs.VERSION }}
+            NODE_ENV=production

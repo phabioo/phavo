@@ -3,6 +3,11 @@ FROM oven/bun:1-alpine AS builder
 WORKDIR /app
 COPY . .
 RUN bun install --frozen-lockfile
+# NODE_ENV=production is required so that SvelteKit's vite plugin builds the
+# server bundle without SSR module evaluation (which would execute module-level
+# DB code and potentially call process.exit() under QEMU arm64 emulation).
+ARG NODE_ENV=production
+ENV NODE_ENV=$NODE_ENV
 RUN bun run build
 
 # Stage 2: production

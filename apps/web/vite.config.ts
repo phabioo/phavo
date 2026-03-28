@@ -4,7 +4,14 @@ import { env } from '@phavo/types/env';
 import { sveltekit } from '@sveltejs/kit/vite';
 import { defineConfig, loadEnv } from 'vite';
 
-const rootPkg = JSON.parse(readFileSync(join(process.cwd(), '../../package.json'), 'utf8'));
+// Read root package.json for the monorepo version. The try/catch guards against
+// running vite config in a non-standard CWD (e.g. buildkit layer under QEMU).
+let rootPkg: { version: string } = { version: 'dev' };
+try {
+  rootPkg = JSON.parse(readFileSync(join(process.cwd(), '../../package.json'), 'utf8'));
+} catch {
+  // Fallback — PHAVO_VERSION will be 'dev'; the build continues normally.
+}
 
 export default defineConfig(({ mode }) => {
   const viteEnv = loadEnv(mode, process.cwd(), '');
