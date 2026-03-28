@@ -8,6 +8,8 @@ RUN bun install --frozen-lockfile
 # DB code and potentially call process.exit() under QEMU arm64 emulation).
 ARG NODE_ENV=production
 ENV NODE_ENV=$NODE_ENV
+# Generate .svelte-kit/ (tsconfig.json + ambient types) before the build.
+RUN cd apps/web && bunx svelte-kit sync
 RUN bun run build
 
 # Stage 2: production
