@@ -47,6 +47,7 @@
       "dependencies": {
         "@phavo/types": "workspace:*",
         "systeminformation": "^5.22.0",
+        "zod": "^3.23.0",
       },
     },
     "packages/db": {

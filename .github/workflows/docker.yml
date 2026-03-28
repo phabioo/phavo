@@ -2,12 +2,19 @@ name: Docker
 on:
   push:
     branches: [main]
-    tags: ['v*.*.*']
+    tags:
+      - 'v*.*.*'
 jobs:
   docker:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Get version
+        id: version
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+          echo "Building version: $VERSION"
       - uses: docker/setup-qemu-action@v3
       - uses: docker/setup-buildx-action@v3
       - name: Log in to Docker Hub
@@ -15,14 +22,6 @@ jobs:
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-      - name: Extract version
-        id: version
-        run: |
-          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
-            echo "tag=${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
-          else
-            echo "tag=dev" >> "$GITHUB_OUTPUT"
-          fi
       - name: Build and push
         uses: docker/build-push-action@v5
         with:
@@ -31,6 +30,6 @@ jobs:
           push: true
           tags: |
             phavo/phavo:latest
-            phavo/phavo:${{ steps.version.outputs.tag }}
+            phavo/phavo:${{ steps.version.outputs.VERSION }}
           build-args: |
-            PHAVO_VERSION=${{ steps.version.outputs.tag }}
+            PHAVO_VERSION=${{ steps.version.outputs.VERSION }}

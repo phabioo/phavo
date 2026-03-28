@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Phavo — Road to v1.0</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600&family=Geist+Mono:wght@400;500&display=swap');
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#000;--bg-s:#0a0a0a;--bg-e:#141414;--bg-h:#1c1c1e;--border:#2a2a2a;--border-s:#1c1c1c;--text:#f5f5f7;--text-2:#86868b;--text-3:#48484a;--accent:#d4922a;--accent-t:rgba(212,146,42,.10);--green:#30a46c;--green-t:rgba(48,164,108,.10);--purple:#7c6af0;--purple-t:rgba(124,106,240,.10);--font-ui:'Geist',-apple-system,sans-serif;--font-mono:'Geist Mono','SF Mono',monospace}
+html{scroll-behavior:smooth}
+body{font-family:var(--font-ui);background:var(--bg);color:var(--text);font-size:13px;line-height:1.6;-webkit-font-smoothing:antialiased}
+.doc-header{border-bottom:1px solid var(--border-s);padding:32px 48px 24px;display:flex;align-items:flex-end;justify-content:space-between;gap:24px;flex-wrap:wrap}
+.doc-header h1{font-size:18px;font-weight:500;letter-spacing:-.02em}
+.doc-header .sub{font-size:11px;color:var(--text-3);font-family:var(--font-mono);margin-top:3px}
+.legend{display:flex;gap:20px;flex-wrap:wrap}
+.leg-item{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text-3);font-family:var(--font-mono)}
+.leg-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.progress-bar{background:var(--bg-s);border-bottom:1px solid var(--border-s);padding:12px 48px;display:flex;align-items:center;gap:14px}
+.progress-track{flex:1;height:2px;background:var(--border);border-radius:1px;overflow:hidden}
+.progress-fill{height:100%;background:var(--accent);border-radius:1px}
+.progress-label{font-size:11px;font-family:var(--font-mono);color:var(--text-3);white-space:nowrap}
+.progress-label b{color:var(--accent);font-weight:500}
+.main{display:grid;grid-template-columns:192px 1fr;min-height:calc(100vh - 100px)}
+.sidebar{border-right:1px solid var(--border-s);padding:24px 0;position:sticky;top:0;height:calc(100vh - 100px);overflow-y:auto}
+.sidebar-label{font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.1em;color:var(--text-3);padding:10px 20px 4px;font-family:var(--font-mono)}
+.sidebar a{display:flex;align-items:center;gap:8px;padding:5px 20px;font-size:12px;color:var(--text-3);text-decoration:none;border-left:2px solid transparent;transition:all .12s;font-family:var(--font-mono)}
+.sidebar a:hover{color:var(--text-2);background:var(--bg-h)}
+.sidebar a.done{color:var(--green)}
+.sidebar a.active{color:var(--accent);border-left-color:var(--accent);background:var(--accent-t)}
+.content{padding:36px 48px 80px;max-width:860px}
+.session{margin-bottom:28px;border:1px solid var(--border-s);border-radius:10px;overflow:hidden;scroll-margin-top:32px}
+.session-header{display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--border-s);flex-wrap:wrap}
+.session.done .session-header{background:var(--green-t);border-bottom-color:rgba(48,164,108,.15)}
+.session.active .session-header{background:var(--accent-t);border-bottom-color:rgba(212,146,42,.15)}
+.session.upcoming .session-header{background:var(--bg-e)}
+.session.prelaunch .session-header{background:var(--purple-t);border-bottom-color:rgba(124,106,240,.15)}
+.session-num{font-family:var(--font-mono);font-size:10px;font-weight:500;padding:2px 8px;border-radius:4px;letter-spacing:.06em;flex-shrink:0}
+.session.done .session-num{background:var(--green-t);color:var(--green);border:1px solid rgba(48,164,108,.3)}
+.session.active .session-num{background:var(--accent-t);color:var(--accent);border:1px solid rgba(212,146,42,.3)}
+.session.upcoming .session-num{background:var(--bg-h);color:var(--text-3);border:1px solid var(--border)}
+.session.prelaunch .session-num{background:var(--purple-t);color:var(--purple);border:1px solid rgba(124,106,240,.3)}
+.session-title{font-size:13px;font-weight:500;color:var(--text)}
+.session-subtitle{font-size:11px;color:var(--text-3);margin-left:auto;font-family:var(--font-mono)}
+.session-body{padding:14px 16px}
+.tasks{display:flex;flex-direction:column;gap:4px}
+.task{display:flex;align-items:flex-start;gap:9px;padding:6px 9px;border-radius:5px;font-size:12px}
+.task:hover{background:var(--bg-h)}
+.task-icon{flex-shrink:0;font-size:11px;margin-top:1px;line-height:1.6}
+.task-text{flex:1;color:var(--text-2);line-height:1.55}
+.task-done .task-text{color:var(--text-3);text-decoration:line-through;text-decoration-color:var(--text-3)}
+.task-tag{font-family:var(--font-mono);font-size:9.5px;padding:1px 6px;border-radius:3px;border:1px solid;flex-shrink:0;align-self:flex-start;margin-top:2px;letter-spacing:.03em}
+.tag-security{border-color:rgba(224,92,75,.4);color:#e8887a;background:rgba(224,92,75,.08)}
+.tag-ui{border-color:rgba(59,130,246,.4);color:#7db3f5;background:rgba(59,130,246,.08)}
+.tag-api{border-color:rgba(212,146,42,.35);color:var(--accent);background:var(--accent-t)}
+.tag-infra{border-color:rgba(133,79,11,.4);color:#c9874e;background:rgba(133,79,11,.10)}
+.tag-ux{border-color:rgba(124,106,240,.4);color:#a89cf5;background:rgba(124,106,240,.08)}
+.tag-design{border-color:rgba(48,164,108,.4);color:#5bc98a;background:rgba(48,164,108,.08)}
+.phase-divider{margin:28px 0 20px;display:flex;align-items:center;gap:12px}
+.phase-divider-label{font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.1em;color:var(--text-3);white-space:nowrap;font-family:var(--font-mono)}
+.phase-divider-line{flex:1;height:1px;background:var(--border-s)}
+.launch-box{border:1px solid rgba(124,106,240,.25);background:var(--purple-t);border-radius:10px;padding:18px 20px;margin-top:28px}
+.launch-title{font-size:13px;font-weight:500;color:var(--purple);margin-bottom:10px;letter-spacing:-.01em}
+.launch-item{font-size:12px;color:#a89cf5;display:flex;align-items:flex-start;gap:8px;padding:3px 0}
+.launch-item::before{content:'→';color:rgba(124,106,240,.5);flex-shrink:0}
+</style>
+</head>
+<body>
+
+<div class="doc-header">
+  <div>
+    <h1>Phavo — Road to v1.0</h1>
+    <div class="sub">Sessions 1–8 complete · Session 9 next · Updated 2026-03-28 · PRD ref v2.7 · CLAUDE.md v2.0</div>
+  </div>
+  <div class="legend">
+    <div class="leg-item"><div class="leg-dot" style="background:#30a46c"></div> Done</div>
+    <div class="leg-item"><div class="leg-dot" style="background:#d4922a"></div> Active</div>
+    <div class="leg-item"><div class="leg-dot" style="background:#3a3a3a"></div> Upcoming</div>
+    <div class="leg-item"><div class="leg-dot" style="background:#7c6af0"></div> Pre-launch</div>
+  </div>
+</div>
+
+<div class="progress-bar">
+  <span class="progress-label">Overall progress</span>
+  <div class="progress-track"><div class="progress-fill" style="width:88%"></div></div>
+  <span class="progress-label"><b>~88%</b> to v1.0 &nbsp;·&nbsp; Sessions 1–8 complete &nbsp;·&nbsp; Session 9 + Pre-Launch remaining</span>
+</div>
+
+<div class="main">
+<nav class="sidebar">
+  <div class="sidebar-label">Completed</div>
+  <a href="#s0" class="done">S0 — Scaffold</a>
+  <a href="#s1" class="done">S1 — Foundation</a>
+  <a href="#s2" class="done">S2 — Auth &amp; Security</a>
+  <a href="#s3" class="done">S3 — Integrations</a>
+  <a href="#s4" class="done">S4 — Setup Wizard</a>
+  <a href="#s5" class="done">S5 — Settings</a>
+  <a href="#s6" class="done">S6 — Import / Export</a>
+  <a href="#s7" class="done">S7 — Mobile</a>
+  <a href="#s8" class="done">S8 — Hardening</a>
+  <div class="sidebar-label">Next</div>
+  <a href="#s9" class="done">S9 — Command Palette</a>
+  <div class="sidebar-label">Pre-Launch</div>
+  <a href="#prelaunch">Final checklist</a>
+</nav>
+
+<div class="content">
+
+<div class="phase-divider"><span class="phase-divider-label">Completed</span><div class="phase-divider-line"></div></div>
+
+<div class="session done" id="s0">
+  <div class="session-header"><span class="session-num">S0</span><span class="session-title">Monorepo Scaffold</span><span class="session-subtitle">complete</span></div>
+  <div class="session-body"><div class="tasks">
+    <div class="task task-done"><div class="task-icon">✅</div><div class="task-text">Turborepo monorepo — apps/web, desktop/mobile stubs, packages/ui/db/types/agent</div></div>
+    <div class="task task-done"><div class="task-icon">✅</div><div class="task-text">Dashboard layout — Sidebar, Header, widget cards, all 7 Free metric widgets</div></div>
+    <div class="task task-done"><div class="task-icon">✅</div><div class="task-text">Config GET/POST, Update check, Notification panel, Dockerfile + CI</div></div>
+  </div></div>
+</div>
+
+<div class="session done" id="s1">
+  <div class="session-header"><span class="session-num">S1</span><span class="session-title">Foundation — Types, Schema, Encryption, Platform</span><span class="session-subtitle">complete</span></div>
+  <div class="session-body"><div class="tasks">
+    <div class="task task-done"><div class="task-icon">✅</div><div class="task-text">env.ts, paths.ts — no hardcoded paths or ports anywhere</div><span class="task-tag tag-infra">infra</span></div>
+    <div class="task task-done"><div class="task-icon">✅</div><div class="task-text">DB schema — 7 tables + configSchemaVersion, Drizzle migrations 0001+0002</div><span class="task-tag tag-api">api</span></div>
+    <div class="task task-done"><div class="task-icon">✅</div><div class="task-text">AES-256-GCM encrypt/decrypt — HKDF-SHA256 key derivation from PHAVO_SECRET</div><span class="task-tag tag-security">security</span></div>
+  </div></div>
+</div>
+
+<div class="session done" id="s2">
+  <div class="session-header"><span class="session-num">S2</span><span class="session-title">Auth, Session Middleware &amp; Tier Enforcement</span><span class="session-subtitle">complete</span></div>
+  <div class="session-body"><div class="tasks">
+    <div class="task task-done"><div class="task-icon">✅</div><div class="task-text">authMiddleware, requireTier(), requireSession() on all endpoints</div><span class="task-tag tag-security">security</span></div>
+    <div class="task task-done"><div class="task-icon">✅</div><div class="task-text">csrfMiddleware + fetchWithCsrf() client utility — all mutations protected</div><span class="task-tag tag-security">security</span></div>
+    <div class="task task-done"><div class="task-icon">✅</div><div class="task-text">POST /auth/login (phavo.net OAuth + Local Argon2id), GET /health (DB verify), TOTP</div><span class="task-tag tag-api">api</span></div>
+    <div class="task task-done"><div class="task-icon">✅</div><div class="task-text">Mock auth production-gated; PHAVO_SECRET required + default rejected in production</div><span class="task-tag tag-security">security</span></div>
+  </div></div>
+</div>
+
+<div class="session done" id="s3">
+  <div class="session-header"><span class="session-num">S3</span><span class="session-title">Integrations, Manifest Split &amp; Design System</span><span class="session-subtitle">complete</span></div>
+  <div class="session-body"><div class="tasks">
+    <div class="task task-done"><div class="task-icon">✅</div><div class="task-text">Widget manifest split — 7 full + 3 WidgetTeaserDefinition for Free tier</div><span class="task-tag tag-api">api</span></div>
+    <div class="task task-done"><div class="task-icon">✅</div><div class="task-text">Pi-hole, RSS, Links — DB credentials, partial failure handling, Zod-validated responses</div><span class="task-tag tag-api">api</span></div>
+    <div class="task task-done"><div class="task-icon">✅</div><div class="task-text">POST /widgets/:instanceId/config — credential split, Zod validation, transaction-safe</div><span class="task-tag tag-api">api</span></div>
+    <div class="task task-done"><div class="task-icon">✅</div><div class="task-text">POST /license/activate + /deactivate; tier from session only (not config)</div><span class="task-tag tag-api">api</span></div>
+    <div class="task task-done"><div class="task-icon">✅</div><div class="task-text">Theme — pure black (#000), Geist font, amber accent (#d4922a), CSS variables only</div><span class="task-tag tag-design">design</span></div>
+  </div></div>
+</div>
+
+<div class="session done" id="s4">
+  <div class="session-header"><span class="session-num">S4</span><span class="session-title">Full Setup Wizard — all 10 steps wired</span><span class="session-subtitle">complete</span></div>
+  <div class="session-body"><div class="tasks">
+    <div class="task task-done"><div class="task-icon">✅</div><div class="task-text">Quick + Full Setup — phavo.net OAuth + Local auth, URL-first navigation (Svelte 5 hydration safe)</div><span class="task-tag tag-ux">ux</span></div>
+    <div class="task task-done"><div class="task-icon">✅</div><div class="task-text">Location + weather preview, tab builder (Free limit), widget select + assign, per-widget config</div><span class="task-tag tag-ux">ux</span></div>
+    <div class="task task-done"><div class="task-icon">✅</div><div class="task-text">sessionStorage persistence for field data; mode/step always URL-driven</div><span class="task-tag tag-ux">ux</span></div>
+  </div></div>
+</div>
+
+<div class="session done" id="s5">
+  <div class="session-header"><span class="session-num">S5</span><span class="session-title">Settings Page, SchemaRenderer &amp; Widget States</span><span class="session-subtitle">complete</span></div>
+  <div class="session-body"><div class="tasks">
+    <div class="task task-done"><div class="task-icon">✅</div><div class="task-text">SchemaRenderer — Zod→form auto-rendering; no per-widget custom panels ever</div><span class="task-tag tag-ui">ui</span></div>
+    <div class="task task-done"><div class="task-icon">✅</div><div class="task-text">Settings → Widgets master/detail (search, category filter, mini-preview, SchemaRenderer)</div><span class="task-tag tag-ui">ui</span></div>
+    <div class="task task-done"><div class="task-icon">✅</div><div class="task-text">Widget state machine — loading / active / unconfigured / error / stale</div><span class="task-tag tag-ui">ui</span></div>
+    <div class="task task-done"><div class="task-icon">✅</div><div class="task-text">Settings 7 tabs: general, account, security, about, widgets, licence, import/export</div><span class="task-tag tag-ui">ui</span></div>
+  </div></div>
+</div>
+
+<div class="session done" id="s6">
+  <div class="session-header"><span class="session-num">S6</span><span class="session-title">Import / Export (.phavo format)</span><span class="session-subtitle">complete</span></div>
+  <div class="session-body"><div class="tasks">
+    <div class="task task-done"><div class="task-icon">✅</div><div class="task-text">GET /api/v1/config/export — .phavo file download (JSON envelope)</div><span class="task-tag tag-api">api</span></div>
+    <div class="task task-done"><div class="task-icon">✅</div><div class="task-text">POST /api/v1/config/export — passphrase-encrypted credentials (PBKDF2→AES-256-GCM)</div><span class="task-tag tag-security">security</span></div>
+    <div class="task task-done"><div class="task-icon">✅</div><div class="task-text">POST /api/v1/config/import — transactional, UUID remapping, Free-tier tab cap, warnings</div><span class="task-tag tag-api">api</span></div>
+    <div class="task task-done"><div class="task-icon">✅</div><div class="task-text">ImportExportTab.svelte — drag-and-drop .phavo, preview panel, credential toggle</div><span class="task-tag tag-ui">ui</span></div>
+  </div></div>
+</div>
+
+<div class="session done" id="s7">
+  <div class="session-header"><span class="session-num">S7</span><span class="session-title">Mobile Responsiveness ≥375px</span><span class="session-subtitle">complete</span></div>
+  <div class="session-body"><div class="tasks">
+    <div class="task task-done"><div class="task-icon">✅</div><div class="task-text">Breakpoints — --bp-mobile: 640px, --bp-tablet: 1024px in theme.css</div><span class="task-tag tag-ui">ui</span></div>
+    <div class="task task-done"><div class="task-icon">✅</div><div class="task-text">Sidebar → bottom nav &lt;640px · icon rail 640–1024px · full sidebar ≥1024px</div><span class="task-tag tag-ui">ui</span></div>
+    <div class="task task-done"><div class="task-icon">✅</div><div class="task-text">Widget grid 1/2/12-col · Settings vertical stack · Setup full-screen steps</div><span class="task-tag tag-ui">ui</span></div>
+    <div class="task task-done"><div class="task-icon">✅</div><div class="task-text">Bottom sheet panels · touch targets ≥44px (WCAG 2.1 AA) · no horizontal scroll at 375px</div><span class="task-tag tag-ui">ui</span></div>
+  </div></div>
+</div>
+
+<div class="session done" id="s8">
+  <div class="session-header"><span class="session-num">S8</span><span class="session-title">Hardening + Production Audit (13 fixes)</span><span class="session-subtitle">complete</span></div>
+  <div class="session-body"><div class="tasks">
+    <div class="task task-done"><div class="task-icon">✅</div><div class="task-text">Docker multi-arch amd64+arm64 · PHAVO_MIGRATIONS_DIR · read_only + tmpfs</div><span class="task-tag tag-infra">infra</span></div>
+    <div class="task task-done"><div class="task-icon">✅</div><div class="task-text">CSP headers · per-IP rate limiting (rate-limit.ts) · 429 + Retry-After</div><span class="task-tag tag-security">security</span></div>
+    <div class="task task-done"><div class="task-icon">✅</div><div class="task-text">CSRF gap closed (fetchWithCsrf) · SSRF partial block · Secure cookie flag</div><span class="task-tag tag-security">security</span></div>
+    <div class="task task-done"><div class="task-icon">✅</div><div class="task-text">POST /config Zod-validated · config import transactional · external APIs Zod-validated</div><span class="task-tag tag-api">api</span></div>
+    <div class="task task-done"><div class="task-icon">✅</div><div class="task-text">Default PHAVO_SECRET rejected · notification queue capped · health check verifies DB</div><span class="task-tag tag-security">security</span></div>
+  </div></div>
+</div>
+
+<div class="phase-divider"><span class="phase-divider-label">Next</span><div class="phase-divider-line"></div></div>
+
+<div class="session done" id="s9">
+  <div class="session-header"><span class="session-num">S9</span><span class="session-title">Command Palette (Cmd+K) — Universal Search + AI</span><span class="session-subtitle">~3h</span></div>
+  <div class="session-body"><div class="tasks">
+    <div class="task task-todo"><div class="task-icon">⬜</div><div class="task-text">Cmd+K / Ctrl+K global shortcut — registered in +layout.svelte via onMount</div><span class="task-tag tag-ui">ui</span></div>
+    <div class="task task-todo"><div class="task-icon">⬜</div><div class="task-text">CommandPalette.svelte — keyboard-navigable modal, grouped results, Escape to close</div><span class="task-tag tag-ui">ui</span></div>
+    <div class="task task-todo"><div class="task-icon">⬜</div><div class="task-text">Local search — widgets (name, category), settings tabs, notifications, actions</div><span class="task-tag tag-ui">ui</span></div>
+    <div class="task task-todo"><div class="task-icon">⬜</div><div class="task-text">Web search — configurable engine (DDG default), URL template, opens new tab</div><span class="task-tag tag-ui">ui</span></div>
+    <div class="task task-todo"><div class="task-icon">⬜</div><div class="task-text">POST /api/v1/ai/chat — requireSession(); reads API key from credentials table server-side</div><span class="task-tag tag-api">api</span></div>
+    <div class="task task-todo"><div class="task-icon">⬜</div><div class="task-text">AI providers — Ollama (localhost:11434, offline), OpenAI, Anthropic Claude</div><span class="task-tag tag-api">api</span></div>
+    <div class="task task-todo"><div class="task-icon">⬜</div><div class="task-text">Settings → General — search engine URL, Ollama URL, OpenAI key, Anthropic key</div><span class="task-tag tag-ui">ui</span></div>
+    <div class="task task-todo"><div class="task-icon">⬜</div><div class="task-text">API keys stored in credentials table (AES-256-GCM) — never exposed to client</div><span class="task-tag tag-security">security</span></div>
+  </div></div>
+</div>
+
+<div class="phase-divider"><span class="phase-divider-label">Pre-Launch</span><div class="phase-divider-line"></div></div>
+
+<div class="session done" id="versioning">
+  <div class="session-header"><span class="session-num">VER</span><span class="session-title">Version Management &amp; CI/CD</span><span class="session-subtitle">complete</span></div>
+  <div class="session-body"><div class="tasks">
+    <div class="task task-done"><div class="task-icon">✅</div><div class="task-text">Single source of truth — root package.json version: "1.0.0"</div><span class="task-tag tag-infra">infra</span></div>
+    <div class="task task-done"><div class="task-icon">✅</div><div class="task-text">PHAVO_VERSION injected at build time via Vite define block</div><span class="task-tag tag-infra">infra</span></div>
+    <div class="task task-done"><div class="task-icon">✅</div><div class="task-text">release:patch/minor/major scripts — bump, commit, tag, push in one command</div><span class="task-tag tag-infra">infra</span></div>
+    <div class="task task-done"><div class="task-icon">✅</div><div class="task-text">Docker CI — builds amd64+arm64, pushes :VERSION + :latest on tag push</div><span class="task-tag tag-infra">infra</span></div>
+    <div class="task task-done"><div class="task-icon">✅</div><div class="task-text">GitHub Release workflow — auto-creates release with Docker install instructions</div><span class="task-tag tag-infra">infra</span></div>
+    <div class="task task-done"><div class="task-icon">✅</div><div class="task-text">CHANGELOG.md — initial 1.0.0 entry, Keep a Changelog format</div><span class="task-tag tag-infra">infra</span></div>
+  </div></div>
+</div>
+
+<div class="launch-box" id="prelaunch">
+  <div class="launch-title">v1.0 Pre-Launch — before publishing anything</div>
+  <div class="launch-item">phavo.net licence backend — validate, activate, deactivate, upgrade endpoints live</div>
+  <div class="launch-item">Gumroad products configured — Standard €8.99, Local €24.99, Ultra €39.99</div>
+  <div class="launch-item">phavo.net landing page — hero screenshot, 4-tier pricing table, CTA</div>
+  <div class="launch-item">docs.phavo.net — installation guide, widget reference, setup walkthrough, FAQ, .phavo format spec</div>
+  <div class="launch-item">Public demo instance deployed on phavo.net</div>
+  <div class="launch-item">Docker Hub — phavo/phavo:1.0.0 + :latest, amd64 + arm64</div>
+  <div class="launch-item">GitHub — SECURITY.md, CONTRIBUTING.md, issue templates, v1.0.0 release notes</div>
+  <div class="launch-item">README final — quick start, pricing, screenshots, roadmap teaser</div>
+  <div class="launch-item">End-to-end smoke test — setup → widget config → export (.phavo) → import → clean Docker install on Pi 5</div>
+  <div class="launch-item">Security review — CSP verified, rate limits tested, CSRF confirmed in production</div>
+  <div class="launch-item">GitHub Sponsors + Ko-fi link in Settings → About (for recurring revenue)</div>
+  <div class="launch-item">Launch posts — r/selfhosted, r/homelab, r/pihole, Product Hunt, HN Show HN</div>
+  <div class="launch-item">Discord server — #announcements, #support, #widget-sharing channels open</div>
+</div>
+
+</div>
+</div>
+</body>
+</html>

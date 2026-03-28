@@ -3,6 +3,7 @@ import '@phavo/ui/src/theme.css';
 import { onMount, type Snippet } from 'svelte';
 import { goto } from '$app/navigation';
 import { icons, Sidebar, Header, NotificationPanel } from '@phavo/ui';
+import type { SearchEntry, AiProviders } from '@phavo/ui';
 import type { DashboardConfig, Notification, Session } from '@phavo/types';
 import en from '$lib/i18n/en.json';
 import { getConfig, setConfig } from '$lib/stores/config.svelte';
@@ -15,7 +16,8 @@ import {
   clearHistory,
   syncFromServer,
 } from '$lib/stores/notifications.svelte';
-import { getIsDrawerOpen, setDrawerOpen } from '$lib/stores/widgets.svelte';
+import { getIsDrawerOpen, setDrawerOpen, getWidgetManifest, getTabs } from '$lib/stores/widgets.svelte';
+import { fetchWithCsrf } from '$lib/utils/api';
 
 interface Props {
   data: {
@@ -34,6 +36,10 @@ let panelOpen = $state(false);
 let updateAvailable = $state(false);
 let latestUpdateVersion = $state('');
 let currentPathname = $state('/');
+
+// Search
+let searchEngineUrl = $state('https://duckduckgo.com/?q={query}');
+let aiProviders = $state<AiProviders>({ ollama: false, openai: false, anthropic: false });
 
 const sidebarItems = [
   { id: 'home', label: 'Dashboard', icon: icons.cpu() },
@@ -71,6 +77,138 @@ function navigate(id: string) {
   goto(id === 'home' ? '/' : `/${id}`);
 }
 
+function navigateToSettings(hash?: string) {
+  if (typeof window !== 'undefined' && window.location.pathname === '/settings') {
+    if (hash) {
+      window.location.hash = hash;
+      window.dispatchEvent(new HashChangeEvent('hashchange'));
+    }
+    return;
+  }
+
+  void goto(hash ? `/settings#${hash}` : '/settings');
+}
+
+// ─── Command Palette helpers ──────────────────────────────────────────
+
+const SETTINGS_TABS = [
+  { id: 'general', label: 'General' },
+  { id: 'account', label: 'Account' },
+  { id: 'security', label: 'Security' },
+  { id: 'widgets', label: 'Widgets' },
+  { id: 'license', label: 'License' },
+  { id: 'import-export', label: 'Import / Export' },
+  { id: 'about', label: 'About' },
+];
+
+const searchIndex = $derived.by((): SearchEntry[] => {
+  const entries: SearchEntry[] = [];
+
+  // Widgets from manifest
+  for (const w of getWidgetManifest()) {
+    entries.push({
+      id: `widget:${w.id}`,
+      label: w.name,
+      subtitle: w.description,
+      category: 'widget',
+      action: () => {
+        setDrawerOpen(true);
+      },
+    });
+  }
+
+  // Settings tabs
+  for (const tab of SETTINGS_TABS) {
+    entries.push({
+      id: `settings:${tab.id}`,
+      label: tab.label,
+      subtitle: 'Settings',
+      category: 'settings',
+      action: () => {
+        navigateToSettings(tab.id);
+      },
+    });
+  }
+
+  // Dashboard tabs
+  for (const tab of getTabs()) {
+    entries.push({
+      id: `tab:${tab.id}`,
+      label: tab.label,
+      subtitle: 'Dashboard Tab',
+      category: 'tab',
+      action: () => {
+        goto('/');
+      },
+    });
+  }
+
+  // Static actions
+  entries.push({
+    id: 'action:add-widget',
+    label: 'Add Widget',
+    subtitle: 'Open widget drawer',
+    category: 'action',
+    action: () => {
+      void goto('/');
+      setDrawerOpen(true);
+    },
+  });
+
+  entries.push({
+    id: 'action:settings',
+    label: 'Open Settings',
+    category: 'action',
+    action: () => {
+      goto('/settings');
+    },
+  });
+
+  entries.push({
+    id: 'action:notifications',
+    label: 'View Notifications',
+    category: 'action',
+    action: () => {
+      panelOpen = true;
+    },
+  });
+
+  return entries;
+});
+
+async function loadAiStatus() {
+  try {
+    const resp = await fetchWithCsrf('/api/v1/ai/status');
+    const json = (await resp.json()) as {
+      ok: boolean;
+      data?: {
+        ollama: boolean;
+        openai: boolean;
+        anthropic: boolean;
+        searchEngineUrl: string;
+        searchEngineName: string;
+      };
+    };
+    if (json.ok && json.data) {
+      aiProviders = { ollama: json.data.ollama, openai: json.data.openai, anthropic: json.data.anthropic };
+      searchEngineUrl = json.data.searchEngineUrl;
+    }
+  } catch { /* AI status is optional — degrade gracefully */ }
+}
+
+async function handleAiChat(provider: 'ollama' | 'openai' | 'anthropic', query: string): Promise<string> {
+  const resp = await fetchWithCsrf('/api/v1/ai/chat', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ provider, query }),
+  });
+  const json = (await resp.json()) as { ok: boolean; data?: { text: string }; error?: string };
+  if (!json.ok || !json.data) {
+    throw new Error(json.error ?? 'AI request failed');
+  }
+  return json.data.text;
+}
+
 onMount(() => {
   const syncPathname = () => {
     currentPathname = window.location.pathname;
@@ -92,6 +230,7 @@ onMount(() => {
   }) as History['replaceState'];
 
   window.addEventListener('popstate', syncPathname);
+
 
   const cleanupEffects = $effect.root(() => {
     $effect(() => {
@@ -116,6 +255,11 @@ onMount(() => {
       syncFromServer();
       const interval = setInterval(syncFromServer, 60_000);
       return () => clearInterval(interval);
+    });
+
+    $effect(() => {
+      if (!isDashboard) return;
+      void loadAiStatus();
     });
   });
 
@@ -145,7 +289,7 @@ function handleNotificationClick(n: Notification) {
   markRead(n.id);
   panelOpen = false;
   if (n.settingsTab) {
-    goto(`/settings?tab=${n.settingsTab}`);
+    navigateToSettings(n.settingsTab);
   } else if (n.widgetId) {
     // Navigate to dashboard and scroll to widget by id
     goto('/');
@@ -175,7 +319,7 @@ function handleNotificationClick(n: Notification) {
         {#if updateAvailable}
           <button
             class="update-badge"
-            onclick={() => goto('/settings?tab=about')}
+            onclick={() => navigateToSettings('about')}
             aria-label="Update available: {latestUpdateVersion}"
           >
             Update
@@ -190,6 +334,11 @@ function handleNotificationClick(n: Notification) {
         onAddWidgetClick={() => setDrawerOpen(!getIsDrawerOpen())}
         addWidgetLabel={en.dashboard.addWidget}
         {updateBadge}
+        {searchIndex}
+        {searchEngineUrl}
+        {aiProviders}
+        tier={data.session?.tier ?? 'free'}
+        onAiChat={handleAiChat}
       />
       {@render children()}
     </main>

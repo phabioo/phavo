@@ -1,0 +1,42 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Get version
+        id: version
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/v}
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Phavo v${{ steps.version.outputs.VERSION }}
+          body: |
+            ## Phavo v${{ steps.version.outputs.VERSION }}
+
+            ### Docker
+            ```bash
+            docker pull phavo/phavo:${{ steps.version.outputs.VERSION }}
+            ```
+
+            ### Docker Compose
+            Update your `docker-compose.yml`:
+            ```yaml
+            image: phavo/phavo:${{ steps.version.outputs.VERSION }}
+            ```
+
+            See [CHANGELOG.md](CHANGELOG.md) for details.
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

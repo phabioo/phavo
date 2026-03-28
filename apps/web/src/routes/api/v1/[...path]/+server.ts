@@ -19,14 +19,15 @@ import {
   PRESERVE_CREDENTIAL_VALUE,
   type WidgetSize,
 } from '@phavo/types';
+import { env } from '@phavo/types/env';
 import type { RequestEvent } from '@sveltejs/kit';
 import { hashPassword, verifyPassword } from 'better-auth/crypto';
-import { asc, desc, eq } from 'drizzle-orm';
+import { asc, desc, eq, sql } from 'drizzle-orm';
 import { Hono } from 'hono';
 import { z } from 'zod';
 import { cached } from '$lib/server/agent';
 import { checkRateLimit, recordLoginAttempt } from '$lib/server/auth';
-import { db, dbReady } from '$lib/server/db';
+import { db } from '$lib/server/db';
 import { activateLocalLicense } from '$lib/server/license';
 import {
   type AppVariables,
@@ -53,7 +54,6 @@ import {
 } from '$lib/server/widget-registry';
 
 const app = new Hono<{ Variables: AppVariables }>().basePath('/api/v1');
-const PHAVO_VERSION = process.env.PHAVO_VERSION ?? '0.0.1';
 
 // ─── Global middleware ────────────────────────────────────────────────────────
 // authMiddleware validates the session cookie on every non-public request.
@@ -260,19 +260,24 @@ async function setSessionCookies(
   maxAgeSeconds: number,
 ): Promise<void> {
   const csrfToken = await deriveCsrfToken(token);
+  const secure = env.nodeEnv === 'production' ? '; Secure' : '';
   appendSetCookie(
     response,
-    `phavo_session=${token}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${maxAgeSeconds}`,
+    `phavo_session=${token}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${maxAgeSeconds}${secure}`,
   );
   appendSetCookie(
     response,
-    `phavo_csrf=${csrfToken}; Path=/; SameSite=Lax; Max-Age=${maxAgeSeconds}`,
+    `phavo_csrf=${csrfToken}; Path=/; SameSite=Lax; Max-Age=${maxAgeSeconds}${secure}`,
   );
 }
 
 function clearSessionCookies(response: Response): void {
-  appendSetCookie(response, 'phavo_session=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0');
-  appendSetCookie(response, 'phavo_csrf=; Path=/; SameSite=Lax; Max-Age=0');
+  const secure = env.nodeEnv === 'production' ? '; Secure' : '';
+  appendSetCookie(
+    response,
+    `phavo_session=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0${secure}`,
+  );
+  appendSetCookie(response, `phavo_csrf=; Path=/; SameSite=Lax; Max-Age=0${secure}`);
 }
 
 type PiholeCredentials = {
@@ -672,8 +677,6 @@ type ExportEnvelope = z.infer<typeof ExportEnvelopeSchema>;
 /** Collects the current config + tabs + widgetInstances into an export payload.
  *  configEncrypted is decrypted so the file is portable across PHAVO_SECRET rotations. */
 async function buildExportPayload(): Promise<Omit<ExportEnvelope, 'credentials'>> {
-  await dbReady;
-
   const configRows = await db.query.config.findMany();
   const parsed = parseConfigEntries(configRows);
 
@@ -755,9 +758,14 @@ const TotpSchema = z.object({
 // ─── Public endpoints ─────────────────────────────────────────────────────────
 
 // Health check — always public, no auth. Polled by Tauri sidecar on startup.
-app.get('/health', (c) =>
-  c.json(ok({ version: PHAVO_VERSION, platform: process.env.PHAVO_ENV ?? 'docker' })),
-);
+app.get('/health', async (c) => {
+  try {
+    await db.run(sql`SELECT 1`);
+  } catch {
+    return c.json(err('Database unreachable'), 503);
+  }
+  return c.json(ok({ version: PHAVO_VERSION, platform: process.env.PHAVO_ENV ?? 'docker' }));
+});
 
 // ─── Widget manifest ──────────────────────────────────────────────────────────
 
@@ -788,13 +796,30 @@ app.get('/config', requireSession(), async (c) => {
 
 app.post('/config', requireSession(), async (c) => {
   try {
-    await dbReady;
-    const body = (await c.req.json()) as {
-      setupComplete?: boolean;
-      dashboardName?: string;
-      sessionTimeout?: '1d' | '7d' | '30d' | 'never';
-      location?: { name: string; latitude: number; longitude: number } | null;
-    };
+    let rawBody: unknown;
+    try {
+      rawBody = await c.req.json();
+    } catch {
+      return c.json(err('Invalid request body'), 400);
+    }
+
+    const ConfigPostSchema = z.object({
+      setupComplete: z.boolean().optional(),
+      dashboardName: z.string().max(100).optional(),
+      sessionTimeout: z.enum(['1d', '7d', '30d', 'never']).optional(),
+      location: z
+        .object({
+          name: z.string().max(200),
+          latitude: z.number().min(-90).max(90),
+          longitude: z.number().min(-180).max(180),
+        })
+        .nullable()
+        .optional(),
+      tabs: z.array(z.any()).optional(),
+    });
+    const parsed = ConfigPostSchema.safeParse(rawBody);
+    if (!parsed.success) return c.json(err('Invalid config'), 400);
+    const body = parsed.data;
 
     const upserts: Array<{ key: string; value: string }> = [];
     const deletes: string[] = [];
@@ -859,8 +884,8 @@ app.get('/config/export', requireSession(), async (c) => {
     return new Response(JSON.stringify(payload, null, 2), {
       status: 200,
       headers: {
-        'Content-Type': 'application/json',
-        'Content-Disposition': `attachment; filename="phavo-config-${dateStr}.json"`,
+        'Content-Type': 'application/octet-stream',
+        'Content-Disposition': `attachment; filename="phavo-config-${dateStr}.phavo"`,
       },
     });
   } catch (e) {
@@ -896,8 +921,8 @@ app.post('/config/export', requireSession(), async (c) => {
     return new Response(JSON.stringify({ ...payload, credentials: credentialBlob }, null, 2), {
       status: 200,
       headers: {
-        'Content-Type': 'application/json',
-        'Content-Disposition': `attachment; filename="phavo-config-${dateStr}.json"`,
+        'Content-Type': 'application/octet-stream',
+        'Content-Disposition': `attachment; filename="phavo-config-${dateStr}.phavo"`,
       },
     });
   } catch (e) {
@@ -909,7 +934,6 @@ app.post('/config/export', requireSession(), async (c) => {
 // Body: { exportJson: string, passphrase?: string }
 app.post('/config/import', requireSession(), async (c) => {
   try {
-    await dbReady;
     const session = c.get('session');
     if (!session) return c.json(err('Unauthorized'), 401);
 
@@ -957,125 +981,129 @@ app.post('/config/import', requireSession(), async (c) => {
     }
     const keptTabIds = new Set(tabsToImport.map((t) => t.id));
 
-    // ── Apply config keys (skip setupComplete — preserve current value) ───────
-    const cfgUpserts: Array<{ key: string; value: string }> = [];
-    if (exportData.config.dashboardName !== undefined) {
-      cfgUpserts.push({
-        key: 'dashboard_name',
-        value: exportData.config.dashboardName.trim() || 'My Dashboard',
-      });
-    }
-    if (exportData.config.sessionTimeout !== undefined) {
-      cfgUpserts.push({ key: 'session_timeout', value: exportData.config.sessionTimeout });
-    }
-    if (exportData.config.location != null) {
-      cfgUpserts.push({ key: 'location_name', value: exportData.config.location.name });
-      cfgUpserts.push({
-        key: 'location_latitude',
-        value: String(exportData.config.location.latitude),
-      });
-      cfgUpserts.push({
-        key: 'location_longitude',
-        value: String(exportData.config.location.longitude),
-      });
-    }
-    for (const entry of cfgUpserts) {
-      await db
-        .insert(schema.config)
-        .values({ key: entry.key, value: entry.value })
-        .onConflictDoUpdate({
-          target: schema.config.key,
-          set: { value: entry.value, updatedAt: new Date() },
-        });
-    }
-
-    // ── Replace tabs ──────────────────────────────────────────────────────────
-    // Delete widget instances first (FK constraint: widgetInstances.tabId → tabs.id).
-    await db.delete(schema.widgetInstances);
-    await db.delete(schema.tabs);
-
-    // Insert tabs with new UUIDs; build oldId → newId map.
+    // All DB mutations inside a single transaction — atomic rollback on failure.
     const tabIdMap = new Map<string, string>();
-    for (const tab of tabsToImport) {
-      const newId = crypto.randomUUID();
-      tabIdMap.set(tab.id, newId);
-      await db.insert(schema.tabs).values({ id: newId, label: tab.label, order: tab.order });
-    }
+    const widgetIdMap = new Map<string, string>();
 
-    // Fallback: if all imported tabs were discarded (edge case), create a default Home tab.
-    if (tabIdMap.size === 0) {
-      const homeId = crypto.randomUUID();
-      await db.insert(schema.tabs).values({ id: homeId, label: 'Home', order: 0 });
-      // No widgets can be imported either.
-      return c.json(ok({ warnings }));
-    }
-
-    // Get the first kept tab's new ID (for reassigning widgets from dropped tabs).
-    const firstNewTabId = tabIdMap.values().next().value as string;
-
-    // ── Import widget instances ───────────────────────────────────────────────
-    const widgetIdMap = new Map<string, string>(); // oldId → newId
-    for (const wi of exportData.widgetInstances) {
-      // Widgets assigned to tabs that were discarded due to Free tier cap get
-      // reassigned to the first tab (they appear locked if tier doesn't cover them).
-      const resolvedOldTabId = keptTabIds.has(wi.tabId) ? wi.tabId : tabsToImport[0]?.id;
-      if (!resolvedOldTabId) continue; // no tabs at all — skip
-
-      const newTabId = tabIdMap.get(resolvedOldTabId) ?? firstNewTabId;
-      const newInstanceId = crypto.randomUUID();
-      widgetIdMap.set(wi.id, newInstanceId);
-
-      const configEncrypted =
-        wi.config && Object.keys(wi.config).length > 0
-          ? await encrypt(JSON.stringify(wi.config))
-          : null;
-
-      await db.insert(schema.widgetInstances).values({
-        id: newInstanceId,
-        widgetId: wi.widgetId,
-        tabId: newTabId,
-        size: wi.size,
-        positionX: wi.positionX,
-        positionY: wi.positionY,
-        configEncrypted,
-      });
-    }
-
-    // ── Import credentials (if blob present and passphrase provided) ──────────
-    if (exportData.credentials && requestParsed.data.passphrase) {
-      let decryptedCredentials: Record<string, Record<string, string>>;
-      try {
-        const raw = await exportDecrypt(exportData.credentials, requestParsed.data.passphrase);
-        const credentialSchema = z.record(z.record(z.string()));
-        const parsed = credentialSchema.safeParse(JSON.parse(raw));
-        if (!parsed.success) throw new Error('Invalid credential structure');
-        decryptedCredentials = parsed.data;
-      } catch {
-        warnings.push('Could not decrypt credentials — wrong passphrase or corrupted file');
-        decryptedCredentials = {};
+    await db.transaction(async (tx) => {
+      // ── Apply config keys (skip setupComplete — preserve current value) ───────
+      const cfgUpserts: Array<{ key: string; value: string }> = [];
+      if (exportData.config.dashboardName !== undefined) {
+        cfgUpserts.push({
+          key: 'dashboard_name',
+          value: exportData.config.dashboardName.trim() || 'My Dashboard',
+        });
+      }
+      if (exportData.config.sessionTimeout !== undefined) {
+        cfgUpserts.push({ key: 'session_timeout', value: exportData.config.sessionTimeout });
+      }
+      if (exportData.config.location != null) {
+        cfgUpserts.push({ key: 'location_name', value: exportData.config.location.name });
+        cfgUpserts.push({
+          key: 'location_latitude',
+          value: String(exportData.config.location.latitude),
+        });
+        cfgUpserts.push({
+          key: 'location_longitude',
+          value: String(exportData.config.location.longitude),
+        });
+      }
+      for (const entry of cfgUpserts) {
+        await tx
+          .insert(schema.config)
+          .values({ key: entry.key, value: entry.value })
+          .onConflictDoUpdate({
+            target: schema.config.key,
+            set: { value: entry.value, updatedAt: new Date() },
+          });
       }
 
-      // Store credentials re-encrypted with PHAVO_SECRET under the new instance IDs.
-      for (const [oldInstanceId, fields] of Object.entries(decryptedCredentials)) {
-        const newInstanceId = widgetIdMap.get(oldInstanceId);
-        if (!newInstanceId) continue; // instance was not imported (tab discarded)
-        for (const [fieldPath, value] of Object.entries(fields)) {
-          const key = credentialStorageKey(newInstanceId, fieldPath);
-          const valueEncrypted = await encrypt(value);
-          await db
-            .insert(schema.credentials)
-            .values({ key, valueEncrypted, updatedAt: Date.now() })
-            .onConflictDoUpdate({
-              target: schema.credentials.key,
-              set: { valueEncrypted, updatedAt: Date.now() },
-            });
+      // ── Replace tabs ──────────────────────────────────────────────────────────
+      // Delete widget instances first (FK constraint: widgetInstances.tabId → tabs.id).
+      await tx.delete(schema.widgetInstances);
+      await tx.delete(schema.tabs);
+
+      // Insert tabs with new UUIDs; build oldId → newId map.
+      for (const tab of tabsToImport) {
+        const newId = crypto.randomUUID();
+        tabIdMap.set(tab.id, newId);
+        await tx.insert(schema.tabs).values({ id: newId, label: tab.label, order: tab.order });
+      }
+
+      // Fallback: if all imported tabs were discarded (edge case), create a default Home tab.
+      if (tabIdMap.size === 0) {
+        const homeId = crypto.randomUUID();
+        await tx.insert(schema.tabs).values({ id: homeId, label: 'Home', order: 0 });
+        return; // No widgets can be imported either.
+      }
+
+      // Get the first kept tab's new ID (for reassigning widgets from dropped tabs).
+      const firstNewTabId = tabIdMap.values().next().value as string;
+
+      // ── Import widget instances ───────────────────────────────────────────────
+      for (const wi of exportData.widgetInstances) {
+        const resolvedOldTabId = keptTabIds.has(wi.tabId) ? wi.tabId : tabsToImport[0]?.id;
+        if (!resolvedOldTabId) continue;
+
+        const newTabId = tabIdMap.get(resolvedOldTabId) ?? firstNewTabId;
+        const newInstanceId = crypto.randomUUID();
+        widgetIdMap.set(wi.id, newInstanceId);
+
+        const configEncrypted =
+          wi.config && Object.keys(wi.config).length > 0
+            ? await encrypt(JSON.stringify(wi.config))
+            : null;
+
+        await tx.insert(schema.widgetInstances).values({
+          id: newInstanceId,
+          widgetId: wi.widgetId,
+          tabId: newTabId,
+          size: wi.size,
+          positionX: wi.positionX,
+          positionY: wi.positionY,
+          configEncrypted,
+        });
+      }
+
+      // ── Import credentials (if blob present and passphrase provided) ──────────
+      if (exportData.credentials && requestParsed.data.passphrase) {
+        let decryptedCredentials: Record<string, Record<string, string>>;
+        try {
+          const raw = await exportDecrypt(exportData.credentials, requestParsed.data.passphrase);
+          const credentialSchema = z.record(z.record(z.string()));
+          const parsed = credentialSchema.safeParse(JSON.parse(raw));
+          if (!parsed.success) throw new Error('Invalid credential structure');
+          decryptedCredentials = parsed.data;
+        } catch {
+          warnings.push('Could not decrypt credentials — wrong passphrase or corrupted file');
+          decryptedCredentials = {};
         }
+
+        for (const [oldInstanceId, fields] of Object.entries(decryptedCredentials)) {
+          const newInstanceId = widgetIdMap.get(oldInstanceId);
+          if (!newInstanceId) continue;
+          for (const [fieldPath, value] of Object.entries(fields)) {
+            const key = credentialStorageKey(newInstanceId, fieldPath);
+            const valueEncrypted = await encrypt(value);
+            await tx
+              .insert(schema.credentials)
+              .values({ key, valueEncrypted, updatedAt: Date.now() })
+              .onConflictDoUpdate({
+                target: schema.credentials.key,
+                set: { valueEncrypted, updatedAt: Date.now() },
+              });
+          }
+        }
+      } else if (exportData.credentials && !requestParsed.data.passphrase) {
+        warnings.push(
+          'Export contains credentials but no passphrase was provided — credentials were not imported',
+        );
       }
-    } else if (exportData.credentials && !requestParsed.data.passphrase) {
-      // Credentials in file but no passphrase provided.
-      warnings.push(
-        'Export contains credentials but no passphrase was provided — credentials were not imported',
-      );
+    });
+
+    // Early return if no tabs were imported (tabIdMap was empty inside tx).
+    if (tabIdMap.size === 0) {
+      return c.json(ok({ warnings }));
     }
 
     // ── Queue reconfiguration notifications for widgets that lack credentials ─
@@ -1145,7 +1173,6 @@ app.post('/auth/login', async (c) => {
     return c.json(err(msg), 400);
   }
 
-  await dbReady;
   const body = parsed.data;
   const SESSION_MAX_AGE = 7 * 24 * 60 * 60; // 7 days in seconds
 
@@ -1369,6 +1396,9 @@ app.post('/auth/login', async (c) => {
   // Check if TOTP is enabled for this user.
   if (user.totpSecret) {
     const partialToken = generateSessionToken();
+    if (partialSessions.size >= 1000) {
+      return c.json(err('Too many pending sessions'), 429);
+    }
     partialSessions.set(partialToken, {
       userId: user.id,
       tier: 'local',
@@ -1470,7 +1500,6 @@ app.get('/auth/session', requireSession(), (c) => {
 /** PATCH /api/v1/auth/password — updates password for local accounts. */
 app.patch('/auth/password', requireSession(), async (c) => {
   try {
-    await dbReady;
     const session = c.get('session');
     if (!session) return c.json(err('Unauthorized'), 401);
     if (session.authMode !== 'local') {
@@ -1494,7 +1523,6 @@ app.patch('/auth/password', requireSession(), async (c) => {
 /** POST /api/v1/auth/logout-all — deletes all sessions for the current user. */
 app.post('/auth/logout-all', requireSession(), async (c) => {
   try {
-    await dbReady;
     const session = c.get('session');
     if (session && !DEV_MOCK_AUTH_ENABLED) {
       await db.delete(schema.sessions).where(eq(schema.sessions.userId, session.userId));
@@ -1627,11 +1655,38 @@ app.get('/pihole', requireTier('standard'), async (c) => {
 
 app.post('/pihole/test', requireTier('standard'), async (c) => {
   try {
-    const body = (await c.req.json()) as { url?: string; token?: string };
-    if (!body.url || !body.token) {
-      return c.json(err('URL and token required'), 400);
+    let rawBody: unknown;
+    try {
+      rawBody = await c.req.json();
+    } catch {
+      return c.json(err('Invalid request body'), 400);
     }
-    const data = await getPihole(body.url, body.token);
+
+    const PiholeTestSchema = z.object({
+      url: z.string().url().max(2048),
+      token: z.string().min(1).max(512),
+    });
+    const parsed = PiholeTestSchema.safeParse(rawBody);
+    if (!parsed.success) {
+      return c.json(err('Valid URL and token required'), 400);
+    }
+
+    // Block cloud metadata endpoints (SSRF) and credential-embedded URLs.
+    const parsedUrl = new URL(parsed.data.url);
+    if (parsedUrl.username || parsedUrl.password) {
+      return c.json(err('URLs with embedded credentials are not allowed'), 400);
+    }
+    const hostname = parsedUrl.hostname;
+    if (
+      hostname === '169.254.169.254' ||
+      hostname === '[fd00:ec2::254]' ||
+      hostname === 'fd00:ec2::254' ||
+      hostname === 'metadata.google.internal'
+    ) {
+      return c.json(err('Cloud metadata endpoints are not allowed'), 400);
+    }
+
+    const data = await getPihole(parsed.data.url, parsed.data.token);
     return c.json(ok(data));
   } catch {
     return c.json(err('Could not connect to Pi-hole'), 500);
@@ -1715,7 +1770,6 @@ app.get('/links', requireTier('standard'), async (c) => {
 
 app.post('/widgets/:instanceId/config', requireSession(), async (c) => {
   try {
-    await dbReady;
     const session = c.get('session');
     if (!session) return c.json(err('Unauthorized'), 401);
 
@@ -1787,7 +1841,6 @@ app.post('/widgets/:instanceId/config', requireSession(), async (c) => {
 
 app.post('/license/activate', requireSession(), async (c) => {
   try {
-    await dbReady;
     const session = c.get('session');
     if (!session) return c.json(err('Unauthorized'), 401);
 
@@ -1848,7 +1901,6 @@ app.post('/license/activate', requireSession(), async (c) => {
 
 app.post('/license/deactivate', requireSession(), async (c) => {
   try {
-    await dbReady;
     const session = c.get('session');
     if (!session) return c.json(err('Unauthorized'), 401);
 
@@ -1916,7 +1968,6 @@ let _notifiedUpdateVersion = '';
 
 app.get('/about', requireSession(), async (c) => {
   try {
-    await dbReady;
     const session = c.get('session');
     if (!session) return c.json(err('Unauthorized'), 401);
     const licenseRows = await db.select().from(schema.licenseActivation);
@@ -2014,7 +2065,6 @@ app.post('/notifications/read', requireSession(), (c) => {
 // ─── Tabs ──────────────────────────────────────────────────────────────
 app.get('/tabs', requireSession(), async (c) => {
   try {
-    await dbReady;
     const rows = await db.select().from(schema.tabs).orderBy(asc(schema.tabs.order));
     return c.json(ok(rows.map((r) => ({ id: r.id, label: r.label, order: r.order }))));
   } catch (e) {
@@ -2024,7 +2074,6 @@ app.get('/tabs', requireSession(), async (c) => {
 
 app.post('/tabs', requireSession(), async (c) => {
   try {
-    await dbReady;
     const session = c.get('session');
     if (!session) return c.json(err('Unauthorized'), 401);
 
@@ -2058,7 +2107,6 @@ app.post('/tabs', requireSession(), async (c) => {
 
 app.patch('/tabs/:id', requireSession(), async (c) => {
   try {
-    await dbReady;
     const tabId = c.req.param('id');
     const body = (await c.req.json()) as { label?: string; order?: number };
 
@@ -2084,7 +2132,6 @@ app.patch('/tabs/:id', requireSession(), async (c) => {
 
 app.delete('/tabs/:id', requireSession(), async (c) => {
   try {
-    await dbReady;
     const tabId = c.req.param('id');
     const allTabs = await db.select().from(schema.tabs).orderBy(asc(schema.tabs.order));
 
@@ -2111,7 +2158,6 @@ app.delete('/tabs/:id', requireSession(), async (c) => {
 
 app.get('/tabs/:id/widgets', requireSession(), async (c) => {
   try {
-    await dbReady;
     const tabId = c.req.param('id');
     const rows = await db
       .select()
@@ -2145,7 +2191,6 @@ app.get('/tabs/:id/widgets', requireSession(), async (c) => {
 // ─── Widget Instances ──────────────────────────────────────────────────
 app.post('/widget-instances', requireSession(), async (c) => {
   try {
-    await dbReady;
     const body = (await c.req.json()) as { widgetId?: string; tabId?: string; size?: WidgetSize };
     if (!body.widgetId || !body.tabId) {
       return c.json(err('widgetId and tabId are required'), 400);
@@ -2184,7 +2229,6 @@ app.post('/widget-instances', requireSession(), async (c) => {
 
 app.patch('/widget-instances/:id', requireSession(), async (c) => {
   try {
-    await dbReady;
     const instanceId = c.req.param('id');
     const body = (await c.req.json()) as {
       size?: WidgetSize;
@@ -2233,12 +2277,319 @@ app.patch('/widget-instances/:id', requireSession(), async (c) => {
 
 app.delete('/widget-instances/:id', requireSession(), async (c) => {
   try {
-    await dbReady;
     const instanceId = c.req.param('id');
     await db.delete(schema.widgetInstances).where(eq(schema.widgetInstances.id, instanceId));
     return c.json(ok(null));
   } catch (e) {
     return c.json(err(e instanceof Error ? e.message : 'Failed to remove widget'), 500);
+  }
+});
+
+// ─── AI ──────────────────────────────────────────────────────────────────────
+
+const AiChatSchema = z.object({
+  provider: z.enum(['ollama', 'openai', 'anthropic']),
+  query: z.string().min(1).max(2000),
+});
+
+async function loadAiCredential(key: string): Promise<string | null> {
+  const rows = await db
+    .select()
+    .from(schema.credentials)
+    .where(eq(schema.credentials.key, key))
+    .limit(1);
+  const row = rows[0];
+  if (!row) return null;
+  try {
+    return await decrypt(row.valueEncrypted);
+  } catch {
+    return null;
+  }
+}
+
+const SEARCH_ENGINE_URLS: Record<string, { url: string; name: string }> = {
+  duckduckgo: { url: 'https://duckduckgo.com/?q={query}', name: 'DuckDuckGo' },
+  google: { url: 'https://www.google.com/search?q={query}', name: 'Google' },
+  brave: { url: 'https://search.brave.com/search?q={query}', name: 'Brave Search' },
+};
+
+app.get('/ai/status', requireSession(), async (c) => {
+  try {
+    const configRows = await db
+      .select({ key: schema.config.key, value: schema.config.value })
+      .from(schema.config);
+    const entries: Record<string, string> = {};
+    for (const row of configRows) entries[row.key] = row.value;
+
+    const engine = entries.search_engine ?? 'duckduckgo';
+    const customUrl = entries.custom_search_url ?? '';
+    const preset = SEARCH_ENGINE_URLS[engine];
+    const duckduckgoPreset = SEARCH_ENGINE_URLS.duckduckgo;
+    const searchEngineUrl =
+      engine === 'custom' && customUrl
+        ? customUrl
+        : (preset?.url ?? duckduckgoPreset?.url ?? 'https://duckduckgo.com/?q={query}');
+    const searchEngineName = engine === 'custom' ? 'Web' : (preset?.name ?? 'DuckDuckGo');
+
+    const openaiKey = await loadAiCredential('ai:openai_key');
+    const anthropicKey = await loadAiCredential('ai:anthropic_key');
+
+    return c.json(
+      ok({
+        ollama: Boolean(entries.ollama_url),
+        openai: Boolean(openaiKey),
+        anthropic: Boolean(anthropicKey),
+        searchEngineUrl,
+        searchEngineName,
+        // For settings page
+        searchEngine: engine,
+        customSearchUrl: customUrl,
+        ollamaUrl: entries.ollama_url ?? '',
+        ollamaModel: entries.ollama_model ?? '',
+        hasOpenaiKey: Boolean(openaiKey),
+        hasAnthropicKey: Boolean(anthropicKey),
+      }),
+    );
+  } catch (e) {
+    return c.json(err(e instanceof Error ? e.message : 'Failed to load AI status'), 500);
+  }
+});
+
+const AiConfigSchema = z.object({
+  searchEngine: z.enum(['duckduckgo', 'google', 'brave', 'custom']).optional(),
+  customSearchUrl: z.string().max(500).optional(),
+  ollamaUrl: z.string().max(500).optional(),
+  ollamaModel: z.string().max(100).optional(),
+  openaiKey: z.string().max(500).optional(),
+  anthropicKey: z.string().max(500).optional(),
+});
+
+app.post('/ai/config', requireSession(), async (c) => {
+  const body = await c.req.json().catch(() => null);
+  const parsed = AiConfigSchema.safeParse(body);
+  if (!parsed.success) {
+    return c.json(err('Invalid AI configuration'), 400);
+  }
+  const data = parsed.data;
+
+  try {
+    // Save non-credential config to config table
+    const configPairs: Array<{ key: string; value: string }> = [];
+    if (data.searchEngine !== undefined)
+      configPairs.push({ key: 'search_engine', value: data.searchEngine });
+    if (data.customSearchUrl !== undefined)
+      configPairs.push({ key: 'custom_search_url', value: data.customSearchUrl });
+    if (data.ollamaUrl !== undefined)
+      configPairs.push({ key: 'ollama_url', value: data.ollamaUrl });
+    if (data.ollamaModel !== undefined)
+      configPairs.push({ key: 'ollama_model', value: data.ollamaModel });
+
+    for (const pair of configPairs) {
+      await db
+        .insert(schema.config)
+        .values(pair)
+        .onConflictDoUpdate({
+          target: schema.config.key,
+          set: { value: pair.value },
+        });
+    }
+
+    // Save credential keys to credentials table
+    if (data.openaiKey !== undefined) {
+      if (data.openaiKey) {
+        const valueEncrypted = await encrypt(data.openaiKey);
+        await db
+          .insert(schema.credentials)
+          .values({ key: 'ai:openai_key', valueEncrypted, updatedAt: Date.now() })
+          .onConflictDoUpdate({
+            target: schema.credentials.key,
+            set: { valueEncrypted, updatedAt: Date.now() },
+          });
+      } else {
+        await db.delete(schema.credentials).where(eq(schema.credentials.key, 'ai:openai_key'));
+      }
+    }
+
+    if (data.anthropicKey !== undefined) {
+      if (data.anthropicKey) {
+        const valueEncrypted = await encrypt(data.anthropicKey);
+        await db
+          .insert(schema.credentials)
+          .values({ key: 'ai:anthropic_key', valueEncrypted, updatedAt: Date.now() })
+          .onConflictDoUpdate({
+            target: schema.credentials.key,
+            set: { valueEncrypted, updatedAt: Date.now() },
+          });
+      } else {
+        await db.delete(schema.credentials).where(eq(schema.credentials.key, 'ai:anthropic_key'));
+      }
+    }
+
+    return c.json(ok(null));
+  } catch (e) {
+    return c.json(err(e instanceof Error ? e.message : 'Failed to save AI config'), 500);
+  }
+});
+
+const OllamaTestSchema = z.object({
+  url: z.string().min(1).max(500),
+});
+
+app.post('/ai/test-ollama', requireSession(), async (c) => {
+  const body = await c.req.json().catch(() => null);
+  const parsed = OllamaTestSchema.safeParse(body);
+  if (!parsed.success) {
+    return c.json(err('Invalid URL'), 400);
+  }
+  try {
+    let tagUrl: URL;
+    try {
+      tagUrl = new URL('/api/tags', parsed.data.url);
+    } catch {
+      return c.json(err('Invalid Ollama URL'), 400);
+    }
+    if (tagUrl.protocol !== 'http:' && tagUrl.protocol !== 'https:') {
+      return c.json(err('URL must use http or https'), 400);
+    }
+    const resp = await fetch(tagUrl.toString(), {
+      signal: AbortSignal.timeout(5_000),
+    });
+    if (!resp.ok) {
+      return c.json(err(`Ollama returned ${resp.status}`), 502);
+    }
+    return c.json(ok(null));
+  } catch (e) {
+    if (e instanceof DOMException && e.name === 'AbortError') {
+      return c.json(err('Connection timed out'), 504);
+    }
+    return c.json(err('Failed to connect to Ollama'), 502);
+  }
+});
+
+app.post('/ai/chat', requireSession(), async (c) => {
+  const body = await c.req.json().catch(() => null);
+  const parsed = AiChatSchema.safeParse(body);
+  if (!parsed.success) {
+    return c.json(err('Invalid request: provider and query are required'), 400);
+  }
+  const { provider, query } = parsed.data;
+
+  try {
+    if (provider === 'ollama') {
+      const configRows = await db
+        .select({ key: schema.config.key, value: schema.config.value })
+        .from(schema.config);
+      const entries: Record<string, string> = {};
+      for (const row of configRows) entries[row.key] = row.value;
+      const ollamaUrl = entries.ollama_url;
+      if (!ollamaUrl) {
+        return c.json(err('Ollama URL not configured'), 400);
+      }
+      // Validate URL — only allow http/https to prevent SSRF
+      let parsedUrl: URL;
+      try {
+        parsedUrl = new URL('/api/generate', ollamaUrl);
+      } catch {
+        return c.json(err('Invalid Ollama URL'), 400);
+      }
+      if (parsedUrl.protocol !== 'http:' && parsedUrl.protocol !== 'https:') {
+        return c.json(err('Ollama URL must use http or https'), 400);
+      }
+      const ollamaModel = entries.ollama_model ?? 'llama3.2';
+      const resp = await fetch(parsedUrl.toString(), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ model: ollamaModel, prompt: query, stream: false }),
+        signal: AbortSignal.timeout(30_000),
+      });
+      if (!resp.ok) {
+        return c.json(err(`Ollama returned ${resp.status}`), 502);
+      }
+      const data = await resp.json();
+      const OllamaResponseSchema = z.object({ response: z.string() });
+      const ollamaParsed = OllamaResponseSchema.safeParse(data);
+      if (!ollamaParsed.success) {
+        return c.json(err('Unexpected response from Ollama'), 502);
+      }
+      return c.json(ok({ text: ollamaParsed.data.response }));
+    }
+
+    if (provider === 'openai') {
+      const apiKey = await loadAiCredential('ai:openai_key');
+      if (!apiKey) {
+        return c.json(err('OpenAI API key not configured'), 400);
+      }
+      const resp = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o-mini',
+          messages: [{ role: 'user', content: query }],
+          max_tokens: 1024,
+        }),
+        signal: AbortSignal.timeout(30_000),
+      });
+      if (!resp.ok) {
+        return c.json(err(`OpenAI returned ${resp.status}`), 502);
+      }
+      const data = await resp.json();
+      const OpenAIResponseSchema = z.object({
+        choices: z.array(z.object({ message: z.object({ content: z.string() }) })).min(1),
+      });
+      const openaiParsed = OpenAIResponseSchema.safeParse(data);
+      if (!openaiParsed.success) {
+        return c.json(err('Unexpected response from OpenAI'), 502);
+      }
+      const firstChoice = openaiParsed.data.choices[0];
+      if (!firstChoice) {
+        return c.json(err('Empty response from OpenAI'), 502);
+      }
+      return c.json(ok({ text: firstChoice.message.content }));
+    }
+
+    if (provider === 'anthropic') {
+      const apiKey = await loadAiCredential('ai:anthropic_key');
+      if (!apiKey) {
+        return c.json(err('Anthropic API key not configured'), 400);
+      }
+      const resp = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01',
+        },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 1024,
+          messages: [{ role: 'user', content: query }],
+        }),
+        signal: AbortSignal.timeout(30_000),
+      });
+      if (!resp.ok) {
+        return c.json(err(`Anthropic returned ${resp.status}`), 502);
+      }
+      const data = await resp.json();
+      const AnthropicResponseSchema = z.object({
+        content: z.array(z.object({ type: z.string(), text: z.string() })).min(1),
+      });
+      const anthropicParsed = AnthropicResponseSchema.safeParse(data);
+      if (!anthropicParsed.success) {
+        return c.json(err('Unexpected response from Anthropic'), 502);
+      }
+      const textBlock = anthropicParsed.data.content.find((b) => b.type === 'text');
+      return c.json(ok({ text: textBlock?.text ?? '' }));
+    }
+
+    return c.json(err('Unsupported provider'), 400);
+  } catch (e) {
+    if (e instanceof DOMException && e.name === 'AbortError') {
+      return c.json(err('AI provider request timed out'), 504);
+    }
+    return c.json(err(e instanceof Error ? e.message : 'AI request failed'), 500);
   }
 });
 

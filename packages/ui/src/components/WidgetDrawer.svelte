@@ -68,19 +68,22 @@
   let previewErrors = $state<Record<string, string | null>>({});
 
   const previewRequests = new Map<string, Promise<void>>();
+  const DEFAULT_MOBILE_HEIGHT = 60;
+  const DEFAULT_DESKTOP_HEIGHT = 400;
+  const MIN_DESKTOP_HEIGHT = 200;
+  const DESKTOP_BREAKPOINT = 640;
 
-  // Resize handle state
-  let drawerHeight = $state(60); // vh
+  let isDesktop = $state(false);
+  let desktopDrawerHeight = $state(DEFAULT_DESKTOP_HEIGHT);
+  let mobileDrawerHeight = $state(DEFAULT_MOBILE_HEIGHT);
   let isResizing = $state(false);
-  let resizeStartY = 0;
-  let resizeStartHeight = 60;
 
-  // Reset height each time the drawer is closed so next open starts at 60vh
   onMount(() => {
     return $effect.root(() => {
       $effect(() => {
         if (!open) {
-          drawerHeight = 60;
+          desktopDrawerHeight = DEFAULT_DESKTOP_HEIGHT;
+          mobileDrawerHeight = DEFAULT_MOBILE_HEIGHT;
           previewData = {};
           previewLoading = {};
           previewErrors = {};
@@ -97,6 +100,22 @@
         }
       });
     });
+  });
+
+  onMount(() => {
+    const syncViewport = () => {
+      isDesktop = window.innerWidth >= DESKTOP_BREAKPOINT;
+      if (isDesktop) {
+        desktopDrawerHeight = Math.min(getMaxDesktopHeight(), Math.max(MIN_DESKTOP_HEIGHT, desktopDrawerHeight));
+      }
+    };
+
+    syncViewport();
+    window.addEventListener('resize', syncViewport);
+
+    return () => {
+      window.removeEventListener('resize', syncViewport);
+    };
   });
 
   const filters: { key: Category; label: () => string }[] = [
@@ -169,22 +188,50 @@
     onDragEndFromDrawer?.();
   }
 
-  // ── Resize handle ──────────────────────────────────────────────────
-  function handleResizeStart(e: PointerEvent) {
+  function getMaxDesktopHeight(): number {
+    return Math.max(MIN_DESKTOP_HEIGHT, Math.floor(window.innerHeight * 0.85));
+  }
+
+  function startResize(event: MouseEvent) {
+    if (!isDesktop) return;
+
     isResizing = true;
-    resizeStartY = e.clientY;
-    resizeStartHeight = drawerHeight;
+    const startY = event.clientY;
+    const startHeight = desktopDrawerHeight;
+
+    function onMouseMove(nextEvent: MouseEvent) {
+      const delta = startY - nextEvent.clientY;
+      desktopDrawerHeight = Math.min(getMaxDesktopHeight(), Math.max(MIN_DESKTOP_HEIGHT, startHeight + delta));
+    }
+
+    function onMouseUp() {
+      isResizing = false;
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
+    }
+
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
+  }
+
+  function handleMobileResizeStart(e: PointerEvent) {
+    isResizing = true;
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    (e.currentTarget as HTMLElement).dataset.startY = String(e.clientY);
+    (e.currentTarget as HTMLElement).dataset.startHeight = String(mobileDrawerHeight);
   }
 
-  function handleResizeMove(e: PointerEvent) {
+  function handleMobileResizeMove(e: PointerEvent) {
     if (!isResizing) return;
-    const delta = resizeStartY - e.clientY;
-    const newHeightVh = resizeStartHeight + (delta / window.innerHeight) * 100;
-    drawerHeight = Math.min(85, Math.max(25, newHeightVh));
+    const handle = e.currentTarget as HTMLElement;
+    const startY = Number(handle.dataset.startY ?? e.clientY);
+    const startHeight = Number(handle.dataset.startHeight ?? mobileDrawerHeight);
+    const delta = startY - e.clientY;
+    const newHeightVh = startHeight + (delta / window.innerHeight) * 100;
+    mobileDrawerHeight = Math.min(85, Math.max(25, newHeightVh));
   }
 
-  function handleResizeEnd(e: PointerEvent) {
+  function handleMobileResizeEnd(e: PointerEvent) {
     isResizing = false;
     (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
   }
@@ -244,16 +291,28 @@
   class="bottom-sheet"
   class:sheet-open={open}
   class:sheet-resizing={isResizing}
-  style="height: {drawerHeight}vh"
+  style="height: {isDesktop ? `${desktopDrawerHeight}px` : `${mobileDrawerHeight}vh`}"
   aria-label={labels.title ?? 'Add Widgets'}
   aria-hidden={!open}
 >
+  <button
+    class="drawer-resize-handle"
+    onmousedown={startResize}
+    type="button"
+    aria-label="Resize drawer"
+  >
+    <div class="drawer-resize-bar"></div>
+  </button>
+
   <!-- Resize handle -->
   <div
     class="sheet-handle-area"
-    onpointerdown={handleResizeStart}
-    onpointermove={handleResizeMove}
-    onpointerup={handleResizeEnd}
+    onpointerdown={handleMobileResizeStart}
+    onpointermove={handleMobileResizeMove}
+    onpointerup={handleMobileResizeEnd}
+    role="separator"
+    aria-label="Resize drawer"
+    aria-orientation="horizontal"
   >
     <div class="sheet-handle"></div>
   </div>
@@ -283,7 +342,7 @@
   </div>
 
   <!-- Widget grid -->
-  <div class="sheet-body">
+  <div class="sheet-body drawer-content">
     <div class="widget-grid-drawer">
       {#each filteredWidgets as w (w.id)}
         {@const inst = getInstanceForWidget(w.id)}
@@ -440,6 +499,30 @@
     transform: translateY(0);
   }
 
+  .drawer-resize-handle {
+    width: 100%;
+    height: 16px;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    cursor: ns-resize;
+    flex-shrink: 0;
+    padding: 0;
+    background: none;
+    border: none;
+  }
+
+  .drawer-resize-bar {
+    width: 40px;
+    height: 4px;
+    background: var(--color-border);
+    border-radius: 2px;
+  }
+
+  .drawer-resize-handle:hover .drawer-resize-bar {
+    background: var(--color-text-muted);
+  }
+
   .sheet-handle-area {
     display: flex;
     justify-content: center;
@@ -460,7 +543,7 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 0 var(--space-6) var(--space-3);
+    padding: 20px var(--space-6) var(--space-3);
     flex-shrink: 0;
   }
 
@@ -540,8 +623,18 @@
 
   .sheet-body {
     flex: 1;
-    overflow-y: auto;
+    min-height: 0;
     padding: 0 var(--space-6) var(--space-6);
+  }
+
+  .drawer-content {
+    overflow-y: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .drawer-content::-webkit-scrollbar {
+    display: none;
   }
 
   .widget-grid-drawer {
@@ -696,6 +789,7 @@
   .drawer-card-desc {
     font-size: 11px;
     color: var(--color-text-muted);
+    line-clamp: 2;
     display: -webkit-box;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
@@ -802,27 +896,11 @@
     }
   }
 
-  /* ── DESKTOP / PC: right-side drawer ─────────────────────────────────── */
-  @media (min-width: 640px), (hover: hover) and (pointer: fine) {
-    .bottom-sheet {
-      top: 0;
-      right: 0;
-      bottom: 0;
-      left: auto;
-      width: min(560px, 100vw);
-      /* Override the mobile inline height style; drawer spans full viewport */
-      height: 100dvh !important;
-      border-top: none;
-      border-left: 1px solid var(--color-border);
-      border-radius: 0;
-      transform: translateX(100%);
+  @media (min-width: 640px) {
+    .drawer-resize-handle {
+      display: flex;
     }
 
-    .sheet-open {
-      transform: translateX(0);
-    }
-
-    /* Hide the drag-to-resize handle on desktop */
     .sheet-handle-area {
       display: none;
     }

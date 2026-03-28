@@ -72,6 +72,8 @@ export const widgetInstances = sqliteTable('widget_instances', {
   positionY: integer('position_y').notNull(),
   // AES-256-GCM. JSON object with non-credential widget config.
   configEncrypted: text('config_encrypted'),
+  // Tracks which version of the widget's configSchema was used to create this config.
+  configSchemaVersion: integer('config_schema_version').notNull().default(1),
   createdAt: integer('created_at').notNull().default(nowMs),
   // timestamp_ms: Drizzle stores Unix ms, accepts Date objects on insert/update.
   updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).notNull().default(nowMs),

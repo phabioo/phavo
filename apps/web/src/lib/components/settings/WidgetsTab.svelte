@@ -25,6 +25,7 @@
     type WidgetInstance,
   } from '@phavo/types';
   import { removeWidgetInstanceFromStore } from '$lib/stores/widgets.svelte';
+  import { fetchWithCsrf } from '$lib/utils/api';
   import CpuWidget from '$lib/widgets/CpuWidget.svelte';
   import DiskWidget from '$lib/widgets/DiskWidget.svelte';
   import LinksWidget from '$lib/widgets/LinksWidget.svelte';
@@ -119,8 +120,8 @@
 
     try {
       const [defsResponse, tabsResponse] = await Promise.all([
-        fetch('/api/v1/widgets'),
-        fetch('/api/v1/tabs'),
+        fetchWithCsrf('/api/v1/widgets'),
+        fetchWithCsrf('/api/v1/tabs'),
       ]);
 
       const defsPayload = (await defsResponse.json()) as {
@@ -145,7 +146,7 @@
 
       const instances = await Promise.all(
         tabsPayload.data.map(async (tab) => {
-          const response = await fetch(`/api/v1/tabs/${encodeURIComponent(tab.id)}/widgets`);
+          const response = await fetchWithCsrf(`/api/v1/tabs/${encodeURIComponent(tab.id)}/widgets`);
           const payload = (await response.json()) as {
             ok: boolean;
             data?: WidgetInstance[];
@@ -185,8 +186,9 @@
     for (const def of widgetDefs) {
       const widgetInstances = grouped.get(def.id) ?? [];
 
+      const hasConfig = !!def.configSchema;
       const status: WidgetStatus =
-        widgetInstances.length === 0 || widgetInstances.some((instance) => instance.configured === false)
+        hasConfig && (widgetInstances.length === 0 || widgetInstances.some((instance) => instance.configured === false))
           ? 'unconfigured'
           : 'active';
 
@@ -256,7 +258,7 @@
     previewError = '';
 
     try {
-      const response = await fetch(def.dataEndpoint);
+      const response = await fetchWithCsrf(def.dataEndpoint);
       const payload = (await response.json()) as { ok: boolean; data?: unknown; error?: string };
       if (!payload.ok) {
         throw new Error(payload.error ?? 'Failed to load preview');
@@ -313,7 +315,7 @@
 
       const responses = await Promise.all(
         widget.instances.map(async (instance) => {
-          const response = await fetch(`/api/v1/widget-instances/${encodeURIComponent(instance.id)}`, {
+          const response = await fetchWithCsrf(`/api/v1/widget-instances/${encodeURIComponent(instance.id)}`, {
             method: 'DELETE',
           });
           const payload = (await response.json()) as { ok: boolean; error?: string };
@@ -533,7 +535,7 @@
   .filter-chip-active {
     border-color: var(--color-accent);
     background: var(--color-accent-subtle);
-    color: var(--color-accent-text);
+    color: var(--color-bg);
   }
 
   .widgets-list-scroll {
@@ -655,10 +657,17 @@
 
   .preview-empty,
   .no-config,
-  .empty-detail,
-  .panel-message {
+  .empty-detail {
     color: var(--color-text-muted);
     font-size: 14px;
+  }
+
+  .panel-message {
+    padding: 32px 16px;
+    text-align: center;
+    color: var(--color-text-muted);
+    font-size: 13px;
+    line-height: 1.5;
   }
 
   .panel-error {

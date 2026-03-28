@@ -31,7 +31,7 @@ let { variant = 'default', children }: Props = $props();
 
   .badge-accent {
     background: var(--color-accent-subtle);
-    color: var(--color-accent-text);
+    color: var(--color-bg);
   }
 
   .badge-danger {
@@ -46,6 +46,6 @@ let { variant = 'default', children }: Props = $props();
 
   .badge-success {
     background: var(--color-accent-subtle);
-    color: var(--color-accent-text);
+    color: var(--color-bg);
   }
 </style>

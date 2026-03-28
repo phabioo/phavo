@@ -557,7 +557,7 @@ pre {
     <a href="#api-widgets">Widget Manifest</a>
     <a href="#api-metrics">Metric Endpoints</a>
     <a href="#api-integrations">Integration Endpoints</a>
-    <a href="#api-phavio">phavo.io Endpoints</a>
+    <a href="#api-phavio">phavo.net Endpoints</a>
   </div>
 
   <div class="nav-group">
@@ -585,6 +585,9 @@ pre {
 
   <div class="nav-group">
     <div class="nav-label">Features</div>
+    <a href="#command-palette">Command Palette</a>
+    <a href="#version-management">Version Management</a>
+    <a href="#web-presence">Web Presence</a>
     <a href="#widget-states">Widget States</a>
     <a href="#schema-renderer">Schema Renderer</a>
     <a href="#plugin-discovery">Plugin Discovery</a>
@@ -627,7 +630,7 @@ pre {
 <tbody>
   <tr><td>HTTP Server</td><td class="type">@sveltejs/adapter-node</td><td class="note">Serves SSR pages + forwards /api/* to Hono</td></tr>
   <tr><td>API Router</td><td class="type">Hono 4.x</td><td class="note">All /api/v1/* routes, middleware chain, tier enforcement</td></tr>
-  <tr><td>Auth</td><td class="type">Better Auth 1.x</td><td class="note">Session management, Argon2id hashing, TOTP, phavo.io OAuth</td></tr>
+  <tr><td>Auth</td><td class="type">Better Auth 1.x</td><td class="note">Session management, Argon2id hashing, TOTP, phavo.net OAuth</td></tr>
   <tr><td>ORM</td><td class="type">Drizzle ORM + libSQL</td><td class="note">Type-safe queries, migrations, single file DB</td></tr>
   <tr><td>Metrics</td><td class="type">@phavo/agent (library)</td><td class="note">systeminformation wrapper, in-process, cached per-key</td></tr>
   <tr><td>Frontend</td><td class="type">SvelteKit + Svelte 5</td><td class="note">SSR, Runes, @phavo/ui components</td></tr>
@@ -701,20 +704,20 @@ pre {
 <p>All tables use <code>text('id').$defaultFn(() => crypto.randomUUID())</code> as primary key. The database file lives at <code>/data/phavo.db</code> in the Docker volume. Credentials are stored AES-256-GCM encrypted — see <a href="#encryption">Encryption Model</a>.</p>
 
 <div class="callout">
-  <strong>Tier enforcement rule:</strong> No <code>tier</code> column exists in <code>users</code> or <code>config</code>. Tier is derived exclusively from <code>sessions.tier</code>, which is set by phavo.io validation or Local activation — never by user-accessible APIs.
+  <strong>Tier enforcement rule:</strong> No <code>tier</code> column exists in <code>users</code> or <code>config</code>. Tier is derived exclusively from <code>sessions.tier</code>, which is set by phavo.net validation or Local activation — never by user-accessible APIs.
 </div>
 
 <div class="schema-table">
   <div class="schema-header">
     <span class="schema-name">users</span>
-    <span class="schema-desc">One row per registered user. Local users have no email; phavo.io users have no passwordHash.</span>
+    <span class="schema-desc">One row per registered user. Local users have no email; phavo.net users have no passwordHash.</span>
   </div>
   <table>
     <thead><tr><th>Column</th><th>Type</th><th>Null</th><th>Notes</th></tr></thead>
     <tbody>
       <tr><td class="pk">id</td><td class="type">text PK</td><td class="nn">NOT NULL</td><td class="note">UUID, auto-generated</td></tr>
-      <tr><td>email</td><td class="type">text</td><td>nullable</td><td class="note">phavo.io users only. Unique if present.</td></tr>
-      <tr><td>passwordHash</td><td class="type">text</td><td>nullable</td><td class="note">Argon2id. Local users only. Never stored for phavo.io users.</td></tr>
+      <tr><td>email</td><td class="type">text</td><td>nullable</td><td class="note">phavo.net users only. Unique if present.</td></tr>
+      <tr><td>passwordHash</td><td class="type">text</td><td>nullable</td><td class="note">Argon2id. Local users only. Never stored for phavo.net users.</td></tr>
       <tr><td>authMode</td><td class="type">text</td><td class="nn">NOT NULL</td><td class="note">'phavo-io' | 'local'</td></tr>
       <tr><td>totpSecret</td><td class="type">text</td><td>nullable</td><td class="note">AES-256-GCM encrypted. Set when user enables 2FA.</td></tr>
       <tr><td>totpBackupCodes</td><td class="type">text</td><td>nullable</td><td class="note">JSON array, AES-256-GCM encrypted. 8 one-time codes.</td></tr>
@@ -735,7 +738,7 @@ pre {
       <tr><td class="fk">userId</td><td class="type">text FK</td><td class="nn">NOT NULL</td><td class="note">→ users.id</td></tr>
       <tr><td>tier</td><td class="type">text</td><td class="nn">NOT NULL</td><td class="note">'free' | 'standard' | 'local' — set by server on login only</td></tr>
       <tr><td>authMode</td><td class="type">text</td><td class="nn">NOT NULL</td><td class="note">'phavo-io' | 'local'</td></tr>
-      <tr><td>validatedAt</td><td class="type">integer</td><td class="nn">NOT NULL</td><td class="note">Unix ms. Last successful phavo.io validation.</td></tr>
+      <tr><td>validatedAt</td><td class="type">integer</td><td class="nn">NOT NULL</td><td class="note">Unix ms. Last successful phavo.net validation.</td></tr>
       <tr><td>graceUntil</td><td class="type">integer</td><td>nullable</td><td class="note">Unix ms. Session valid offline until this time. Free: +24h, Std: +72h from validatedAt.</td></tr>
       <tr><td>expiresAt</td><td class="type">integer</td><td class="nn">NOT NULL</td><td class="note">Unix ms. Hard expiry — default 7 days from creation.</td></tr>
     </tbody>
@@ -815,7 +818,7 @@ pre {
 <div class="schema-table">
   <div class="schema-header">
     <span class="schema-name">licenseActivation</span>
-    <span class="schema-desc">Local tier only. Stores phavo.io-issued signed JWT. Verified on every server start.</span>
+    <span class="schema-desc">Local tier only. Stores phavo.net-issued signed JWT. Verified on every server start.</span>
   </div>
   <table>
     <thead><tr><th>Column</th><th>Type</th><th>Null</th><th>Notes</th></tr></thead>
@@ -823,7 +826,7 @@ pre {
       <tr><td class="pk">id</td><td class="type">text PK</td><td class="nn">NOT NULL</td><td class="note">UUID</td></tr>
       <tr><td>licenseKey</td><td class="type">text</td><td class="nn">NOT NULL</td><td class="note">Gumroad licence key</td></tr>
       <tr><td>tier</td><td class="type">text</td><td class="nn">NOT NULL</td><td class="note">'local' (only Local tier activates here)</td></tr>
-      <tr><td>activationJwt</td><td class="type">text</td><td class="nn">NOT NULL</td><td class="note">Signed JWT from phavo.io. Payload: { instanceId, tier, activatedAt }. RS256.</td></tr>
+      <tr><td>activationJwt</td><td class="type">text</td><td class="nn">NOT NULL</td><td class="note">Signed JWT from phavo.net. Payload: { instanceId, tier, activatedAt }. RS256.</td></tr>
       <tr><td>instanceIdentifier</td><td class="type">text</td><td class="nn">NOT NULL</td><td class="note">Stable UUID bound to Docker volume (generated once, stored in /data/instance.id)</td></tr>
       <tr><td>activatedAt</td><td class="type">integer</td><td class="nn">NOT NULL</td><td class="note">Unix ms</td></tr>
     </tbody>
@@ -865,14 +868,14 @@ pre {
 }</pre>
 
 <h3>Local Tier — Activation JWT</h3>
-<p>For Local tier, phavo.io issues an RS256-signed JWT after activation. The JWT public key is embedded in the Phavo binary at build time.</p>
-<pre><span class="cm">JWT Payload (issued by phavo.io):</span>
+<p>For Local tier, phavo.net issues an RS256-signed JWT after activation. The JWT public key is embedded in the Phavo binary at build time.</p>
+<pre><span class="cm">JWT Payload (issued by phavo.net):</span>
 {
   <span class="str">"instanceId"</span>: <span class="str">"uuid-of-docker-volume"</span>,
   <span class="str">"tier"</span>:       <span class="str">"local"</span>,
   <span class="str">"licenseKey"</span>: <span class="str">"GUMROAD-KEY-XXX"</span>,
   <span class="str">"activatedAt"</span>: <span class="num">1711234567890</span>,
-  <span class="str">"iss"</span>:         <span class="str">"phavo.io"</span>
+  <span class="str">"iss"</span>:         <span class="str">"phavo.net"</span>
 }
 
 <span class="cm">On every server start:</span>
@@ -883,27 +886,27 @@ pre {
 
 <!-- ══════════════════════════════════════════════════ -->
 <section id="auth-free-std">
-<h2>Auth Flow — Free / Standard (phavo.io)</h2>
+<h2>Auth Flow — Free / Standard (phavo.net)</h2>
 
-<p>Free and Standard users authenticate via phavo.io OAuth. The local Phavo server never sees or stores phavo.io passwords.</p>
+<p>Free and Standard users authenticate via phavo.net OAuth. The local Phavo server never sees or stores phavo.net passwords.</p>
 
 <div class="seq">
   <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;margin-bottom:12px;">
     <div style="text-align:center"><span class="actor-box browser">Browser</span></div>
     <div style="text-align:center"><span class="actor-box server">Phavo Server</span></div>
-    <div style="text-align:center"><span class="actor-box phaviio">phavo.io</span></div>
+    <div style="text-align:center"><span class="actor-box phaviio">phavo.net</span></div>
     <div style="text-align:center"><span class="actor-box db">libSQL</span></div>
   </div>
 
   <pre style="margin:0;background:transparent;border:none;padding:0;font-size:11.5px;line-height:1.9;color:var(--text-2)"><span class="acc">1.</span> Browser    ──── GET /auth/login ──────────────────────►  Server
-<span class="acc">2.</span>            ◄─── redirect → phavo.io/oauth/authorize ──  Server
-<span class="acc">3.</span> Browser    ──── user logs in ────────────────────────►  phavo.io
-<span class="acc">4.</span>            ◄─── redirect /auth/callback?code=xxx ─────  phavo.io
+<span class="acc">2.</span>            ◄─── redirect → phavo.net/oauth/authorize ──  Server
+<span class="acc">3.</span> Browser    ──── user logs in ────────────────────────►  phavo.net
+<span class="acc">4.</span>            ◄─── redirect /auth/callback?code=xxx ─────  phavo.net
 <span class="acc">5.</span> Browser    ──── GET /auth/callback?code=xxx ──────────►  Server
-<span class="acc">6.</span>            Server  ─── POST /api/oauth/token ──────────►  phavo.io
-<span class="acc">7.</span>                    ◄── { access_token, user } ──────────  phavo.io
-<span class="acc">8.</span>            Server  ─── POST /api/license/validate ──────►  phavo.io
-<span class="acc">9.</span>                    ◄── { tier: 'free'|'standard' } ──────  phavo.io
+<span class="acc">6.</span>            Server  ─── POST /api/oauth/token ──────────►  phavo.net
+<span class="acc">7.</span>                    ◄── { access_token, user } ──────────  phavo.net
+<span class="acc">8.</span>            Server  ─── POST /api/license/validate ──────►  phavo.net
+<span class="acc">9.</span>                    ◄── { tier: 'free'|'standard' } ──────  phavo.net
 <span class="acc">10.</span>           Server  ─── INSERT sessions({ tier, graceUntil }) ─►  libSQL
 <span class="acc">11.</span>           Server  ─── INSERT/UPDATE users ───────────────►  libSQL
 <span class="acc">12.</span> Browser   ◄─── Set-Cookie: session=&lt;32-byte-token&gt;  ──  Server
@@ -912,7 +915,7 @@ pre {
 </div>
 
 <div class="callout warn">
-  <strong>Grace period:</strong> At step 9, the server calculates <code>graceUntil = Date.now() + (tier === 'free' ? 86400000 : 259200000)</code>. If phavo.io is unreachable at step 8, the server checks whether the existing session's <code>graceUntil</code> is still in the future. If yes, the existing session is refreshed. If no, login is rejected with a "phavo.io unreachable — grace period expired" error.
+  <strong>Grace period:</strong> At step 9, the server calculates <code>graceUntil = Date.now() + (tier === 'free' ? 86400000 : 259200000)</code>. If phavo.net is unreachable at step 8, the server checks whether the existing session's <code>graceUntil</code> is still in the future. If yes, the existing session is refreshed. If no, login is rejected with a "phavo.net unreachable — grace period expired" error.
 </div>
 </section>
 
@@ -925,8 +928,8 @@ pre {
 <h3>A. First Activation</h3>
 <div class="seq">
   <pre style="margin:0;background:transparent;border:none;padding:0;font-size:11.5px;line-height:1.9;color:var(--text-2)"><span class="acc">1.</span> Browser  ──── POST /api/v1/auth/login { licenseKey, username, password } ─►  Server
-<span class="acc">2.</span>          Server  ─── POST /api/license/activate { licenseKey, instanceId } ──►  phavo.io
-<span class="acc">3.</span>                  ◄── { activationJwt: &lt;RS256-signed-JWT&gt; } ─────────────────  phavo.io
+<span class="acc">2.</span>          Server  ─── POST /api/license/activate { licenseKey, instanceId } ──►  phavo.net
+<span class="acc">3.</span>                  ◄── { activationJwt: &lt;RS256-signed-JWT&gt; } ─────────────────  phavo.net
 <span class="acc">4.</span>          Server  ─── INSERT licenseActivation({ activationJwt }) ─────────────►  libSQL
 <span class="acc">5.</span>          Server  ─── INSERT users({ passwordHash: argon2id(password) }) ────►  libSQL
 <span class="acc">6.</span>          Server  ─── INSERT sessions({ tier: 'local', graceUntil: null }) ──►  libSQL
@@ -942,7 +945,7 @@ pre {
 <span class="acc">5.</span>          Server  ─── verifyRS256(jwt, EMBEDDED_PUBLIC_KEY) <span class="cm">[in-process]</span>
 <span class="acc">6.</span>          Server  ─── INSERT sessions({ tier: 'local' }) ─────────────────────►  libSQL
 <span class="acc">7.</span> Browser  ◄──────── Set-Cookie: session=&lt;32-byte-token&gt; ──────────────────  Server
-          <span class="cm">         ← No network call to phavo.io required at any point</span></pre>
+          <span class="cm">         ← No network call to phavo.net required at any point</span></pre>
 </div>
 </section>
 
@@ -1041,11 +1044,11 @@ pre {
     <span class="ep-method m-post">POST</span>
     <span class="ep-path">/api/v1/auth/login</span>
     <span class="badge b-pub">public</span>
-    <span class="ep-desc">Login — phavo.io or local</span>
+    <span class="ep-desc">Login — phavo.net or local</span>
   </div>
   <div class="endpoint-body">
     <div class="ep-label">Request</div>
-    <pre><span class="cm">// phavo.io auth</span>
+    <pre><span class="cm">// phavo.net auth</span>
 { <span class="str">"authMode"</span>: <span class="str">"phavo-io"</span>, <span class="str">"code"</span>: <span class="str">string</span> }          <span class="cm">// OAuth code from callback</span>
 
 <span class="cm">// Local auth (login)</span>
@@ -1325,14 +1328,14 @@ pre {
 
 <!-- ══════════════════════════════════════════════════ -->
 <section id="api-phavio">
-<h2>API — phavo.io Infrastructure Endpoints</h2>
+<h2>API — phavo.net Infrastructure Endpoints</h2>
 
-<p>These endpoints are hosted on <code>phavo.io</code> — <em>not</em> on the local Phavo instance. The local server calls them over TLS. They are documented here for completeness.</p>
+<p>These endpoints are hosted on <code>phavo.net</code> — <em>not</em> on the local Phavo instance. The local server calls them over TLS. They are documented here for completeness.</p>
 
 <div class="tbl-wrap"><table>
-<thead><tr><th>Method</th><th>Path (phavo.io)</th><th>Called by</th><th>Purpose</th></tr></thead>
+<thead><tr><th>Method</th><th>Path (phavo.net)</th><th>Called by</th><th>Purpose</th></tr></thead>
 <tbody>
-  <tr><td class="method post">POST</td><td><code>/api/license/validate</code></td><td>Local server on login</td><td class="note">Returns { tier } for a valid phavo.io session. Called every login for Free/Standard.</td></tr>
+  <tr><td class="method post">POST</td><td><code>/api/license/validate</code></td><td>Local server on login</td><td class="note">Returns { tier } for a valid phavo.net session. Called every login for Free/Standard.</td></tr>
   <tr><td class="method post">POST</td><td><code>/api/license/activate</code></td><td>Local server on first setup (Local tier)</td><td class="note">Validates licence key + instanceId. Returns signed activationJwt.</td></tr>
   <tr><td class="method post">POST</td><td><code>/api/license/deactivate</code></td><td>Local server via Settings UI</td><td class="note">Frees the instance slot so a new instance can activate the same key.</td></tr>
   <tr><td class="method post">POST</td><td><code>/api/license/upgrade</code></td><td>Local server via Settings UI</td><td class="note">Standard → Local: validates upgrade payment, returns new activationJwt.</td></tr>
@@ -1504,7 +1507,7 @@ registry.<span class="fn">register</span>({ id: <span class="str">'io.phavo.piho
   <tr><td>Svelte component isolation</td><td>✓ Inside &lt;WidgetCard&gt; slot</td><td>✓</td></tr>
   <tr><td>Process isolation</td><td>✗ Same Bun process</td><td>✓ Worker thread or subprocess</td></tr>
   <tr><td>Security review</td><td>User responsibility</td><td>✓ Automated + manual</td></tr>
-  <tr><td>Code signing</td><td>✗</td><td>✓ phavo.io developer key</td></tr>
+  <tr><td>Code signing</td><td>✗</td><td>✓ phavo.net developer key</td></tr>
 </tbody>
 </table></div>
 </section>
@@ -1647,7 +1650,7 @@ cp -r dist/ /path/to/phavo-data/plugins/my-widget/
 ├── package.json         <span class="cm">← devDependencies: @phavo/plugin-sdk only</span>
 └── tsconfig.json        <span class="cm">← extends @phavo/types tsconfig, strict: true</span></pre>
 
-<h3>docs.phavo.io/plugins — Minimum Viable Content at SDK Launch</h3>
+<h3>docs.phavo.net/plugins — Minimum Viable Content at SDK Launch</h3>
 <div class="tbl-wrap"><table>
 <thead><tr><th>Page</th><th>Content</th></tr></thead>
 <tbody>
@@ -1812,7 +1815,7 @@ bun build apps/web/src/server.ts \
     <span class="str">"dialog"</span>:    <span class="kw">true</span>,
     <span class="str">"pubkey"</span>:    <span class="str">"&lt;ed25519-public-key-embedded-at-build&gt;"</span>,
     <span class="str">"endpoints"</span>: [
-      <span class="str">"https://phavo.io/api/updates/{{target}}/{{arch}}/{{current_version}}"</span>
+      <span class="str">"https://phavo.net/api/updates/{{target}}/{{arch}}/{{current_version}}"</span>
     ]
   },
   <span class="str">"bundle"</span>: {
@@ -1821,7 +1824,7 @@ bun build apps/web/src/server.ts \
   }
 }
 
-<span class="cm">// phavo.io /api/updates endpoint responds with:
+<span class="cm">// phavo.net /api/updates endpoint responds with:
 // { version, notes, pub_date, platforms: { "darwin-aarch64": { url, signature }, ... } }
 // Private signing key stored exclusively in GitHub Actions Secrets (TAURI_PRIVATE_KEY)</span></pre>
 
@@ -2052,6 +2055,95 @@ bun build apps/web/src/server.ts \
 </section>
 
 <!-- ══════════════════════════════════════════════════ -->
+<!-- ══════════════════════════════════════════════════ -->
+<section id="version-management">
+<h2>Version Management</h2>
+
+<h3>Single source of truth</h3>
+<pre><span class="cm">// root package.json</span>
+{ <span class="str">"version"</span>: <span class="str">"1.0.0"</span> }
+
+<span class="cm">// apps/web/vite.config.ts — injected at build time</span>
+<span class="kw">const</span> rootPkg = <span class="ty">JSON</span>.<span class="fn">parse</span>(
+  <span class="fn">readFileSync</span>(<span class="fn">join</span>(process.<span class="fn">cwd</span>(), <span class="str">'../../package.json'</span>), <span class="str">'utf8'</span>)
+)
+define: { <span class="ty">PHAVO_VERSION</span>: <span class="ty">JSON</span>.<span class="fn">stringify</span>(rootPkg.version) }
+
+<span class="cm">// Available everywhere in server code as:</span>
+<span class="ty">PHAVO_VERSION</span> <span class="cm">// e.g. "1.0.0"</span></pre>
+
+<h3>Release workflow</h3>
+<pre><span class="cm"># Bump patch/minor/major, commit, tag, push → triggers CI</span>
+bun run release:patch   <span class="cm"># 1.0.0 → 1.0.1</span>
+bun run release:minor   <span class="cm"># 1.0.0 → 1.1.0</span>
+bun run release:major   <span class="cm"># 1.0.0 → 2.0.0</span></pre>
+
+<h3>CI/CD (GitHub Actions)</h3>
+<div class="tbl-wrap"><table>
+<thead><tr><th>Trigger</th><th>Action</th><th>Docker tags</th></tr></thead>
+<tbody>
+  <tr><td>push to <code>main</code></td><td class="note">Build amd64+arm64</td><td class="note"><code>phavo/phavo:latest</code></td></tr>
+  <tr><td>push tag <code>v*.*.*</code></td><td class="note">Build + GitHub Release</td><td class="note"><code>phavo/phavo:1.0.0</code> + <code>:latest</code></td></tr>
+</tbody>
+</table></div>
+</section>
+
+<!-- ══════════════════════════════════════════════════ -->
+<section id="web-presence">
+<h2>Web Presence &amp; Infrastructure</h2>
+
+<h3>Domain structure</h3>
+<div class="tbl-wrap"><table>
+<thead><tr><th>URL</th><th>Purpose</th><th>Hosting</th></tr></thead>
+<tbody>
+  <tr><td><code>phavo.net</code></td><td class="note">Landing page</td><td class="note">Hetzner Webhosting S</td></tr>
+  <tr><td><code>www.phavo.net</code></td><td class="note">→ Redirect to phavo.net</td><td class="note">Cloudflare CNAME</td></tr>
+  <tr><td><code>docs.phavo.net</code></td><td class="note">Documentation</td><td class="note">GitHub Pages / Netlify</td></tr>
+  <tr><td><code>api.phavo.net</code></td><td class="note">Licence backend (Phase 1+)</td><td class="note">Hetzner VPS</td></tr>
+</tbody>
+</table></div>
+
+<p>DNS managed via Cloudflare. MX records point to Hetzner mail servers (<code>mx1/2/3.hetzner.com</code>).</p>
+
+<h3>Email addresses</h3>
+<div class="tbl-wrap"><table>
+<thead><tr><th>Address</th><th>Purpose</th></tr></thead>
+<tbody>
+  <tr><td><code>docker@phavo.net</code></td><td class="note">Docker Hub account, automated system mail</td></tr>
+  <tr><td><code>security@phavo.net</code></td><td class="note">Vulnerability reports (SECURITY.md)</td></tr>
+  <tr><td><code>hello@phavo.net</code></td><td class="note">General contact on landing page</td></tr>
+  <tr><td><code>noreply@phavo.net</code></td><td class="note">Transactional mail (future)</td></tr>
+</tbody>
+</table></div>
+
+<h3>Docker Hub</h3>
+<pre><span class="cm"># Public repository</span>
+docker pull phavo/phavo:latest
+docker pull phavo/phavo:1.0.0
+
+<span class="cm"># GitHub Secrets required for CI:</span>
+DOCKERHUB_USERNAME = docker@phavo.net username
+DOCKERHUB_TOKEN    = Docker Hub access token</pre>
+
+<h3>Dashboard auto-update flow</h3>
+<pre><span class="cm">// GET /api/v1/update/check</span>
+<span class="cm">// Polls GitHub Releases API, 1h cache</span>
+<span class="cm">// Returns: { hasUpdate, latestVersion, changelog }</span>
+
+<span class="cm">// Header badge appears when hasUpdate = true</span>
+<span class="cm">// Clicking opens update panel with changelog</span>
+
+<span class="cm">// POST /api/v1/update/apply</span>
+<span class="cm">// Runs per installMethod:</span>
+<span class="str">'docker-compose'</span>: <span class="str">'docker compose pull && docker compose up -d'</span>
+<span class="str">'docker-run'</span>:     <span class="cm">// instructions only — no auto-apply</span>
+<span class="str">'bun-direct'</span>:     <span class="cm">// git pull + bun install + restart</span></pre>
+
+<div class="callout">
+  The auto-update command runs via <code>execFile('docker', ['compose', 'pull'])</code> — not <code>exec()</code> with a shell string — to avoid shell injection vectors. Errors are logged with the <code>[phavo]</code> prefix.
+</div>
+</section>
+
 <section id="setup-wizard">
 <h2>Setup Wizard — Full Setup (10 Steps)</h2>
 
@@ -2089,7 +2181,7 @@ bun build apps/web/src/server.ts \
 <tbody>
   <tr><td>1 · Welcome</td><td class="note"><code>SetupWelcome.svelte</code> — logo, tagline, two CTAs</td><td>none</td><td>—</td></tr>
   <tr><td>2 · Tier Select</td><td class="note"><code>SetupTierSelect.svelte</code> — 3 cards with feature diff. Selecting sets <code>state.tier</code></td><td>none</td><td>—</td></tr>
-  <tr><td>3 · Auth</td><td class="note"><code>SetupAuth.svelte</code> — branches on <code>state.tier</code>. phavo.io: OAuth button. Local: username/pw/licenceKey fields</td><td><code>POST /auth/login</code></td><td>—</td></tr>
+  <tr><td>3 · Auth</td><td class="note"><code>SetupAuth.svelte</code> — branches on <code>state.tier</code>. phavo.net: OAuth button. Local: username/pw/licenceKey fields</td><td><code>POST /auth/login</code></td><td>—</td></tr>
   <tr><td>4 · Dashboard Name</td><td class="note"><code>SetupName.svelte</code> — text input, default "My Dashboard", 1–40 chars</td><td>none (saved at step 10)</td><td>—</td></tr>
   <tr><td>5 · Location</td><td class="note"><code>SetupLocation.svelte</code> — city search via Open-Meteo geocoding, live weather preview after selection</td><td><code>GET https://geocoding-api.open-meteo.com/v1/search</code></td><td>✓</td></tr>
   <tr><td>6 · Tabs</td><td class="note"><code>SetupTabs.svelte</code> — add/rename/delete/reorder. Free: max 1 tab (add button disabled with upgrade prompt). Default: ["Home"]</td><td>none (saved at step 10)</td><td>—</td></tr>
@@ -2206,8 +2298,8 @@ bun upgrade && bun run build && bun run start
 │  │     Pi-hole · RSS · Links + future widgets  │   │
 │  │     Unlimited tabs · No Phavo branding      │   │
 │  │                                             │   │
-│  │     [Upgrade to Standard — €7.99]           │   │
-│  │     [Upgrade to Local — €19.99]             │   │
+│  │     [Upgrade to Standard — €8.99]           │   │
+│  │     [Upgrade to Local — €24.99]             │   │
 │  └─────────────────────────────────────────────┘   │
 │                                                     │
 │  Already have a licence key?                        │
@@ -2218,7 +2310,7 @@ bun upgrade && bun run build && bun run start
 <pre><span class="cm">┌─────────────────────────────────────────────────────┐
 │  Current plan   [STANDARD]                          │
 │  Licence key    XXXX-XXXX-••••-••••  [Copy]         │
-│  Account        user@example.com (phavo.io)         │
+│  Account        user@example.com (phavo.net)         │
 │  Validated      3 minutes ago  (grace: 71h 57m)     │
 │                                                     │
 │  [Upgrade to Local — pay €12.00 difference]         │
@@ -2247,13 +2339,13 @@ bun upgrade && bun run build && bun run start
   <div class="endpoint-body">
     <div class="ep-label">Request</div>
     <pre>{ licenseKey: <span class="ty">string</span> }
-<span class="cm">// Server calls phavo.io /api/license/activate with { licenseKey, instanceId }
+<span class="cm">// Server calls phavo.net /api/license/activate with { licenseKey, instanceId }
 // On success: writes activationJwt to DB, invalidates current session, creates new session with new tier
 // Client receives new Set-Cookie and must reload</span></pre>
     <div class="ep-label">Response 200</div>
     <pre>{ ok: <span class="kw">true</span>, data: { tier: <span class="str">'standard'</span> | <span class="str">'local'</span>, reload: <span class="kw">true</span> } }</pre>
     <div class="ep-label">Response 400</div>
-    <pre>{ ok: <span class="kw">false</span>, error: <span class="str">'Invalid licence key'</span> | <span class="str">'Licence already in use'</span> | <span class="str">'phavo.io unreachable'</span> }</pre>
+    <pre>{ ok: <span class="kw">false</span>, error: <span class="str">'Invalid licence key'</span> | <span class="str">'Licence already in use'</span> | <span class="str">'phavo.net unreachable'</span> }</pre>
   </div>
 </div>
 
@@ -2266,11 +2358,11 @@ bun upgrade && bun run build && bun run start
   </div>
   <div class="endpoint-body">
     <div class="ep-label">Notes</div>
-    <pre><span class="cm">// Calls phavo.io /api/license/deactivate
+    <pre><span class="cm">// Calls phavo.net /api/license/deactivate
 // Deletes licenseActivation row from DB
 // Downgrades session.tier to 'free'
-// Frees instance slot on phavo.io — another instance can activate the same key
-// Requires internet connection (400 if phavo.io unreachable)</span></pre>
+// Frees instance slot on phavo.net — another instance can activate the same key
+// Requires internet connection (400 if phavo.net unreachable)</span></pre>
   </div>
 </div>
 </section>
@@ -2339,6 +2431,57 @@ bun upgrade && bun run build && bun run start
 
 <div class="callout">
   <strong>Credential separation rule:</strong> The <code>configSchema</code> for each widget annotates which fields are credentials using a Zod <code>.meta({ credential: true })</code> marker. The save handler iterates schema fields, writes <code>credential: true</code> fields to <code>credentials</code> table (encrypted, keyed as <code>widgetId_fieldName</code>), and writes the rest to <code>widgetInstances.configEncrypted</code>. Credentials are never included in config exports unless explicitly requested with a passphrase.
+</div>
+</section>
+
+<!-- ══════════════════════════════════════════════════ -->
+<!-- ══════════════════════════════════════════════════ -->
+<section id="command-palette">
+<h2>Command Palette</h2>
+
+<p>A universal search and action interface accessible from anywhere in the dashboard via <strong>Cmd+K</strong> (macOS) or <strong>Ctrl+K</strong> (Windows/Linux).</p>
+
+<h3>Keyboard shortcut — global registration</h3>
+<pre><span class="cm">// apps/web/src/routes/+layout.svelte</span>
+<span class="fn">onMount</span>(() =&gt; {
+  <span class="kw">function</span> <span class="fn">handleKeydown</span>(e: <span class="ty">KeyboardEvent</span>) {
+    <span class="kw">if</span> ((e.metaKey || e.ctrlKey) &amp;&amp; e.key === <span class="str">'k'</span>) {
+      e.<span class="fn">preventDefault</span>()
+      commandPaletteOpen = <span class="kw">true</span>
+    }
+  }
+  document.<span class="fn">addEventListener</span>(<span class="str">'keydown'</span>, handleKeydown)
+  <span class="kw">return</span> () =&gt; document.<span class="fn">removeEventListener</span>(<span class="str">'keydown'</span>, handleKeydown)
+})</pre>
+
+<h3>Three search modes</h3>
+<div class="tbl-wrap"><table>
+<thead><tr><th>Mode</th><th>Trigger</th><th>What it searches</th></tr></thead>
+<tbody>
+  <tr><td><strong>Local</strong></td><td class="note">Instant, no network</td><td class="note">Widgets (name, category), Settings tabs, Notifications, Actions (Add Widget, Export Config…)</td></tr>
+  <tr><td><strong>Web</strong></td><td class="note">Enter on empty or web result</td><td class="note">Opens configurable search engine in new tab. URL template: <code>https://duckduckgo.com/?q={query}</code></td></tr>
+  <tr><td><strong>AI</strong></td><td class="note">Prefix: <code>/ai</code> or tab to AI mode</td><td class="note">Sends query to configured AI provider. Response shown inline.</td></tr>
+</tbody>
+</table></div>
+
+<h3>AI provider configuration</h3>
+<pre><span class="cm">// Settings → General — stored in credentials table</span>
+<span class="str">'ollama_url'</span>      → <span class="str">'http://localhost:11434'</span>  <span class="cm">// default</span>
+<span class="str">'openai_key'</span>      → <span class="str">'sk-...'</span>                  <span class="cm">// AES-256-GCM encrypted</span>
+<span class="str">'anthropic_key'</span>   → <span class="str">'sk-ant-...'</span>              <span class="cm">// AES-256-GCM encrypted</span>
+<span class="str">'search_engine'</span>   → <span class="str">'https://duckduckgo.com/?q={query}'</span></pre>
+
+<h3>AI chat endpoint</h3>
+<pre><span class="cm">// POST /api/v1/ai/chat — requireSession()</span>
+<span class="cm">// Request:</span>
+{ provider: <span class="str">'ollama'</span> | <span class="str">'openai'</span> | <span class="str">'claude'</span>, query: <span class="ty">string</span> }
+
+<span class="cm">// Server reads API key from credentials table</span>
+<span class="cm">// Never passes key to client</span>
+<span class="cm">// Returns: ok({ response: string })</span></pre>
+
+<div class="callout">
+  <strong>Iron rule:</strong> API keys are stored in the <code>credentials</code> table (AES-256-GCM). The client never sees them. All AI calls go through <code>POST /api/v1/ai/chat</code> server-side.
 </div>
 </section>
 
@@ -2475,7 +2618,7 @@ Focus rings: visible on keyboard navigation (never removed with outline: none wi
 </table></div>
 
 <p style="margin-top:24px;font-size:12px;color:var(--text-3)">
-  Architecture Spec v1.7 · Phavo PRD ref v2.5 · Widget System fully specified · configSchemaVersion added · <em>github.com/phabioo/phavo</em>
+  Architecture Spec v1.9 · Phavo PRD ref v2.7 · Sessions 1–8 complete · Command Palette + .phavo/.phwidget formats added · <em>github.com/phabioo/phavo</em>
 </p>
 </section>
 

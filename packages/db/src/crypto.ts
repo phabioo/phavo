@@ -1,30 +1,78 @@
 // AES-256-GCM encryption via Web Crypto API (crypto.subtle), native in Bun.
-// Key derived from PHAVO_SECRET via HKDF-SHA256 with info "phavo-aes-key".
-// Key is derived once and cached in module scope for the lifetime of the process.
+// Key derived from PHAVO_SECRET (or auto-generated secret) via HKDF-SHA256.
+// Secret priority:
+//   1. PHAVO_SECRET env var (required for Kubernetes / multi-instance deployments)
+//   2. Persisted secret in data volume (data/secret.key) — loaded on restart
+//   3. Auto-generate and persist atomically on first start
 //
 // Ciphertext format: base64( iv[12 bytes] + authTag[16 bytes] + ciphertext[n bytes] )
 // Note: SubtleCrypto.encrypt appends the authTag to the ciphertext automatically.
 
+import { randomBytes } from 'node:crypto';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import path, { dirname } from 'node:path';
 import { env } from '@phavo/types/env';
 
 const ALGORITHM = 'AES-GCM';
 const IV_LENGTH = 12; // bytes
 const TAG_LENGTH = 128; // bits (= 16 bytes)
 
+// Path to persisted secret — equivalent to paths.encKey in apps/web/src/lib/server/paths.ts.
+// Kept in sync: path.join(env.dataDir, 'secret.key')
+const ENC_KEY_PATH = path.join(env.dataDir, 'secret.key');
+
+let cachedSecret: string | null = null;
 let cachedKey: CryptoKey | null = null;
 
-if (env.nodeEnv === 'production' && !process.env.PHAVO_SECRET) {
-  console.error('[phavo] PHAVO_SECRET is required in production');
-  process.exit(1);
+/**
+ * Loads the encryption secret from the environment, the persisted key file,
+ * or generates and persists a new one on first start.
+ *
+ * Call once at startup; subsequent calls return the cached value immediately.
+ */
+export async function loadOrCreateSecret(): Promise<string> {
+  if (cachedSecret !== null) return cachedSecret;
+
+  // Explicit env var always wins (Kubernetes, power users, CI).
+  if (process.env.PHAVO_SECRET && process.env.PHAVO_SECRET !== 'change-me') {
+    cachedSecret = process.env.PHAVO_SECRET;
+    return cachedSecret;
+  }
+
+  // Try to load existing persisted secret from data volume.
+  try {
+    const stored = readFileSync(ENC_KEY_PATH, 'utf8').trim();
+    if (stored.length >= 32) {
+      cachedSecret = stored;
+      return cachedSecret;
+    }
+  } catch {
+    // File doesn't exist yet — fall through to generate.
+  }
+
+  // Generate a new 256-bit secret and persist it atomically.
+  // flag 'wx' = exclusive create — prevents a race condition on concurrent first starts.
+  const secret = randomBytes(32).toString('hex'); // 64-char hex string
+  mkdirSync(dirname(ENC_KEY_PATH), { recursive: true });
+  try {
+    writeFileSync(ENC_KEY_PATH, secret, { mode: 0o600, flag: 'wx' });
+  } catch {
+    // Another process won the race — use their persisted value.
+    const stored = readFileSync(ENC_KEY_PATH, 'utf8').trim();
+    cachedSecret = stored;
+    return cachedSecret;
+  }
+
+  console.log('[phavo] Encryption secret generated → stored in data volume');
+  console.log('[phavo] Back up your data volume to preserve access to encrypted data.');
+  cachedSecret = secret;
+  return cachedSecret;
 }
 
 async function getKey(): Promise<CryptoKey> {
   if (cachedKey !== null) return cachedKey;
 
-  const secret = process.env.PHAVO_SECRET;
-  if (!secret) {
-    throw new Error('PHAVO_SECRET environment variable is not set');
-  }
+  const secret = await loadOrCreateSecret();
 
   const encoder = new TextEncoder();
 

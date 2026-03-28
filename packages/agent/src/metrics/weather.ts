@@ -1,6 +1,22 @@
 import type { WeatherForecastDay, WeatherMetrics } from '@phavo/types';
+import { z } from 'zod';
 
 export type { WeatherForecastDay, WeatherMetrics } from '@phavo/types';
+
+const OpenMeteoResponseSchema = z.object({
+  current: z.object({
+    temperature_2m: z.number(),
+    weather_code: z.number(),
+    wind_speed_10m: z.number(),
+    relative_humidity_2m: z.number(),
+  }),
+  daily: z.object({
+    time: z.array(z.string()),
+    temperature_2m_min: z.array(z.number()),
+    temperature_2m_max: z.array(z.number()),
+    weather_code: z.array(z.number()),
+  }),
+});
 
 export async function getWeather(latitude: number, longitude: number): Promise<WeatherMetrics> {
   const url = new URL('https://api.open-meteo.com/v1/forecast');
@@ -20,20 +36,13 @@ export async function getWeather(latitude: number, longitude: number): Promise<W
     throw new Error(`Open-Meteo API error: ${response.status} ${response.statusText}`);
   }
 
-  const data = (await response.json()) as {
-    current: {
-      temperature_2m: number;
-      weather_code: number;
-      wind_speed_10m: number;
-      relative_humidity_2m: number;
-    };
-    daily: {
-      time: string[];
-      temperature_2m_min: number[];
-      temperature_2m_max: number[];
-      weather_code: number[];
-    };
-  };
+  const raw: unknown = await response.json();
+  const parsed = OpenMeteoResponseSchema.safeParse(raw);
+  if (!parsed.success) {
+    throw new Error(`Invalid Open-Meteo response: ${parsed.error.issues[0]?.message ?? 'unknown'}`);
+  }
+
+  const data = parsed.data;
 
   const forecast: WeatherForecastDay[] = data.daily.time.map((date, i) => ({
     date,

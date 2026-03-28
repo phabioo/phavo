@@ -1,11 +1,13 @@
 # Phavo — Product Requirements Document
 
-**Version:** 2.5  
+**Version:** 2.7  
 **Date:** 2026-03-26  
-**Status:** Active — Phase 1 Sessions 1–3 complete · Widget System fully specified  
+**Status:** Active — Sessions 1–9 planned · Feature-complete · Pre-Launch  
 **Owner:** phabioo
 
-**Changelog v2.5:** Decisions 33–41 merged into main decisions table (no more split). SRI section updated to Geist font. `WidgetDefinition.version` vs `schemaVersion` clarified. `configSchemaVersion` column added to `widgetInstances` schema. CLAUDE.md references corrected.
+**Changelog v2.7:** Version management (single source of truth, release scripts, CHANGELOG.md, Docker CI). Web presence plan (phavo.net landing, docs.phavo.net, email addresses). Docker Hub setup documented. Infrastructure decisions added. CLAUDE.md v2.0 reference.
+
+**Changelog v2.5 (archived):** Decisions 33–41 merged into main decisions table (no more split). SRI section updated to Geist font. `WidgetDefinition.version` vs `schemaVersion` clarified. `configSchemaVersion` column added to `widgetInstances` schema. CLAUDE.md references corrected.
 
 **Changelog v2.4 (archived):** Settings → Widgets tab redesigned as master/detail layout (list + search + filter on left, config panel on right). No per-widget tabs. Decision 57 added.
 
@@ -21,10 +23,10 @@ The core promise: **beautiful by default, infinitely extensible, yours to own �
 
 | | Phavo Free | Phavo Standard | Phavo Local |
 |---|---|---|---|
-| Price | €0 | €7.99 one-time | €19.99 one-time |
+| Price | €0 | €8.99 one-time | €24.99 one-time | €39.99 one-time |
 | Widgets | Core system + weather | All launch widgets | All launch widgets |
 | Tabs | 1 | Unlimited | Unlimited |
-| Auth | phavo.io account | phavo.io account | Local user account |
+| Auth | phavo.net account | phavo.net account | Local user account |
 | 2FA | Optional (TOTP) | Optional (TOTP) | Optional (TOTP) |
 | Internet required | Yes (login) | Yes (login) | No (after activation) |
 | Offline grace period | 24 hours | 72 hours | Not applicable |
@@ -40,7 +42,7 @@ After v1.0 ships, the core codebase will be released under a dual licence:
 - **AGPL-3.0** for open source / self-hosted use
 - **Commercial licence** for the paid tiers (Standard, Local)
 
-**Important:** Tier enforcement (widget access, tab limits, branding) is done entirely server-side via phavo.io — not through code locks in the client. This means the AGPL codebase does not contain bypassable paywalls. The Free tier restrictions are enforced at the phavo.io licence validation endpoint. A self-compiled AGPL build without a phavo.io account gets Free tier behaviour by default. This model mirrors tools like Umami and Plausible: open source drives adoption and community, the commercial licence and phavo.io account converts power users.
+**Important:** Tier enforcement (widget access, tab limits, branding) is done entirely server-side via phavo.net — not through code locks in the client. This means the AGPL codebase does not contain bypassable paywalls. The Free tier restrictions are enforced at the phavo.net licence validation endpoint. A self-compiled AGPL build without a phavo.net account gets Free tier behaviour by default. This model mirrors tools like Umami and Plausible: open source drives adoption and community, the commercial licence and phavo.net account converts power users.
 
 ---
 
@@ -75,7 +77,7 @@ Phavo's differentiator: **polished GUI, guided setup, resizable widgets, open wi
 ### Secondary Goals (Phase 1)
 - Build a CSS token system that enables theming from day one
 - Lay the Turborepo/Bun monorepo foundation for Phase 2–4
-- Publish phavo.io landing page before launch
+- Publish phavo.net landing page before launch
 - Establish documentation and a support channel at launch
 
 ### Non-Goals (Phase 1)
@@ -130,7 +132,7 @@ packages/
 Design:     Figma → Design Tokens → Tailwind CSS v4
 Components: shadcn-svelte
 API:        Hono
-Auth:       Better Auth (Phase 1 — local accounts + phavo.io OAuth)
+Auth:       Better Auth (Phase 1 — local accounts + phavo.net OAuth)
 Database:   libSQL (local) → Turso (Phase 4, cloud)
 Docker:     multi-arch (amd64 + arm64 for Raspberry Pi)
 CI/CD:      GitHub Actions
@@ -144,11 +146,11 @@ CI/CD:      GitHub Actions
 
 A SvelteKit web application served via Docker (or direct Bun process). Users access it via browser at their local IP or custom domain. All dashboard data stays local.
 
-**Free tier:** phavo.io account required. License validated on each login. Core widgets only, 1 tab, Phavo branding visible.
+**Free tier:** phavo.net account required. License validated on each login. Core widgets only, 1 tab, Phavo branding visible.
 
-**Standard tier:** phavo.io account required. License validated on each login. **72-hour offline grace period:** if phavo.io is unreachable, the last validated session stays active for 72 hours. After that, login is blocked until connectivity is restored. Grace period resets on every successful validation.
+**Standard tier:** phavo.net account required. License validated on each login. **72-hour offline grace period:** if phavo.net is unreachable, the last validated session stays active for 72 hours. After that, login is blocked until connectivity is restored. Grace period resets on every successful validation.
 
-**Local tier:** Local user account (username + password) created during setup. License key validated once against phavo.io on first activation and stored locally. Fully offline after activation — no phone-home ever again.
+**Local tier:** Local user account (username + password) created during setup. License key validated once against phavo.net on first activation and stored locally. Fully offline after activation — no phone-home ever again.
 
 ### 6.2 Core Features
 
@@ -157,7 +159,7 @@ A SvelteKit web application served via Docker (or direct Bun process). Users acc
 For users who want to get started immediately. Accessible from the welcome screen as the default path for Persona B.
 
 **Flow (3 steps):**
-1. Auth — phavo.io sign in / register (Free or Standard), or local account creation + license key (Local)
+1. Auth — phavo.net sign in / register (Free or Standard), or local account creation + license key (Local)
 2. Weather location — optional, skippable
 3. Done — dashboard loads with a sensible default layout (system widgets + weather). Standard/Local users additionally get a Links widget pre-configured.
 
@@ -170,10 +172,10 @@ For users who want a tailored experience from the start. Accessible from the wel
 **Flow:**
 
 1. **Welcome** — Phavo logo, tagline, two CTAs: "Quick Setup (2 min)" → Quick Setup, "Full Setup" → continue
-2. **Tier selection** — Three cards: Free / Standard / Local with feature comparison. Selecting a tier determines the auth screen. Free/Standard → phavo.io OAuth. Local → local account form.
+2. **Tier selection** — Three cards: Free / Standard / Local with feature comparison. Selecting a tier determines the auth screen. Free/Standard → phavo.net OAuth. Local → local account form.
 3. **Auth**
-   - *Free/Standard:* "Sign in with phavo.io" button → OAuth redirect. On return: licence validated, tier confirmed, continue.
-   - *Local:* Username + password + confirm-password fields + licence key field. Argon2id hashing server-side. Activation JWT fetched from phavo.io.
+   - *Free/Standard:* "Sign in with phavo.net" button → OAuth redirect. On return: licence validated, tier confirmed, continue.
+   - *Local:* Username + password + confirm-password fields + licence key field. Argon2id hashing server-side. Activation JWT fetched from phavo.net.
 4. **Dashboard name** — Text input, default "My Dashboard". Validates: 1–40 chars.
 5. **Weather location** — City search with geocode autocomplete (Open-Meteo geocoding API). Skippable. Shows live weather preview after selection.
 6. **Tab builder** — Add/rename/reorder/delete tabs. Default: one tab named "Home". Free tier: add button disabled after first tab (shows upgrade prompt, but first tab always created).
@@ -380,13 +382,13 @@ A single dedicated tab for all widget configuration. Never one tab per widget. L
 
 **Tab: Licence**
 - Current tier badge (Free / Standard / Local)
-- **Free tier:** Upgrade banner — "Unlock all widgets for €7.99 one-time" with direct link to phavo.io checkout
-- **Standard tier:** Licence key (masked), linked phavo.io account email, "Upgrade to Local (€12.00)" link, deactivate button
+- **Free tier:** Upgrade banner — "Unlock all widgets for €8.99 one-time" with direct link to phavo.net checkout
+- **Standard tier:** Licence key (masked), linked phavo.net account email, "Upgrade to Local (€12.00)" link, deactivate button
 - **Local tier:** Licence key (masked), instance ID, activation date, deactivate button (requires online connection)
 - Re-enter / replace licence key field for key transfers
 
 **Tab: Account**
-- phavo.io users: display email, "Sign out" button, link to phavo.io account portal for password changes
+- phavo.net users: display email, "Sign out" button, link to phavo.net account portal for password changes
 - Local users: change username, change password form (current + new + confirm)
 - 2FA: enable/disable TOTP — QR code display, backup code download
 
@@ -396,7 +398,7 @@ A single dedicated tab for all widget configuration. Never one tab per widget. L
 - Changelog panel (expandable): rendered from GitHub Releases API response
 - Update command snippet (Docker Compose / Bun) — copy-paste ready
 - Optional: one-click update button if Docker socket is mounted (opt-in)
-- Links: GitHub, docs.phavo.io, Discord, security@phavo.io
+- Links: GitHub, docs.phavo.net, Discord, security@phavo.net
 
 #### Notification System
 
@@ -451,6 +453,10 @@ export type NotifyFn = (notification: Omit<Notification, 'id' | 'timestamp' | 'r
 
 
 
+**File formats:**
+- Config exports use the `.phavo` file extension (`phavo-export-2026-03-27.phavo`)
+- Widget packages (Phase 1.x) use the `.phwidget` file extension — a ZIP-based bundle containing the Svelte component, `manifest.json`, and optional assets
+
 **Credential handling:** Pi-hole tokens, RSS credentials, and all sensitive values are excluded from exports by default. A separate prompt offers to include them, encrypted with a user-provided passphrase. On import, widgets with missing credentials show a "configure me" prompt.
 
 ---
@@ -481,7 +487,7 @@ export type NotifyFn = (notification: Omit<Notification, 'id' | 'timestamp' | 'r
 
 | Widget | Notes |
 |---|---|
-| Spotify | Requires OAuth relay on phavo.io. Now playing, album art, playback controls. Spotify Premium required for control. |
+| Spotify | Requires OAuth relay on phavo.net. Now playing, album art, playback controls. Spotify Premium required for control. |
 
 ---
 
@@ -489,11 +495,11 @@ export type NotifyFn = (notification: Omit<Notification, 'id' | 'timestamp' | 'r
 
 The Free tier is the primary acquisition channel. Conversion levers built into the product:
 
-- **Widget drawer upgrade prompt:** When a Free user opens the widget drawer, Standard widgets are visible but locked — shown with a lock icon and the label "Standard". Clicking one triggers: "Upgrade to Standard to unlock all widgets — €7.99 one-time." This works via a **split manifest**: `GET /api/v1/widgets` returns full definitions for entitled widgets, plus teaser entries `{ id, name, description, tier, locked: true }` for locked ones. Teaser entries contain no `dataEndpoint`, `configSchema`, or `permissions` — only enough to render the upgrade prompt. Security-relevant fields are never sent to the browser for unentitled tiers.
+- **Widget drawer upgrade prompt:** When a Free user opens the widget drawer, Standard widgets are visible but locked — shown with a lock icon and the label "Standard". Clicking one triggers: "Upgrade to Standard to unlock all widgets — €8.99 one-time." This works via a **split manifest**: `GET /api/v1/widgets` returns full definitions for entitled widgets, plus teaser entries `{ id, name, description, tier, locked: true }` for locked ones. Teaser entries contain no `dataEndpoint`, `configSchema`, or `permissions` — only enough to render the upgrade prompt. Security-relevant fields are never sent to the browser for unentitled tiers.
 - **Tab limit prompt:** Attempting to add a second tab on Free shows the upgrade prompt.
 - **Phavo branding:** Small "Powered by Phavo" badge in dashboard footer on Free. Removable on Standard and Local.
 - **No feature degradation:** Free tier stays free indefinitely. Phavo does not reduce the Free offering to force upgrades.
-- **Standard → Local upgrade path:** Pay the €12.00 difference via the phavo.io account portal. No repurchase.
+- **Standard → Local upgrade path:** Pay the €12.00 difference via the phavo.net account portal. No repurchase.
 
 ---
 
@@ -535,7 +541,7 @@ GET  /api/v1/update/check
 POST /api/v1/update/apply
 ```
 
-**phavo.io infrastructure endpoints (hosted, not local):**
+**phavo.net infrastructure endpoints (hosted, not local):**
 ```
 POST /api/license/validate        — Free/Standard: on each login
 POST /api/license/activate        — Local: once on first setup
@@ -685,9 +691,9 @@ Tauri Shell (Rust)
 
 | Platform | Format | Distribution |
 |---|---|---|
-| macOS | `.dmg` (universal: Apple Silicon + Intel) | phavo.io, Homebrew Cask |
-| Windows | `.msi` + NSIS `.exe` | phavo.io, winget (stretch) |
-| Linux | `.deb`, `.AppImage`, `.rpm` | phavo.io, AUR (stretch) |
+| macOS | `.dmg` (universal: Apple Silicon + Intel) | phavo.net, Homebrew Cask |
+| Windows | `.msi` + NSIS `.exe` | phavo.net, winget (stretch) |
+| Linux | `.deb`, `.AppImage`, `.rpm` | phavo.net, AUR (stretch) |
 
 Build-Befehl: `bun tauri build` — erzeugt alle Formate via GitHub Actions CI (matrix: macos-latest, windows-latest, ubuntu-latest).
 
@@ -703,14 +709,14 @@ apps/desktop/src-tauri/tauri.conf.json:
 {
   "updater": {
     "active": true,
-    "endpoints": ["https://phavo.io/api/updates/{{target}}/{{arch}}/{{current_version}}"],
+    "endpoints": ["https://phavo.net/api/updates/{{target}}/{{arch}}/{{current_version}}"],
     "dialog": true,
     "pubkey": "<embedded-public-key>"
   }
 }
 ```
 
-phavo.io hostet einen einfachen Update-Endpoint der auf GitHub Releases antwortet. Signierung: Ed25519 (Tauri Standard). Private Key liegt ausschließlich in GitHub Actions Secrets.
+phavo.net hostet einen einfachen Update-Endpoint der auf GitHub Releases antwortet. Signierung: Ed25519 (Tauri Standard). Private Key liegt ausschließlich in GitHub Actions Secrets.
 
 ### 7.5 Datenpfade pro OS
 
@@ -723,7 +729,7 @@ phavo.io hostet einen einfachen Update-Endpoint der auf GitHub Releases antworte
 Tauri stellt diese Pfade via `tauri::api::path::app_data_dir()` bereit. Der Sidecar-Prozess erhält den Pfad als Umgebungsvariable beim Start.
 
 **Platforms:** macOS 12+, Windows 10+, Ubuntu 20.04+  
-**Distribution:** phavo.io (primary), Homebrew Cask, winget (stretch)
+**Distribution:** phavo.net (primary), Homebrew Cask, winget (stretch)
 
 ---
 
@@ -748,7 +754,7 @@ Tauri 2.0 Mobile — same `@phavo/ui` components rendered via Tauri's mobile Web
 - **Widget Marketplace** — community + Pro widgets
 - **Phavo Agent** — local Bun daemon, sends encrypted metrics to cloud
 - **E2E encryption** — TLS, DSGVO-compliant
-- **Public demo instance** on phavo.io
+- **Public demo instance** on phavo.net
 
 ---
 
@@ -759,8 +765,9 @@ Tauri 2.0 Mobile — same `@phavo/ui` components rendered via Tauri's mobile Web
 | Tier | Price | Model |
 |---|---|---|
 | Free | €0 | Forever free — core system widgets, weather, 1 tab, Phavo branding |
-| Standard | €7.99 | One-time — all widgets, unlimited tabs, no branding |
-| Local | €19.99 | One-time — all widgets, unlimited tabs, fully offline, no branding |
+| Standard | €8.99 | One-time — all widgets, unlimited tabs, no branding |
+| Local | €24.99 | One-time — all widgets, unlimited tabs, fully offline, no branding |
+| Ultra | €39.99 | One-time — all widgets + exclusive Ultra, unlimited tabs, fully offline, 1yr feature updates |
 | Standard → Local upgrade | €12.00 | Pay the difference, no repurchase |
 | Phase 2 Desktop | TBD | Bundled or small upgrade fee for existing licence holders |
 | Phase 4 Cloud | ~€4.99/month | Subscription — sync, marketplace, multi-device |
@@ -774,15 +781,15 @@ Tauri 2.0 Mobile — same `@phavo/ui` components rendered via Tauri's mobile Web
 
 ### Standard / Free licence model
 - Sold via Gumroad
-- User links licence key to phavo.io account
-- Validated on every login; 72-hour offline grace period if phavo.io is unreachable
+- User links licence key to phavo.net account
+- Validated on every login; 72-hour offline grace period if phavo.net is unreachable
 - No device fingerprinting — follows the account, reinstalls are free
 
 ### Local licence model
 - Sold via Gumroad at a higher price reflecting offline capability
-- One-time activation against phavo.io; stored in Docker volume thereafter
+- One-time activation against phavo.net; stored in Docker volume thereafter
 - Bound to volume identifier — survives container rebuilds, not hardware-based
-- Second activation requires deactivating the first via phavo.io portal
+- Second activation requires deactivating the first via phavo.net portal
 - One re-activation grace for hardware replacement
 - Fully offline after initial activation
 
@@ -792,7 +799,7 @@ Tauri 2.0 Mobile — same `@phavo/ui` components rendered via Tauri's mobile Web
 
 *Detailed launch campaign to be planned when v1.0 is ready. The following must be in place before launch:*
 
-### phavo.io Landing Page (required before launch)
+### phavo.net Landing Page (required before launch)
 - Hero: screenshot or short screen recording of the live dashboard
 - Feature highlights: widgets, responsive design, setup flow, Free tier CTA
 - Pricing table: Free / Standard / Local clearly compared with feature checklist
@@ -803,8 +810,8 @@ Tauri 2.0 Mobile — same `@phavo/ui` components rendered via Tauri's mobile Web
 - Installation guide (Docker, direct Bun)
 - Widget reference
 - Setup assistant walkthrough (Quick and Full)
-- FAQ: "What happens if phavo.io is down?", "How do I go offline?", "Can I self-host without a phavo.io account?"
-- Hosted at docs.phavo.io
+- FAQ: "What happens if phavo.net is down?", "How do I go offline?", "Can I self-host without a phavo.net account?"
+- Hosted at docs.phavo.net
 
 ### Support Channels (required before launch)
 - **GitHub Issues** — bugs and feature requests
@@ -828,8 +835,8 @@ Security is a first-class concern in Phavo — not an afterthought. Users trust 
 - **Password hashing:** All local passwords hashed with Argon2id (via Better Auth). No MD5, no SHA-1, no bcrypt.
 - **Session tokens:** Cryptographically random, stored as HttpOnly + Secure + SameSite=Strict cookies. Never in localStorage.
 - **Session expiry:** Configurable idle timeout (default: 7 days). Sessions invalidated on logout and password change.
-- **2FA (TOTP):** Available on all tiers — phavo.io accounts and local accounts alike. Standard TOTP (RFC 6238), compatible with any authenticator app (Authy, 1Password, Google Authenticator). Optional, not enforced. Setup via QR code in account settings. Backup codes generated at 2FA setup.
-- **Brute-force protection:** Login rate-limited per IP and per account — 10 attempts before a 5-minute lockout. Applies to both phavo.io and local logins.
+- **2FA (TOTP):** Available on all tiers — phavo.net accounts and local accounts alike. Standard TOTP (RFC 6238), compatible with any authenticator app (Authy, 1Password, Google Authenticator). Optional, not enforced. Setup via QR code in account settings. Backup codes generated at 2FA setup.
+- **Brute-force protection:** Login rate-limited per IP and per account — 10 attempts before a 5-minute lockout. Applies to both phavo.net and local logins.
 - **CSRF protection:** All state-changing API endpoints require a CSRF token. Enforced by Hono middleware.
 
 ### 12.2 Data Encryption
@@ -837,33 +844,33 @@ Security is a first-class concern in Phavo — not an afterthought. Users trust 
 - **Credentials at rest:** All sensitive values (Pi-hole tokens, RSS Basic Auth credentials, Bearer tokens, future OAuth tokens) encrypted with AES-256-GCM in libSQL. Encryption key derived from a server-side secret stored in the Docker volume, separate from the database file.
 - **Config exports:** Credentials excluded by default. Optional inclusion uses AES-256-GCM encryption with a user-provided passphrase — the passphrase is never stored or transmitted.
 - **HTTPS / TLS:** All traffic between browser and Phavo encrypted in transit. TLS 1.2 minimum, TLS 1.3 preferred. Built-in certificate management (Let's Encrypt, self-signed, or custom cert). HTTP redirects to HTTPS automatically once HTTPS is configured.
-- **phavo.io communication:** All local app → phavo.io API calls over TLS with standard CA validation. No certificate pinning (would break every 90 days with Let's Encrypt rotation).
+- **phavo.net communication:** All local app → phavo.net API calls over TLS with standard CA validation. No certificate pinning (would break every 90 days with Let's Encrypt rotation).
 
 ### 12.3 External Data & Privacy
 
 - **RSS feed fetching:** Fetched server-side by `@phavo/agent`, not in the browser. This means external feed servers see the IP of the Phavo host, not the user's browser. Users should be aware of this when using public cloud hosts.
 - **No telemetry by default:** Phavo collects no telemetry, no analytics, no error reporting from the local app without explicit user opt-in.
-- **phavo.io anonymous analytics:** Anonymised, aggregated usage data is collected on phavo.io (which widget categories are popular, setup completion rates). No PII, no per-user tracking. Collected data is listed explicitly in the privacy policy. Users can opt out from the phavo.io account settings.
-- **Minimal phavo.io data retention:** phavo.io stores only email address, hashed password, licence key association, and active instance count per account. No dashboard layout, no widget config, no content is ever sent to phavo.io.
-- **DSGVO / GDPR compliance:** phavo.io privacy policy published before launch. Right to erasure (account deletion removes all phavo.io data). Data processing agreement (DPA) available on request for business users.
+- **phavo.net anonymous analytics:** Anonymised, aggregated usage data is collected on phavo.net (which widget categories are popular, setup completion rates). No PII, no per-user tracking. Collected data is listed explicitly in the privacy policy. Users can opt out from the phavo.net account settings.
+- **Minimal phavo.net data retention:** phavo.net stores only email address, hashed password, licence key association, and active instance count per account. No dashboard layout, no widget config, no content is ever sent to phavo.net.
+- **DSGVO / GDPR compliance:** phavo.net privacy policy published before launch. Right to erasure (account deletion removes all phavo.net data). Data processing agreement (DPA) available on request for business users.
 
 ### 12.4 Infrastructure & Supply Chain
 
 - **Dependency scanning:** GitHub Dependabot enabled for all packages in the monorepo — automatic PRs for security updates. `bun audit` runs in CI on every push and PR.
 - **CI/CD security:** GitHub Actions workflows pin all action versions to a commit SHA (not a tag). No third-party actions without explicit review. Secrets managed via GitHub Encrypted Secrets, never in code.
 - **Docker image scanning:** Container image scanned for known CVEs on every build (e.g. via Trivy in CI). Images published only if scan passes.
-- **Signed releases:** All Docker images and binary releases signed. Checksums published with every release on GitHub and phavo.io.
+- **Signed releases:** All Docker images and binary releases signed. Checksums published with every release on GitHub and phavo.net.
 - **Minimal Docker image:** The build stage uses `oven/bun:1-alpine`. The production runtime stage uses `oven/bun:1-alpine` with the shell explicitly removed post-copy (`RUN apk del busybox`) and only Bun runtime files present — no package manager, no unnecessary tools. A fully distroless base is the Phase 2 hardening target; Alpine with shell removal is the Phase 1 pragmatic baseline.
 
 ### 12.5 Responsible Disclosure
 
 Phavo operates a responsible disclosure programme from day one:
 
-- **Security policy:** `SECURITY.md` in the public repo and a dedicated page at `phavo.io/security` describing the process.
-- **Disclosure email:** `security@phavo.io` — monitored by the maintainer. PGP key published for encrypted reports.
+- **Security policy:** `SECURITY.md` in the public repo and a dedicated page at `phavo.net/security` describing the process.
+- **Disclosure email:** `security@phavo.net` — monitored by the maintainer. PGP key published for encrypted reports.
 - **Response commitment:** Acknowledgement within 48 hours, status update within 7 days, fix timeline communicated within 14 days.
 - **CVE coordination:** Critical vulnerabilities coordinated with GitHub Security Advisories before public disclosure.
-- **Hall of fame:** Researchers who report valid vulnerabilities listed on `phavo.io/security` (with their permission).
+- **Hall of fame:** Researchers who report valid vulnerabilities listed on `phavo.net/security` (with their permission).
 - **No legal threats:** Phavo explicitly commits not to pursue legal action against researchers acting in good faith.
 
 ### 12.6 Security in the Widget System
@@ -900,7 +907,7 @@ Phavo operates a responsible disclosure programme from day one:
 | Docker hardening | Non-root user, read-only filesystem except data volume |
 | Update check | GitHub Releases API, max once/hour, cached |
 | Offline grace period | Free: 24h · Standard: 72h — after last successful login validation |
-| Telemetry | None by default; phavo.io analytics anonymised + aggregated only |
+| Telemetry | None by default; phavo.net analytics anonymised + aggregated only |
 
 ---
 
@@ -926,31 +933,63 @@ Phavo operates a responsible disclosure programme from day one:
 
 | # | Decision |
 |---|---|
-| 1 | **Spotify OAuth:** Cloud relay `phavo.io/api/oauth/spotify/callback`. Stateless, DSGVO-compliant. Phase 1.x. |
-| 2 | **Licence & auth:** Three tiers. Free: phavo.io login + **24h** offline grace. Standard: phavo.io login + **72h** offline grace. Local: one-time activation + Docker volume identifier, fully offline. |
+| 1 | **Spotify OAuth:** Cloud relay `phavo.net/api/oauth/spotify/callback`. Stateless, DSGVO-compliant. Phase 1.x. |
+| 2 | **Licence & auth:** Four tiers. Free: phavo.net login + **24h** offline grace. Standard: phavo.net login + **72h** offline grace. Local: one-time activation, fully offline. Ultra: one-time activation, fully offline + exclusive widgets + 1yr updates. |
 | 3 | **RSS auth:** Basic Auth + Bearer token, encrypted in libSQL. At launch. |
 | 4 | **Widget resize:** S / M / L / XL steps, grid snapping. |
 | 5 | **Theme:** Dark only at launch. Token system ready for future themes. |
 | 6 | **Figma timing:** Code first, Figma later. No hardcoded values in `@phavo/ui`. |
-| 7 | **Access protection:** Free/Standard: phavo.io login. Local: local username + password. No unauthenticated access. |
+| 7 | **Access protection:** Free/Standard: phavo.net login. Local: local username + password. No unauthenticated access. |
 | 8 | **Mobile (Phase 1):** Responsive web app ≥ 375px. Native apps Phase 3. |
 | 9 | **Updates:** In-dashboard panel with version badge. Phase 1 (Docker): copy-paste command snippet, optional Docker socket for one-click (opt-in). Phase 2 (Desktop/Installer): Tauri Updater — signed, automatic, no terminal required. |
 | 10 | **Pi-hole:** At launch. Core widget for Persona A. |
 | 11 | **Links / Bookmarks:** At launch. Core widget for Persona B. |
 | 12 | **Setup:** Quick Setup (3 steps) + Full Setup (10 steps). Both accessible from welcome screen. |
 | 13 | **Freemium:** Free tier — core system widgets + weather, 1 tab, Phavo branding. No time limit. |
-| 14 | **Pricing:** Free €0 · Standard €7.99 · Local €19.99 · Upgrade €12.00. Launch discount recommended. |
+| 14 | **Pricing:** Free €0 · Standard €8.99 · Local €24.99 · Ultra €39.99. Launch discount recommended. Superseded by Decision 62. |
 | 15 | **Open source:** AGPL-3.0 + commercial dual licence, released after v1.0. |
 | 16 | **Export credentials:** Excluded by default; optionally included as passphrase-encrypted blob. |
-| 17 | **Widget drawer:** + button in header — add/remove widgets at any time post-setup. |
+| 17 | **Widget drawer:** + button in header — add/remove widgets at any time post-setup.
+#### Command Palette (Cmd+K / Ctrl+K)
+
+A universal search and action interface accessible from anywhere in the dashboard.
+
+**Trigger:** Cmd+K (macOS) / Ctrl+K (Windows/Linux) — global keyboard shortcut in the root layout.
+
+**Capabilities:**
+
+1. **Local search** — searches the current dashboard in real-time:
+   - Widgets (by name, category)
+   - Settings tabs (navigates directly)
+   - Notifications (shows unread count)
+   - Actions ("Add Widget", "Export Config", "Open Settings")
+
+2. **Web search** — user-configurable search engine:
+   - Default: DuckDuckGo
+   - Options: Google, Brave, Startpage, custom URL template
+   - Configured in Settings → General
+
+3. **AI chat** — inline AI assistant:
+   - Ollama (localhost — fully offline, perfect for Local tier)
+   - OpenAI (API key in Settings → General)
+   - Anthropic Claude (API key in Settings → General)
+   - Simple prompt → response inline in the panel
+   - No history stored, no context from dashboard data (Phase 1.x)
+   - API keys stored server-side in `credentials` table — never in frontend
+
+**Iron rule:** AI API calls are always made server-side via `POST /api/v1/ai/chat`. API keys never reach the browser.
+
+**UI:** Full-width modal overlay, keyboard-navigable (arrow keys + Enter), Escape to close. Results grouped by category (Dashboard, Web, AI).
+
+ |
 | 18 | **2FA:** TOTP-based, optional on all tiers. Backup codes generated at setup. |
 | 19 | **HTTPS:** Self-signed cert by default (works everywhere). Let's Encrypt as advanced opt-in for public-facing domains. Custom cert supported. TLS 1.2 min, HTTP → HTTPS redirect once configured. |
 | 20 | **RSS fetching:** Server-side via `@phavo/agent` (not browser-direct). Feed server sees Phavo host IP only. |
-| 21 | **Telemetry:** None from local app. phavo.io analytics anonymised + aggregated only. Opt-out available. |
-| 22 | **Responsible disclosure:** `security@phavo.io` + `SECURITY.md`. 48h acknowledgement SLA. No legal threats for good-faith research. |
+| 21 | **Telemetry:** None from local app. phavo.net analytics anonymised + aggregated only. Opt-out available. |
+| 22 | **Responsible disclosure:** `security@phavo.net` + `SECURITY.md`. 48h acknowledgement SLA. No legal threats for good-faith research. |
 | 23 | **Dependency scanning:** Dependabot + `bun audit` in CI. Docker image scanned via Trivy on every build. |
 | 24 | **Docker hardening:** Non-root user, read-only filesystem except data volume, distroless/Alpine base image. |
-| 25 | **Open source enforcement:** AGPL-3.0 with server-side tier enforcement via phavo.io. No code-level locks — a self-compiled AGPL build defaults to Free tier behaviour. |
+| 25 | **Open source enforcement:** AGPL-3.0 with server-side tier enforcement via phavo.net. No code-level locks — a self-compiled AGPL build defaults to Free tier behaviour. |
 | 26 | **Installer:** No native installer in Phase 1. Docker only. Phase 2 desktop app solves the Persona B installation barrier on Windows/macOS. |
 | 27 | **Demo:** Built just before v1.0 launch, once the dashboard is stable. Not during Phase 1 development. |
 | 28 | **Refund policy:** 14-day money-back guarantee on all paid tiers via Gumroad. |
@@ -960,8 +999,8 @@ Phavo operates a responsible disclosure programme from day one:
 | 32 | **Notification system:** Collapsible panel from right side, bell icon in header with unread badge. In-memory history per process lifetime. Notifications are clickable and deep-link to widgets or settings. All widgets (including future third-party) can push via shared `notify()` from `@phavo/types`. Built-in triggers: disk >90%, CPU temp >80°C, Pi-hole unreachable, RSS failing, update available. |
 | 33 | **Tier enforcement per-endpoint:** `requireTier()` middleware on every Standard/Local API route. Tier re-read from session record in DB on every request — never from cookie payload or client headers. |
 | 34 | **Opaque session tokens:** 32-byte random session ID, no JWT, no decodable tier claim in cookie. |
-| 35 | **Tier not in config table:** No user-editable DB column controls tier. Tier flows only via phavo.io validation → session record → middleware. |
-| 36 | **Local activation token signing:** Signed JWT from phavo.io, verified against embedded public key on every server start. Manual DB edits detected and rejected. |
+| 35 | **Tier not in config table:** No user-editable DB column controls tier. Tier flows only via phavo.net validation → session record → middleware. |
+| 36 | **Local activation token signing:** Signed JWT from phavo.net, verified against embedded public key on every server start. Manual DB edits detected and rejected. |
 | 37 | **Tier-filtered widget manifest:** `GET /api/v1/widgets` returns full definitions for entitled widgets and teaser entries (`WidgetTeaserDefinition`) for locked widgets. Standard dataEndpoints and permissions never reach the browser for Free users. |
 | 38 | **No tier in client payload:** SvelteKit layout load never serialises tier to the client. Upgrade prompts are cosmetic UX only — server enforces access independently. |
 | 39 | **SRI on external resources:** Subresource Integrity hashes applied to externally loaded resources (fonts, CDN assets). Not applied to self-hosted bundle files — SRI provides no protection against server-side file tampering on the same origin. |
@@ -970,11 +1009,11 @@ Phavo operates a responsible disclosure programme from day one:
 | 42 | **Platform abstraction:** No hardcoded `/data/` paths or ports in server code. All path/port values read from `PHAVO_DB_PATH`, `PHAVO_DATA_DIR`, `PHAVO_PORT`, `PHAVO_HTTPS_PORT`, `PHAVO_ENV`. Phase 1 Docker defaults applied if env vars absent. |
 | 43 | **`installMethod` detection:** Derived from `PHAVO_ENV` on first start, stored in `config` table. Values: `'docker-compose'` \| `'bun-direct'` \| `'tauri'`. Drives which update UI is shown. |
 | 44 | **Tauri Sidecar:** Phase 2 wraps `apps/web/` Bun server as a Tauri sidecar. No changes to `apps/web/` required — platform abstraction (Decision 42) is the only prerequisite. |
-| 45 | **Tauri Updater:** Ed25519-signed updates via phavo.io endpoint. Private key in GitHub Actions Secrets only. Auto-install with user confirmation dialog. |
+| 45 | **Tauri Updater:** Ed25519-signed updates via phavo.net endpoint. Private key in GitHub Actions Secrets only. Auto-install with user confirmation dialog. |
 | 46 | **Tauri data paths:** OS app data dir provided by `tauri::api::path::app_data_dir()`, passed to sidecar as `PHAVO_DATA_DIR` env var. macOS: `~/Library/Application Support/phavo/`, Windows: `%APPDATA%\phavo\`, Linux: `~/.local/share/phavo/`. |
 | 47 | **Plugin API versioning:** `WidgetDefinition` schema is versioned via `schemaVersion` field in `manifest.json`. Breaking changes require a major `@phavo/plugin-sdk` version bump. Compatibility matrix in `packages/types/src/plugin-compat.ts`. Old-schema plugins load with a deprecation warning in Phase 1.x, are rejected in Phase 4 Marketplace. |
-| 48 | **SDK docs prerequisite:** `@phavo/plugin-sdk` is not published until `docs.phavo.io/plugins` minimum viable docs are live. A developer must be able to build and deploy a working plugin in under 30 minutes from zero. |
-| 49 | **Plugin pricing cap:** Marketplace widgets priced by developers within phavo.io-enforced limits: free, one-time up to €9.99, or subscription up to €2.99/month. Higher pricing requires explicit approval. |
+| 48 | **SDK docs prerequisite:** `@phavo/plugin-sdk` is not published until `docs.phavo.net/plugins` minimum viable docs are live. A developer must be able to build and deploy a working plugin in under 30 minutes from zero. |
+| 49 | **Plugin pricing cap:** Marketplace widgets priced by developers within phavo.net-enforced limits: free, one-time up to €9.99, or subscription up to €2.99/month. Higher pricing requires explicit approval. |
 | 50 | **Font:** Geist (UI) + Geist Mono (data values). Loaded via Google Fonts. CSS variables `--font-ui` and `--font-mono` — never hardcoded font names in components. |
 | 51 | **Accent colour:** Amber/gold (#d4922a) replaces teal (#0f6e56). Chosen for strong contrast on pure black, editorial feel, differentiation from typical green-heavy homelab tools. |
 | 52 | **Schema-driven Settings UI:** `<SchemaRenderer>` component renders Settings panels from `configSchema` automatically. No per-widget custom Settings code. New widgets get a Settings panel for free. |
@@ -983,6 +1022,14 @@ Phavo operates a responsible disclosure programme from day one:
 | 55 | **Widget drawer categories:** Filter chips (All · System · Consumer · Integration · Utility) in the drawer. Third-party plugins appear in their declared category automatically. |
 | 56 | **Widget schema versioning:** Additive schema changes are safe. Breaking changes (remove/rename required fields) trigger `unconfigured` state on existing instances. Widget `version` field uses semver; breaking changes require minor bump minimum. |
 | 57 | **Settings → Widgets layout:** Single tab with master/detail layout — scrollable widget list (left) with search + category filter, config panel (right). No individual tab per widget. Scales to unlimited widgets without polluting the Settings tab bar. Mobile: full-screen list → tap → full-screen detail. |
+| 58 | **Config file format:** Dashboard config exports use `.phavo` extension. The format is JSON with an envelope `{ version, exportedAt, config, credentials? }`. Credentials are optionally included as a PBKDF2-SHA256 → AES-256-GCM encrypted blob. |
+| 59 | **Widget package format:** Third-party widget packages use `.phwidget` extension. ZIP-based bundle containing `manifest.json`, Svelte component, and optional assets. Defined in Phase 1.x when plugin system ships. |
+| 60 | **Command Palette:** Cmd+K global shortcut. Three modes: local dashboard search, web search (configurable engine), AI chat (Ollama/OpenAI/Claude). API keys server-side only, never in frontend. |
+| 61 | **AI chat server-side:** All AI API calls go through `POST /api/v1/ai/chat`. API keys stored in `credentials` table. Client never sees keys. Ollama at localhost:11434 for Local tier offline use. |
+| 62 | **Pricing model revision:** Four tiers — Free (€0), Standard (€8.99 one-time), Local (€24.99 one-time), Ultra (€39.99 one-time). Standard adds unlimited tabs + all widgets + no branding. Local adds full offline + local account. Ultra adds exclusive widgets + 1yr feature updates. |
+| 63 | **Domain:** phavo.net (registered via Cloudflare). All references to phavo.net are invalid. |
+| 64 | **Production audit:** 13 issues fixed before v1.0 — CSRF gap, SSRF, missing Secure flag, unvalidated POST /config, non-transactional import, missing external API Zod validation, unbounded notification queue, default secret acceptance, missing configSchemaVersion, health check without DB verify, unbounded TOTP map, redundant dbReady awaits, wrong docker tmpfs path. |
+| 65 | **fetchWithCsrf utility:** All client-side mutation requests use `fetchWithCsrf()` from `apps/web/src/lib/utils/api.ts`. Automatically injects X-CSRF-Token on POST/PUT/DELETE/PATCH. GET requests unaffected. |
 
 ---
 
@@ -995,8 +1042,8 @@ The widget schema defined in Phase 0 is the seed of a full plugin ecosystem. The
 | Stage | Phase | What ships |
 |---|---|---|
 | **Schema** | Phase 0–1 | `WidgetDefinition` type + `dataEndpoint` contract. Internal use only. |
-| **Local Plugin API** | Phase 1.x | Self-hosted widgets loaded from a local directory. No phavo.io required. |
-| **Marketplace** | Phase 4 | Signed, reviewed widgets distributed via phavo.io. Revenue-sharing. |
+| **Local Plugin API** | Phase 1.x | Self-hosted widgets loaded from a local directory. No phavo.net required. |
+| **Marketplace** | Phase 4 | Signed, reviewed widgets distributed via phavo.net. Revenue-sharing. |
 
 ### 16.2 Widget Contract (canonical definition)
 
@@ -1004,7 +1051,7 @@ Every widget — built-in or third-party — must conform to the `WidgetDefiniti
 
 - **`id`** — globally unique, reverse-DNS recommended: `"io.phavo.cpu"`, `"com.example.mywidget"`
 - **`version`** — semver, required for all plugins; built-in widgets use the Phavo release version
-- **`author`** — `"phavo"` for built-ins, the developer's phavo.io username for marketplace widgets
+- **`author`** — `"phavo"` for built-ins, the developer's phavo.net username for marketplace widgets
 - **`permissions[]`** — every plugin must declare all capabilities it needs (see Section 16.4); built-in widgets use the same system for consistency
 - **`tier`** — `'free'` or `'standard'`; third-party plugins shipped via the marketplace can be listed as `'free'` or `'standard'`, but cannot define new tiers
 
@@ -1012,11 +1059,11 @@ Every widget — built-in or third-party — must conform to the `WidgetDefiniti
 
 ### 16.3 Local Plugin API (Phase 1.x)
 
-Local plugins are the bridge between the internal widget schema and the public SDK. They run entirely on the self-hosted Phavo instance — no phavo.io connection needed.
+Local plugins are the bridge between the internal widget schema and the public SDK. They run entirely on the self-hosted Phavo instance — no phavo.net connection needed.
 
 **How it works:**
 
-1. Developer creates a widget package following the Phavo plugin spec (documented at `docs.phavo.io/plugins`)
+1. Developer creates a widget package following the Phavo plugin spec (documented at `docs.phavo.net/plugins`)
 2. Plugin is placed in the `phavo-data` volume under `/data/plugins/<plugin-id>/`
 3. On startup, `WidgetRegistry` scans `/data/plugins/`, validates each `manifest.json` against the `WidgetDefinition` schema, and registers valid plugins
 4. Plugin's Hono handler is mounted at `/api/v1/plugins/<plugin-id>/`
@@ -1120,13 +1167,13 @@ my-widget/
 
 When the Widget Marketplace launches:
 
-- All marketplace widgets are **signed** with the author's phavo.io developer key
+- All marketplace widgets are **signed** with the author's phavo.net developer key
 - Widgets go through **automated security review** (static analysis, import scanning, permission audit) and **manual review** for Pro-tier widgets
 - Installation is one-click from the dashboard widget drawer — no manual file copy
-- Revenue sharing: 70% to developer, 30% to phavo.io platform fee (subject to change before Phase 4)
-- Pricing options for marketplace widgets: free, one-time purchase, or subscription (handled by phavo.io payments)
-- Community widgets are free to list; Pro widgets require a developer account on phavo.io
-- **Marketplace widget pricing range:** free – €9.99 one-time – max €2.99/month subscription (enforced by phavo.io checkout)
+- Revenue sharing: 70% to developer, 30% to phavo.net platform fee (subject to change before Phase 4)
+- Pricing options for marketplace widgets: free, one-time purchase, or subscription (handled by phavo.net payments)
+- Community widgets are free to list; Pro widgets require a developer account on phavo.net
+- **Marketplace widget pricing range:** free – €9.99 one-time – max €2.99/month subscription (enforced by phavo.net checkout)
 
 ### 16.8 Non-Goals for the Plugin System
 
@@ -1166,7 +1213,7 @@ export const PLUGIN_COMPAT: Record<string, string> = {
 
 Plugins declare their schema version in `manifest.json` as `"schemaVersion": "1"`. Missing → defaults to `"1"`.
 
-### 16.10 Developer Documentation (docs.phavo.io/plugins)
+### 16.10 Developer Documentation (docs.phavo.net/plugins)
 
 Required before `@phavo/plugin-sdk` is published. Minimum viable docs at Phase 1.x launch:
 
@@ -1195,7 +1242,7 @@ The primary threat is a technically capable user who either:
 3. **Directly edits the libSQL database file** — changes the stored tier value to `'standard'` or `'local'`
 4. **Forks the AGPL codebase and removes tier checks** — builds a version without any restrictions
 
-Phavo's architecture is designed so that **options 1–3 yield nothing**, and **option 4 is explicitly permitted** under the AGPL licence (a self-built fork gets Free tier behaviour from phavo.io anyway — see Decision 25).
+Phavo's architecture is designed so that **options 1–3 yield nothing**, and **option 4 is explicitly permitted** under the AGPL licence (a self-built fork gets Free tier behaviour from phavo.net anyway — see Decision 25).
 
 ### 17.2 Server-Side Tier Enforcement on Every Request
 
@@ -1236,16 +1283,16 @@ The tier embedded in the session cookie is **never trusted directly**. On every 
 
 - **Session record is the source of truth.** The tier stored in the `sessions` table in libSQL is set exclusively by the server during login/licence validation. It cannot be changed by any client-accessible API.
 - **Session token is opaque.** The cookie value is a cryptographically random string (32 bytes, base64url). It contains no decodable payload — no JWT, no tier claim, nothing a user can decode and modify.
-- **Tier re-validation on login.** Every login event triggers a fresh phavo.io licence validation (Free/Standard) or local activation check (Local). The tier in the session record is overwritten with the freshly validated value — any manually edited DB value is overwritten at next login.
-- **Session invalidation on tier change.** If a licence upgrade or downgrade is processed via phavo.io, the current session is invalidated and the user is required to log in again. This ensures the new tier is written from a fresh validation, not inherited.
+- **Tier re-validation on login.** Every login event triggers a fresh phavo.net licence validation (Free/Standard) or local activation check (Local). The tier in the session record is overwritten with the freshly validated value — any manually edited DB value is overwritten at next login.
+- **Session invalidation on tier change.** If a licence upgrade or downgrade is processed via phavo.net, the current session is invalidated and the user is required to log in again. This ensures the new tier is written from a fresh validation, not inherited.
 
 ### 17.4 Database Tamper Resistance
 
 The libSQL database file lives at `/data/phavo.db` inside the Docker volume. A user with volume access can theoretically edit it directly with a SQLite client. Phavo mitigates this:
 
-- **Tier not stored in config table.** The tier is derived exclusively from the active session (which comes from phavo.io validation or Local activation) — not from a `config` key-value pair that a user could trivially edit.
-- **Activation token integrity.** For Local tier, the activation token stored in `/data/phavo.db` is a signed JWT issued by phavo.io, containing: `{ instanceId, tier, activatedAt, sig }`. The signature uses an asymmetric key — the public key is embedded in the Phavo binary at build time (pinned). On every server start, the activation token is re-verified against the embedded public key. A manually edited token fails signature verification and is rejected → instance falls back to Free behaviour.
-- **No tier column in user table.** There is no `tier` column in the `users` or `config` tables that a user could edit to elevate themselves. Tier flows only through: phavo.io validation → session record → request middleware.
+- **Tier not stored in config table.** The tier is derived exclusively from the active session (which comes from phavo.net validation or Local activation) — not from a `config` key-value pair that a user could trivially edit.
+- **Activation token integrity.** For Local tier, the activation token stored in `/data/phavo.db` is a signed JWT issued by phavo.net, containing: `{ instanceId, tier, activatedAt, sig }`. The signature uses an asymmetric key — the public key is embedded in the Phavo binary at build time (pinned). On every server start, the activation token is re-verified against the embedded public key. A manually edited token fails signature verification and is rejected → instance falls back to Free behaviour.
+- **No tier column in user table.** There is no `tier` column in the `users` or `config` tables that a user could edit to elevate themselves. Tier flows only through: phavo.net validation → session record → request middleware.
 
 ### 17.5 Client-Side Hardening
 
@@ -1275,7 +1322,7 @@ Rate limiting is implemented as in-memory counters in Phase 1 (acceptable for si
 
 Phavo does not attempt to prevent:
 
-- **AGPL forking without tier checks.** This is a legitimate use under the licence. A self-built fork that removes all tier logic gets Free tier data from phavo.io anyway, because the licence key validation is server-side on phavo.io infrastructure.
+- **AGPL forking without tier checks.** This is a legitimate use under the licence. A self-built fork that removes all tier logic gets Free tier data from phavo.net anyway, because the licence key validation is server-side on phavo.net infrastructure.
 - **Users reading their own data from the volume.** The `/data` volume is theirs. They own the hardware. Phavo does not encrypt the entire database — only credentials at rest (AES-256-GCM). Reading your own widget layout from SQLite is not a threat.
 - **Network interception between browser and local Phavo instance.** On a local network, a user could run a MitM proxy against their own traffic. This is not a realistic attack on a self-hosted tool running on `localhost` or a trusted home network. TLS is still enforced to protect against accidental exposure on shared networks.
 
@@ -1285,8 +1332,8 @@ Phavo does not attempt to prevent:
 |---|---|
 | 33 | **Tier enforcement per-endpoint:** `requireTier()` middleware on every Standard/Local API route. Tier re-read from session record in DB on every request — never from cookie payload or client headers. |
 | 34 | **Opaque session tokens:** 32-byte random session ID, no JWT, no decodable tier claim in cookie. |
-| 35 | **Tier not in config table:** No user-editable DB column controls tier. Tier flows only via phavo.io validation → session record → middleware. |
-| 36 | **Local activation token signing:** Signed JWT from phavo.io, verified against embedded public key on every server start. Manual DB edits detected and rejected. |
+| 35 | **Tier not in config table:** No user-editable DB column controls tier. Tier flows only via phavo.net validation → session record → middleware. |
+| 36 | **Local activation token signing:** Signed JWT from phavo.net, verified against embedded public key on every server start. Manual DB edits detected and rejected. |
 | 37 | **Tier-filtered widget manifest:** `GET /api/v1/widgets` returns full definitions for entitled widgets and teaser entries (`WidgetTeaserDefinition`) for locked widgets. Standard dataEndpoints and permissions never reach the browser for Free users. |
 | 38 | **No tier in client payload:** SvelteKit layout load never serialises tier to the client. Upgrade prompts are cosmetic UX only — server enforces access independently. |
 | 39 | **SRI on external resources:** Subresource Integrity hashes applied to externally loaded resources (fonts, CDN assets). Not applied to self-hosted bundle files — SRI provides no protection against server-side file tampering on the same origin. |
@@ -1297,7 +1344,7 @@ Phavo does not attempt to prevent:
 
 ## 18. Success Metrics (Phase 1)
 
-- 200 phavo.io account registrations within 60 days of launch
+- 200 phavo.net account registrations within 60 days of launch
 - 100 paid licence sales (Standard + Local) within 60 days
 - Free → paid conversion rate ≥ 5% (baseline); ≥ 15% (stretch goal)
 - Docker Hub: 500+ pulls in first month
@@ -1325,6 +1372,13 @@ Phavo does not attempt to prevent:
 | 11 | `@phavo/agent` described as "Bun daemon" in Techstack — it is a library in Phase 1 | Clarified: library in Phase 1, standalone daemon only in Phase 4 |
 | 12 | Import/Export feature specified in §6.2 but no API endpoints defined in §6.5 | Added `GET /api/v1/config/export` and `POST /api/v1/config/import` to API table |
 
+
+| 61 | **Version management:** Single source of truth in root `package.json`. Vite injects `PHAVO_VERSION` at build time. Release scripts (`release:patch/minor/major`) bump version, commit, tag, push — triggering Docker CI and GitHub Release automatically. |
+| 62 | **Docker Hub:** Public repository `phavo/phavo`. Tagged as `:latest` on every main push and `:VERSION` on every release tag. Multi-arch (amd64 + arm64) via GitHub Actions buildx. Docker Hub account uses `docker@phavo.net`. |
+| 63 | **Email infrastructure:** Hetzner Webhosting S for mail hosting. MX records via Cloudflare. Addresses: `docker@`, `security@`, `hello@`, `noreply@` phavo.net. |
+| 64 | **Web presence:** phavo.net (landing) on Hetzner Webhosting. docs.phavo.net on GitHub Pages or Netlify. DNS and CDN via Cloudflare. www.phavo.net CNAME redirects to apex. |
+| 65 | **Dashboard auto-update:** `GET /api/v1/update/check` polls GitHub Releases API (1h cache). Header badge appears on new version. Update panel shows changelog. `POST /api/v1/update/apply` runs `docker compose pull && docker compose up -d` for docker-compose installs. |
+
 ---
 
-*Phavo · phavo.io · github.com/phabioo/phavo*
+*Phavo · phavo.net · github.com/phabioo/phavo*

@@ -5,6 +5,7 @@ import type { Notification, NotifyFn } from '@phavo/types';
  * Notifications are produced by server-side triggers (update check, etc.) and
  * consumed by the client via GET /api/v1/notifications, which drains the queue.
  */
+const MAX_QUEUE = 100;
 const _queue: Notification[] = [];
 
 let _callback: NotifyFn | null = null;
@@ -23,6 +24,7 @@ export function serverNotify(n: Omit<Notification, 'id' | 'timestamp' | 'read'>)
     read: false,
   };
   _queue.push(notification);
+  if (_queue.length > MAX_QUEUE) _queue.shift();
   _callback?.(n);
 }
 

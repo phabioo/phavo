@@ -134,6 +134,11 @@ let {
     border-bottom: 1px solid var(--color-border-subtle);
   }
 
+  .sidebar.collapsed .sidebar-header {
+    justify-content: center;
+    padding-inline: var(--space-2);
+  }
+
   .sidebar-logo {
     font-size: 18px;
     font-weight: 700;
@@ -152,6 +157,11 @@ let {
   .sidebar-toggle:hover {
     background: var(--color-bg-hover);
     color: var(--color-text-primary);
+  }
+
+  .sidebar.collapsed .sidebar-toggle {
+    width: 100%;
+    padding: 0;
   }
 
   .sidebar-nav-shell {
@@ -203,7 +213,12 @@ let {
 
   .nav-item.active {
     background: var(--color-accent-subtle);
-    color: var(--color-accent-text);
+    color: var(--color-bg);
+  }
+
+  .sidebar.collapsed .nav-item {
+    justify-content: center;
+    padding: var(--space-2);
   }
 
   .nav-icon {

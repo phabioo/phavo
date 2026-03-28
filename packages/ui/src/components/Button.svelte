@@ -57,7 +57,7 @@ let {
   /* Variants */
   .btn-primary {
     background: var(--color-accent);
-    color: var(--color-text-primary);
+    color: var(--color-bg);
     border-color: var(--color-accent);
   }
   .btn-primary:hover:not(:disabled) {

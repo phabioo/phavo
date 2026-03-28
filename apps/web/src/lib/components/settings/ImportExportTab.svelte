@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import { Button, Card, Input, Switch } from '@phavo/ui';
   import en from '$lib/i18n/en.json';
+  import { fetchWithCsrf } from '$lib/utils/api';
 
   // ─── State ────────────────────────────────────────────────────────────────
 
@@ -35,11 +36,6 @@
 
   // ─── Helpers ─────────────────────────────────────────────────────────────
 
-  function getCsrfToken(): string {
-    const match = document.cookie.match(/(?:^|;\s*)phavo_csrf=([^;]+)/);
-    return match?.[1] ?? '';
-  }
-
   function pluralise(n: number, singular: string, plural: string): string {
     return n === 1 ? singular.replace('{n}', String(n)) : plural.replace('{n}', String(n));
   }
@@ -56,20 +52,18 @@
 
     try {
       const url = new URL('/api/v1/config/export', window.location.origin);
-      const csrfToken = getCsrfToken();
 
       let res: Response;
       if (includeCredentials) {
-        res = await fetch(url.toString(), {
+        res = await fetchWithCsrf(url.toString(), {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'X-CSRF-Token': csrfToken,
           },
           body: JSON.stringify({ passphrase: exportPassphrase }),
         });
       } else {
-        res = await fetch(url.toString(), { method: 'GET' });
+        res = await fetchWithCsrf(url.toString(), { method: 'GET' });
       }
 
       if (!res.ok) {
@@ -84,13 +78,17 @@
         return;
       }
 
-      const blob = await res.blob();
+      const json: unknown = await res.json();
+      const blob = new Blob([JSON.stringify(json, null, 2)], { type: 'application/x-phavo-config' });
       const dateStr = new Date().toISOString().slice(0, 10);
+      const blobUrl = URL.createObjectURL(blob);
       const anchor = document.createElement('a');
-      anchor.href = URL.createObjectURL(blob);
-      anchor.download = `phavo-config-${dateStr}.json`;
+      anchor.href = blobUrl;
+      anchor.download = `phavo-config-${dateStr}.phavo`;
+      document.body.appendChild(anchor);
       anchor.click();
-      URL.revokeObjectURL(anchor.href);
+      document.body.removeChild(anchor);
+      URL.revokeObjectURL(blobUrl);
     } catch {
       exportError = 'Export failed — please try again.';
     } finally {
@@ -190,7 +188,6 @@
     importSuccess = false;
 
     try {
-      const csrfToken = getCsrfToken();
       const body: { exportJson: string; passphrase?: string } = {
         exportJson: parsedExport.rawJson,
       };
@@ -198,11 +195,10 @@
         body.passphrase = importPassphrase;
       }
 
-      const res = await fetch('/api/v1/config/import', {
+      const res = await fetchWithCsrf('/api/v1/config/import', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-CSRF-Token': csrfToken,
         },
         body: JSON.stringify(body),
       });
@@ -290,7 +286,7 @@
     <!-- Hidden file input -->
     <input
       type="file"
-      accept=".json,application/json"
+      accept=".phavo,.json,application/json"
       class="file-input-hidden"
       bind:this={fileInputEl}
       onchange={handleFileInput}

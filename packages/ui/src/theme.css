@@ -6,6 +6,7 @@
 :root,
 :root[data-theme="dark"] {
   /* Backgrounds */
+  --color-bg:             #000000;  /* alias for --color-bg-base; used as on-accent text color */
   --color-bg-base:        #000000;
   --color-bg-surface:     #0a0a0a;
   --color-bg-elevated:    #141414;

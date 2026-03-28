@@ -1,18 +1,20 @@
 # Phavo
 
-> Modular, self-hosted personal dashboard — beautiful by default, infinitely extensible, yours to own.
+> Modular, self-hosted personal dashboard — beautiful by default, yours to own.
 
-Phavo is the successor to **phaboard**, rebuilt from scratch with a production-grade stack, a proper business model, and a multi-platform roadmap. It ships as a web dashboard first, then expands to desktop, mobile, and cloud.
+Phavo is the successor to **phaboard**, rebuilt from scratch with a production-grade stack, a proper tier model, and a multi-platform roadmap. It ships as a web dashboard first, then expands to desktop and mobile.
 
 ---
 
 ## ✨ Features
 
-- **Drag-and-drop widget layout** — resizable S / M / L / XL grid with snap
-- **Guided setup** — Quick Setup (3 steps) or Full Setup (10 steps)
+- **Command Palette** — `Cmd+K` / `Ctrl+K` to search widgets, navigate settings, run actions, search the web, or ask an AI assistant (Ollama, OpenAI, Claude)
+- **Guided setup** — Quick Setup (3 steps) or Full Setup (10 steps), both fully wired
 - **System monitoring** — CPU, memory, disk, network, temperature, uptime
-- **Integrations** — Pi-hole, RSS feeds, weather (Open-Meteo, no API key needed)
-- **Secure by default** — AES-256-GCM credential storage, HTTPS out of the box, Argon2id passwords
+- **Integrations** — Pi-hole, RSS feeds, links/bookmarks, weather (Open-Meteo, no API key needed)
+- **Widget config via SchemaRenderer** — every widget's settings are auto-rendered from its Zod schema, no custom forms
+- **Import / Export** — full dashboard config as `.phavo` file, with optional passphrase-encrypted credentials
+- **Secure by default** — AES-256-GCM credential storage, CSRF protection, Argon2id passwords, per-IP rate limiting, CSP headers
 - **Self-hosted** — single Docker container, multi-arch (amd64 + arm64 for Raspberry Pi)
 - **Fully offline capable** — Local tier requires no internet after initial activation
 
@@ -21,12 +23,15 @@ Phavo is the successor to **phaboard**, rebuilt from scratch with a production-g
 ## 🚀 Quick Start
 
 ```bash
-docker run -p 3000:3000 -p 3443:3443 -v phavo-data:/data phavo/phavo
+docker run -p 3000:3000 \
+  -v phavo-data:/data \
+  -e PHAVO_SECRET=your-secret-here \
+  phavo/phavo
 ```
 
-Then open [https://localhost:3000](https://localhost:3000) in your browser. On first launch, the setup wizard guides you through the rest.
+Then open [http://localhost:3000](http://localhost:3000) in your browser. The setup wizard guides you through the rest.
 
-### Docker Compose
+### Docker Compose (recommended)
 
 ```yaml
 services:
@@ -34,16 +39,18 @@ services:
     image: phavo/phavo:latest
     ports:
       - "3000:3000"
-      - "3443:3443"
     volumes:
       - phavo-data:/data
     environment:
-      - PHAVO_SECRET=change-me-in-production
+      - PHAVO_SECRET=change-me-to-a-random-string   # required
+      - PHAVO_ENV=production
     restart: unless-stopped
 
 volumes:
   phavo-data:
 ```
+
+> **Important:** Set `PHAVO_SECRET` to a random string of at least 32 characters. The server will not start in production if this is missing or left as the default value.
 
 ---
 
@@ -52,13 +59,13 @@ volumes:
 ### Free Tier
 | Widget | Data |
 |---|---|
-| CPU | Usage %, per-core breakdown, load average |
+| CPU | Usage %, per-core breakdown, load average, model name |
 | Memory | Used / total, swap |
 | Disk | Per-mount usage %, read/write throughput |
 | Network | Upload/download speed, total traffic |
 | Temperature | CPU temp (where available) |
 | Uptime | System uptime, human-readable |
-| Weather | Current conditions + 5-day forecast (Open-Meteo) |
+| Weather | Current conditions + 5-day forecast (Open-Meteo, no API key) |
 
 ### Standard & Local Tier
 | Widget | Details |
@@ -69,19 +76,32 @@ volumes:
 
 ---
 
+## ⌨️ Command Palette
+
+Press `Cmd+K` (macOS) or `Ctrl+K` (Windows/Linux) from anywhere in the dashboard to open the Command Palette.
+
+**Three modes:**
+- **Local search** — instantly find and navigate to widgets, settings, tabs, and actions
+- **Web search** — search with your preferred engine (DuckDuckGo by default, configurable)
+- **AI assistant** — ask questions inline using Ollama (fully local/offline), OpenAI, or Anthropic Claude
+
+AI API keys are stored server-side and never exposed to the browser.
+
+---
+
 ## 💳 Pricing
 
 | | Free | Standard | Local |
 |---|---|---|---|
-| Price | €0 | €7.99 one-time | €19.99 one-time |
+| Price | €0 | €8.99 one-time | €24.99 one-time |
 | Widgets | Core system + weather | All launch widgets | All launch widgets |
 | Tabs | 1 | Unlimited | Unlimited |
-| Auth | phavo.io account | phavo.io account | Local account |
+| Auth | phavo.net account | phavo.net account | Local account |
 | Offline | 24h grace | 72h grace | Fully offline |
-| Branding | Visible | Removable | Removable |
+| Branding | "Powered by Phavo" | Removable | Removable |
 
-**Standard → Local upgrade:** pay the €12.00 difference, no repurchase needed.  
-**14-day money-back guarantee** on all paid tiers.
+**Standard → Local upgrade:** pay the €16.00 difference, no repurchase needed.  
+**14-day money-back guarantee** on all paid tiers via Gumroad.
 
 ---
 
@@ -89,11 +109,10 @@ volumes:
 
 | Phase | Status | Description |
 |---|---|---|
-| **0 — Foundation** | Now | Turborepo monorepo, Figma design system, shared packages, widget schema |
-| **1 — Web Dashboard** | Launch target | SvelteKit dashboard, all launch widgets, Docker multi-arch |
-| **2 — Desktop App** | After Phase 1 | Tauri 2.0 · macOS, Windows, Linux · system tray · auto-update |
-| **3 — Mobile Apps** | After Phase 2 | Tauri 2.0 Mobile · iOS, iPadOS, Android |
-| **4 — Cloud + Agent** | Long-term | Turso, multi-user, widget marketplace, Phavo Agent daemon |
+| **1 — Web Dashboard** | ✅ Complete | SvelteKit dashboard, all launch widgets, Command Palette, Docker multi-arch |
+| **2 — Desktop App** | Planned | Tauri 2.0 · macOS, Windows, Linux · system tray · auto-update |
+| **3 — Mobile Apps** | Planned | Tauri 2.0 Mobile · iOS, iPadOS, Android |
+| **4 — Cloud + Marketplace** | Long-term | Multi-user, widget marketplace, Phavo Agent daemon |
 
 ---
 
@@ -105,21 +124,20 @@ Language:   TypeScript (strict)
 Linting:    Biome
 
 apps/
-  web/        SvelteKit (Phase 1)
+  web/        SvelteKit + Hono (Phase 1 — web dashboard)
   desktop/    Tauri 2.0 (Phase 2)
   mobile/     Tauri 2.0 Mobile (Phase 3)
 
 packages/
   @phavo/ui       Svelte 5 (Runes) component library
-  @phavo/db       Drizzle ORM + libSQL
+  @phavo/db       Drizzle ORM + libSQL + AES-256-GCM crypto
   @phavo/types    Shared TypeScript types & Zod schemas
-  @phavo/agent    Bun daemon for system metrics
+  @phavo/agent    System metrics library
 
-Design:     Figma → Design Tokens → Tailwind CSS v4
-API:        Hono
-Auth:       Better Auth
-Database:   libSQL (local) → Turso (Phase 4)
-Docker:     multi-arch (amd64 + arm64)
+API:        Hono (centralized in one file)
+Auth:       Custom (Argon2id + phavo.net OAuth)
+Database:   libSQL (local SQLite) → Turso (Phase 4)
+Docker:     Multi-arch (amd64 + arm64)
 CI/CD:      GitHub Actions
 ```
 
@@ -127,15 +145,17 @@ CI/CD:      GitHub Actions
 
 ## 🔒 Security
 
-- **Passwords:** Argon2id hashing via Better Auth
-- **Sessions:** HttpOnly + Secure + SameSite=Strict cookies, 7-day idle timeout
-- **Credentials at rest:** AES-256-GCM encryption in libSQL (Pi-hole tokens, RSS auth, etc.)
-- **HTTPS:** Built-in TLS — self-signed by default, Let's Encrypt or custom cert supported
-- **Brute-force protection:** 10 attempts → 5-minute lockout per IP and account
+- **Passwords:** Argon2id hashing
+- **Credentials at rest:** AES-256-GCM encryption (Pi-hole tokens, RSS auth, AI API keys)
+- **Sessions:** HttpOnly + Secure + SameSite=Strict cookies, configurable timeout
+- **CSRF:** HMAC double-submit token on all mutations
+- **Rate limiting:** Per-IP in-memory limiting on all endpoints
+- **CSP:** Content-Security-Policy headers on all pages
+- **Brute-force protection:** 10 attempts → 5-minute lockout per IP
 - **2FA:** TOTP optional on all tiers, compatible with any authenticator app
-- **No telemetry** from the local app by default
+- **No telemetry** from the local app
 
-To report a vulnerability, see [SECURITY.md](SECURITY.md) or email **security@phavo.io**.
+To report a vulnerability, see [SECURITY.md](SECURITY.md) or email **security@phavo.net**.
 
 ---
 
@@ -145,13 +165,14 @@ To report a vulnerability, see [SECURITY.md](SECURITY.md) or email **security@ph
 phavo/
 ├── apps/
 │   ├── web/          # SvelteKit web dashboard (Phase 1)
-│   ├── desktop/      # Tauri 2.0 desktop app (Phase 2)
-│   └── mobile/       # Tauri Mobile (Phase 3)
+│   ├── desktop/      # Tauri 2.0 desktop app (Phase 2, stub)
+│   └── mobile/       # Tauri Mobile (Phase 3, stub)
 ├── packages/
-│   ├── ui/           # @phavo/ui — component library
-│   ├── db/           # @phavo/db — Drizzle + libSQL
+│   ├── ui/           # @phavo/ui — Svelte 5 component library
+│   ├── db/           # @phavo/db — Drizzle + libSQL + crypto
 │   ├── types/        # @phavo/types — shared types & schemas
-│   └── agent/        # @phavo/agent — system metrics daemon
+│   └── agent/        # @phavo/agent — system metrics
+├── docs/             # PRD, Arch Spec, Roadmap
 ├── turbo.json
 ├── docker-compose.yml
 └── Dockerfile
@@ -161,21 +182,32 @@ phavo/
 
 ## 🧑‍💻 Development
 
-**Prerequisites:** [Bun](https://bun.sh) ≥ 1.1.0
+**Prerequisites:** [Bun](https://bun.sh) ≥ 1.3.0
 
 ```bash
 # Install dependencies
 bun install
 
-# Start dev server
+# Create dev environment file
+cat > apps/web/.env << EOF
+PHAVO_SECRET=dev-secret-change-in-production
+PHAVO_PORT=3000
+PHAVO_ENV=development
+PHAVO_DATA_DIR=./.dev-data
+PHAVO_DEV_MOCK_AUTH=true
+EOF
+
+# Start dev server (mock auth enabled — no login required)
 bun run dev
 
-# Typecheck all packages
+# Typecheck
 bun run typecheck
 
 # Lint
 bun run lint
 ```
+
+The dev server starts on port 3000. With `PHAVO_DEV_MOCK_AUTH=true`, you are automatically logged in as a Free tier user — change to `standard` or `local` in `mock-auth.ts` to test other tiers.
 
 ---
 
@@ -184,19 +216,18 @@ bun run lint
 After v1.0 ships, Phavo will be dual-licensed:
 
 - **AGPL-3.0** for open source / self-hosted use
-- **Commercial licence** for the paid tiers (Standard, Local)
+- **Commercial licence** included with Standard and Local tier purchases
 
-A self-compiled AGPL build without a phavo.io account defaults to Free tier behaviour. Tier enforcement is done server-side via phavo.io — there are no code-level locks in the client.
+A self-compiled AGPL build without a phavo.net account defaults to Free tier behaviour. Tier enforcement is server-side via phavo.net — no code-level locks in the client.
 
 ---
 
 ## 🔗 Links
 
-- Website: [phavo.io](https://phavo.io)
-- Docs: [docs.phavo.io](https://docs.phavo.io)
-- Discord: community support & announcements
+- Website: [phavo.net](https://phavo.net)
+- Docs: [docs.phavo.net](https://docs.phavo.net)
 - Issues: [github.com/phabioo/phavo/issues](https://github.com/phabioo/phavo/issues)
 
 ---
 
-*Phavo · phabioo · phavo.io*
+*Phavo · phavo.net · github.com/phabioo/phavo*

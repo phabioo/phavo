@@ -15,6 +15,13 @@
       "when": 1774513647477,
       "tag": "0001_spicy_clea",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1774650812498,
+      "tag": "0002_keen_luminals",
+      "breakpoints": true
     }
   ]
 }

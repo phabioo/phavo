@@ -1,3 +1,5 @@
+import { z } from 'zod';
+
 interface LicenseValidationResult {
   valid: boolean;
   tier: 'free' | 'standard' | 'local';
@@ -8,6 +10,14 @@ interface LicenseValidationResult {
 
 const GRACE_PERIOD_FREE = 24 * 60 * 60 * 1000; // 24 hours
 const GRACE_PERIOD_STANDARD = 72 * 60 * 60 * 1000; // 72 hours
+
+const LicenseValidateResponseSchema = z.object({
+  tier: z.enum(['free', 'standard']),
+});
+
+const LicenseActivateResponseSchema = z.object({
+  activationJwt: z.string().optional(),
+});
 
 export async function validateLicense(
   licenseKey: string,
@@ -32,10 +42,14 @@ export async function validateLicense(
     });
 
     if (response.ok) {
-      const data = (await response.json()) as { tier: 'free' | 'standard' };
+      const raw: unknown = await response.json();
+      const parsed = LicenseValidateResponseSchema.safeParse(raw);
+      if (!parsed.success) {
+        return { valid: false, tier: 'free', error: 'Invalid response from phavo.net' };
+      }
       return {
         valid: true,
-        tier: data.tier,
+        tier: parsed.data.tier,
       };
     }
 
@@ -79,15 +93,16 @@ export async function activateLocalLicense(
       return { valid: false, tier: 'local', error };
     }
 
-    const data = (await response.json()) as { activationJwt?: string };
-    if (!data.activationJwt) {
+    const raw: unknown = await response.json();
+    const parsed = LicenseActivateResponseSchema.safeParse(raw);
+    if (!parsed.success || !parsed.data.activationJwt) {
       return { valid: false, tier: 'local', error: 'Missing activation token from phavo.net' };
     }
 
     return {
       valid: true,
       tier: 'local',
-      activationJwt: data.activationJwt,
+      activationJwt: parsed.data.activationJwt,
     };
   } catch {
     return { valid: false, tier: 'local', error: 'phavo.net unreachable' };

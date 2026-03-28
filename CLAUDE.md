@@ -8,8 +8,8 @@
 
 | Document | Location | What you need from it |
 |---|---|---|
-| `docs/phavo_PRD_v2.5.md` | repo root/docs/ | Product logic, tier model, feature descriptions, decisions |
-| `docs/phavo_arch_spec_v1.7.html` | repo root/docs/ | DB schema, API contracts, auth flows, types, all implementation details |
+| `docs/phavo_PRD_v2.7.md` | repo root/docs/ | Product logic, tier model, feature descriptions, decisions |
+| `docs/phavo_arch_spec_v1.9.html` | repo root/docs/ | DB schema, API contracts, auth flows, types, all implementation details |
 
 If a prompt names a specific section (e.g. "Setup Wizard"), read exactly that section in the arch spec before you start.
 
@@ -159,6 +159,7 @@ All endpoints under `/api/v1/*`. Tier mapping:
 - ✅ CSP headers — full Content-Security-Policy in hooks.server.ts; API routes exempt
 - ✅ Rate limiting — per-IP in-memory limiter (rate-limit.ts); TOTP 5/5min, metrics 60/1min, import 5/10min, default 120/1min; 429 + Retry-After header
 - ⬜ Plugin loading pipeline — `paths.plugins` defined; no loading logic
+- ✅ Version management — single source of truth in root `package.json`; Vite injects `PHAVO_VERSION` at build time; `release:patch/minor/major` scripts; Docker CI tags `phavo/phavo:VERSION + :latest`; GitHub Release workflow; CHANGELOG.md
 
 ### Phase 2 — Desktop app (after Phase 1 launch)
 - ⬜ `apps/desktop/` Tauri 2.0 setup
@@ -246,12 +247,31 @@ const db = createClient({ url: 'file:/data/phavo.db' })
 - ~~Tab limit not enforced client-side~~ — upgrade prompt shown + server-side 403 enforced
 - ~~Locked widget cards layout broken~~ — flex layout fixed, no absolute positioning
 
+### Resolved — Production Audit Fixes ✅
+- ~~CSRF tokens missing from Settings + Widget store~~ — `fetchWithCsrf()` utility in `utils/api.ts`; all internal fetch calls replaced
+- ~~SSRF via /pihole/test~~ — cloud metadata endpoints blocked (169.254.169.254 etc); local IPs allowed for self-hosted Pi-hole
+- ~~Session cookies missing Secure flag~~ — `; Secure` added in production
+- ~~POST /config not Zod-validated~~ — `ConfigPostSchema.safeParse()` with length limits + enum checks
+- ~~Config import not transactional~~ — wrapped in `db.transaction()`; full rollback on failure
+- ~~External APIs not Zod-validated~~ — weather.ts, pihole.ts, license.ts all use safeParse()
+- ~~Notification queue unbounded~~ — capped at 100, oldest dropped on overflow
+- ~~Default PHAVO_SECRET accepted in production~~ — process exits if value is 'change-me'
+- ~~configSchemaVersion missing from schema~~ — added to widgetInstances; migration 0002_keen_luminals.sql generated
+- ~~Health check doesn't verify DB~~ — SELECT 1 check; returns 503 if unreachable
+- ~~partialSessions map unbounded~~ — capped at 1000 pending TOTP sessions
+- ~~Redundant await dbReady in route handlers~~ — all 18 removed; hooks.server.ts guarantees DB ready
+- ~~.svelte-kit in docker tmpfs~~ — removed, doesn't exist at runtime
+
 ### Resolved — Security Hardening ✅
 - ~~`tier` in `DashboardConfig`~~ — removed; tier now only from session
 - ~~Layout fake session fallback~~ — cleared; invalid sessions now redirect to /setup
 - ~~CSRF fallback secret~~ — `PHAVO_SECRET` required in production, process exits if missing
 
 ### Active — pre-Launch
+- **Docker Hub setup** — Account `docker@phavo.net`, Repository `phavo/phavo`, GitHub Secrets `DOCKERHUB_USERNAME` + `DOCKERHUB_TOKEN` needed before first release tag
+- **Hetzner Mail** — MX-Records bei Cloudflare eintragen, Mailboxen anlegen: docker@, security@, hello@, noreply@ phavo.net
+- **Landing Page** phavo.net — Hero, Pricing, Quick-Start, Links
+- **docs.phavo.net** — Installation, Widget-Referenz, Command Palette Guide, FAQ
 - **Windows ESM module resolution** — `packages/types/src/index.ts` uses extensionless relative imports (e.g. `./api`) which fail on Windows; needs `.js` extensions
 - **svelte-check accessibility warnings** — 5 pre-existing warnings in shared UI components (Input, Select, Switch, TabBar, WidgetDrawer); address in dedicated UI polish session
 - **Plugin discovery notification missing** — server start doesn't notify on new plugins; Phase 1.x
@@ -267,4 +287,4 @@ const db = createClient({ url: 'file:/data/phavo.db' })
 ---
 
 *Phavo · phavo.net · github.com/phabioo/phavo*
-*CLAUDE.md v1.8 · PRD ref: v2.5 · Arch Spec ref: v1.7 · Contract: PHAVO_CONTRACT_v3.md · Roadmap: docs/phavo_roadmap_v2.html*
+*CLAUDE.md v2.1 · PRD ref: v2.7 · Arch Spec ref: v1.9 · Contract: PHAVO_CONTRACT_v3.md · Roadmap: docs/phavo_roadmap_v3.html*

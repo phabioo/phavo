@@ -1,6 +1,7 @@
 <script lang="ts">
   import { Badge, Button, Card, Input, icons } from '@phavo/ui';
   import en from '$lib/i18n/en.json';
+  import { fetchWithCsrf } from '$lib/utils/api';
 
   type Tier = 'free' | 'standard' | 'local';
   type AuthMode = 'phavo-io' | 'local' | null;
@@ -44,7 +45,7 @@
     successMessage = '';
 
     try {
-      const response = await fetch('/api/v1/license/activate', {
+      const response = await fetchWithCsrf('/api/v1/license/activate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ licenseKey: licenseKey.trim() }),
@@ -80,7 +81,7 @@
     successMessage = '';
 
     try {
-      const response = await fetch('/api/v1/license/deactivate', { method: 'POST' });
+      const response = await fetchWithCsrf('/api/v1/license/deactivate', { method: 'POST' });
       const payload = (await response.json()) as {
         ok: boolean;
         data?: { reload?: boolean };
@@ -114,7 +115,7 @@
       </div>
       <div>
         <span class="setting-label">{en.settings.licenseKey}</span>
-        <p class="mono licence-key">{licenseKeyMasked ?? en.settings.noLicense}</p>
+        <p class="licence-key" class:mono={!!licenseKeyMasked}>{licenseKeyMasked ?? en.settings.noLicense}</p>
       </div>
     </div>
 
@@ -137,9 +138,11 @@
           bind:value={licenseKey}
         />
         <p class="setting-description">{en.settings.licenseActivationHint}</p>
-        <Button onclick={activateLicense} disabled={activating}>
-          {activating ? en.settings.activatingLicense : en.settings.activateLicense}
-        </Button>
+        <div class="btn-wrap">
+          <Button onclick={activateLicense} disabled={activating}>
+            {activating ? en.settings.activatingLicense : en.settings.activateLicense}
+          </Button>
+        </div>
       </div>
     {:else}
       <div class="form-panel danger-panel">
@@ -185,6 +188,11 @@
 
   .licence-key {
     margin: 0;
+    font-family: var(--font-ui);
+  }
+
+  .btn-wrap {
+    align-self: flex-start;
   }
 
   .info-panel,

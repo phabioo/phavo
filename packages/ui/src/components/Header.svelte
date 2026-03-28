@@ -2,6 +2,8 @@
 import { onMount } from 'svelte';
 import type { Snippet } from 'svelte';
 import * as icons from '../icons/icons';
+import HeaderSearch from './HeaderSearch.svelte';
+import type { SearchEntry, AiProviders } from './HeaderSearch.svelte';
 
 interface Props {
   dashboardName?: string;
@@ -12,6 +14,12 @@ interface Props {
   onBellClick?: () => void;
   onAddWidgetClick?: () => void;
   addWidgetLabel?: string;
+  searchIndex?: SearchEntry[];
+  searchEngineUrl?: string;
+  aiProviders?: AiProviders;
+  tier?: 'free' | 'standard' | 'local';
+  onSearchAction?: (entry: SearchEntry) => void;
+  onAiChat?: (provider: 'ollama' | 'openai' | 'anthropic', query: string) => Promise<string>;
 }
 
 let {
@@ -23,6 +31,12 @@ let {
   onBellClick,
   onAddWidgetClick,
   addWidgetLabel = 'Add widget',
+  searchIndex = [],
+  searchEngineUrl,
+  aiProviders,
+  tier = 'free',
+  onSearchAction,
+  onAiChat,
 }: Props = $props();
 
 let time = $state(new Date());
@@ -52,6 +66,16 @@ const formattedTime = $derived(
       {/if}
     </div>
   </div>
+
+  <HeaderSearch
+    {searchIndex}
+    {searchEngineUrl}
+    {aiProviders}
+    {tier}
+    onAction={onSearchAction}
+    {onAiChat}
+  />
+
   <div class="header-right">
     {#if onAddWidgetClick}
       <button class="add-widget-btn" onclick={onAddWidgetClick} aria-label={addWidgetLabel}>
@@ -143,7 +167,7 @@ const formattedTime = $derived(
     padding: var(--space-1) var(--space-3);
     font-size: 13px;
     font-weight: 500;
-    color: var(--color-accent-text, var(--color-accent));
+    color: var(--color-bg);
     background: var(--color-accent-subtle, transparent);
     border: 1px solid var(--color-accent);
     border-radius: var(--radius-sm, 4px);
@@ -182,7 +206,6 @@ const formattedTime = $derived(
     background: var(--color-bg-hover);
   }
 
-  /* Badge */
   .bell-badge {
     position: absolute;
     top: 2px;

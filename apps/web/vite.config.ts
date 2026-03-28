@@ -1,13 +1,27 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { env } from '@phavo/types/env';
 import { sveltekit } from '@sveltejs/kit/vite';
 import { defineConfig, loadEnv } from 'vite';
+
+const rootPkg = JSON.parse(readFileSync(join(process.cwd(), '../../package.json'), 'utf8'));
 
 export default defineConfig(({ mode }) => {
   const viteEnv = loadEnv(mode, process.cwd(), '');
   process.env.PHAVO_PORT = viteEnv.PHAVO_PORT || process.env.PHAVO_PORT;
 
+  // Inject env vars that SSR code reads via process.env at dev/build time.
+  // Vite does not polyfill process.env for SSR bundles — these must be explicit.
+  const processEnvDefines: Record<string, string> = {
+    'process.env.PHAVO_DEV_MOCK_AUTH': JSON.stringify(
+      viteEnv.PHAVO_DEV_MOCK_AUTH ?? process.env.PHAVO_DEV_MOCK_AUTH ?? '',
+    ),
+    PHAVO_VERSION: JSON.stringify(rootPkg.version),
+  };
+
   return {
     plugins: [sveltekit()],
+    define: processEnvDefines,
     server: {
       port: env.port,
       strictPort: true,

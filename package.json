@@ -1,5 +1,6 @@
 {
   "name": "phavo",
+  "version": "1.0.0",
   "private": true,
   "workspaces": [
     "apps/*",
@@ -11,7 +12,10 @@
     "lint": "biome check .",
     "format": "biome format --write .",
     "typecheck": "turbo run typecheck",
-    "clean": "turbo run clean"
+    "clean": "turbo run clean",
+    "release:patch": "npm version patch && git push && git push --tags",
+    "release:minor": "npm version minor && git push && git push --tags",
+    "release:major": "npm version major && git push && git push --tags"
   },
   "devDependencies": {
     "@biomejs/biome": "latest",

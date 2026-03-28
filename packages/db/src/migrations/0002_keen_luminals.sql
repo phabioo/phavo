@@ -1,0 +1,1 @@
+ALTER TABLE `widget_instances` ADD `config_schema_version` integer DEFAULT 1 NOT NULL;

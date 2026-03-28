@@ -1,14 +1,52 @@
+# ─── Node / Bun ──────────────────────────────────────────────────────────────
 node_modules/
+.cache/
+
+# ─── SvelteKit ───────────────────────────────────────────────────────────────
 .svelte-kit/
 build/
-dist/
+
+# ─── Turborepo ───────────────────────────────────────────────────────────────
+.turbo/
+
+# ─── Dev runtime data ────────────────────────────────────────────────────────
+# Local dev data directories (server creates these at ${PHAVO_DATA_DIR})
+.dev-data/
+.phavo-data/
+
+# Container / production data dir (never committed)
+/data/
+
+# ─── Database ────────────────────────────────────────────────────────────────
 *.db
 *.db-wal
 *.db-shm
+
+# ─── Secrets / environment ───────────────────────────────────────────────────
 .env
 .env.local
-/data/
-*.local
+secret.key
+*.pem
+*.key
+
+# ─── Build outputs ───────────────────────────────────────────────────────────
+dist/
+
+# ─── Logs ────────────────────────────────────────────────────────────────────
+*.log
+
+# ─── OS files ────────────────────────────────────────────────────────────────
 .DS_Store
-.turbo/
-*.turbo/
+Thumbs.db
+desktop.ini
+
+# ─── Editor ──────────────────────────────────────────────────────────────────
+.idea/
+*.swp
+*.swo
+# Keep .vscode/extensions.json — ignore only user-specific settings
+.vscode/settings.json
+
+# ─── Old AI context docs ─────────────────────────────────────────────────────
+CLAUDE_v*.txt
+CLAUDE_v*.md

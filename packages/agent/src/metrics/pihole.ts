@@ -1,6 +1,21 @@
 import type { PiholeMetrics } from '@phavo/types';
+import { z } from 'zod';
 
 export type { PiholeMetrics } from '@phavo/types';
+
+const PiholeApiResponseSchema = z.object({
+  queries: z.object({
+    total: z.number(),
+    blocked: z.number(),
+    percent_blocked: z.number(),
+  }),
+  gravity: z.object({
+    domains_being_blocked: z.number(),
+  }),
+  ftl: z.object({
+    status: z.string(),
+  }),
+});
 
 export async function getPihole(url: string, token: string): Promise<PiholeMetrics> {
   const apiUrl = new URL('/api/stats/summary', url);
@@ -15,11 +30,13 @@ export async function getPihole(url: string, token: string): Promise<PiholeMetri
     throw new Error(`Pi-hole API error: ${response.status} ${response.statusText}`);
   }
 
-  const data = (await response.json()) as {
-    queries: { total: number; blocked: number; percent_blocked: number };
-    gravity: { domains_being_blocked: number };
-    ftl: { status: string };
-  };
+  const raw: unknown = await response.json();
+  const parsed = PiholeApiResponseSchema.safeParse(raw);
+  if (!parsed.success) {
+    throw new Error(`Invalid Pi-hole response: ${parsed.error.issues[0]?.message ?? 'unknown'}`);
+  }
+
+  const data = parsed.data;
 
   return {
     totalQueries: data.queries.total,

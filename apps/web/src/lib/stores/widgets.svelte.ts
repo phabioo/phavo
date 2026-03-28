@@ -10,6 +10,7 @@ import {
 } from '@phavo/types';
 import en from '$lib/i18n/en.json';
 import { notify } from '$lib/stores/notifications.svelte';
+import { fetchWithCsrf } from '$lib/utils/api';
 
 let currentTabId = $state<string>('');
 let tabs = $state<Tab[]>([]);
@@ -74,7 +75,7 @@ export function getWidgetLastSuccess(instanceId: string): number | null {
 
 export async function loadWidgetManifest(): Promise<void> {
   try {
-    const res = await fetch('/api/v1/widgets');
+    const res = await fetchWithCsrf('/api/v1/widgets');
     const json = (await res.json()) as { ok: boolean; data: WidgetManifestEntry[] };
     if (json.ok) widgetManifest = json.data;
   } catch {
@@ -212,7 +213,7 @@ async function fetchWidgetData(def: WidgetDefinition, silent: boolean): Promise<
 
   const request = (async () => {
     try {
-      const res = await fetch(def.dataEndpoint);
+      const res = await fetchWithCsrf(def.dataEndpoint);
       const json = (await res.json()) as { ok: boolean; data?: unknown; error?: string };
 
       if (!json.ok) {
@@ -301,7 +302,7 @@ let piholeFailStreak = 0;
 /** Load all tabs from server and set the first one as active if no tab is active. */
 export async function loadTabs(): Promise<void> {
   try {
-    const res = await fetch('/api/v1/tabs');
+    const res = await fetchWithCsrf('/api/v1/tabs');
     const json = (await res.json()) as { ok: boolean; data: Tab[] };
     if (json.ok) {
       tabs = json.data;
@@ -341,7 +342,7 @@ export async function setActiveTab(id: string): Promise<void> {
 /** Create a new tab via API, then refresh the tab list. */
 export async function createTab(label: string): Promise<{ ok: boolean; error?: string }> {
   try {
-    const res = await fetch('/api/v1/tabs', {
+    const res = await fetchWithCsrf('/api/v1/tabs', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ label }),
@@ -363,7 +364,7 @@ export async function updateTab(
   patch: { label?: string; order?: number },
 ): Promise<void> {
   try {
-    const res = await fetch(`/api/v1/tabs/${encodeURIComponent(id)}`, {
+    const res = await fetchWithCsrf(`/api/v1/tabs/${encodeURIComponent(id)}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(patch),
@@ -381,7 +382,7 @@ export async function updateTab(
 /** Delete a tab. Widgets are reassigned server-side. */
 export async function deleteTab(id: string): Promise<void> {
   try {
-    const res = await fetch(`/api/v1/tabs/${encodeURIComponent(id)}`, { method: 'DELETE' });
+    const res = await fetchWithCsrf(`/api/v1/tabs/${encodeURIComponent(id)}`, { method: 'DELETE' });
     const json = (await res.json()) as { ok: boolean };
     if (json.ok) {
       tabs = tabs.filter((t) => t.id !== id);
@@ -398,7 +399,7 @@ export async function deleteTab(id: string): Promise<void> {
 // ── Widget instances ───────────────────────────────────────────────────
 async function loadWidgetInstances(tabId: string): Promise<void> {
   try {
-    const res = await fetch(`/api/v1/tabs/${encodeURIComponent(tabId)}/widgets`);
+    const res = await fetchWithCsrf(`/api/v1/tabs/${encodeURIComponent(tabId)}/widgets`);
     const json = (await res.json()) as { ok: boolean; data: WidgetInstance[] };
     if (json.ok) {
       widgetInstances = json.data;
@@ -416,7 +417,7 @@ export async function addWidget(
 ): Promise<WidgetInstance | null> {
   if (!currentTabId) return null;
   try {
-    const res = await fetch('/api/v1/widget-instances', {
+    const res = await fetchWithCsrf('/api/v1/widget-instances', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ widgetId, tabId: currentTabId, size }),
@@ -444,7 +445,7 @@ export async function removeWidget(instanceId: string): Promise<void> {
   const prevFailureCounts = widgetFailureCounts;
   removeWidgetInstanceFromStore(instanceId);
   try {
-    const res = await fetch(`/api/v1/widget-instances/${encodeURIComponent(instanceId)}`, {
+    const res = await fetchWithCsrf(`/api/v1/widget-instances/${encodeURIComponent(instanceId)}`, {
       method: 'DELETE',
     });
     const json = (await res.json()) as { ok: boolean };
@@ -528,7 +529,7 @@ export async function updateInstance(
   });
 
   try {
-    await fetch(`/api/v1/widget-instances/${encodeURIComponent(id)}`, {
+    await fetchWithCsrf(`/api/v1/widget-instances/${encodeURIComponent(id)}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(patch),
@@ -557,12 +558,12 @@ export async function swapWidgets(draggedId: string, targetId: string): Promise<
   // Persist both
   try {
     await Promise.all([
-      fetch(`/api/v1/widget-instances/${encodeURIComponent(draggedId)}`, {
+      fetchWithCsrf(`/api/v1/widget-instances/${encodeURIComponent(draggedId)}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ positionX: targetPos.x, positionY: targetPos.y }),
       }),
-      fetch(`/api/v1/widget-instances/${encodeURIComponent(targetId)}`, {
+      fetchWithCsrf(`/api/v1/widget-instances/${encodeURIComponent(targetId)}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ positionX: draggedPos.x, positionY: draggedPos.y }),

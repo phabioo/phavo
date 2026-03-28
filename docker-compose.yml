@@ -9,13 +9,15 @@ services:
     volumes:
       - phavo-data:/data
     environment:
-      - PHAVO_SECRET=${PHAVO_SECRET:-change-me}
+      # Optional: set explicitly for Kubernetes or multi-instance deployments. If unset,
+      # Phavo auto-generates and persists a secret in the data volume on first start.
+      # Never use 'change-me'. Back up your data volume to preserve encrypted data.
+      # - PHAVO_SECRET=your-random-string-here
       - PHAVO_TLS_MODE=${PHAVO_TLS_MODE:-self-signed}
       - PHAVO_DOMAIN=${PHAVO_DOMAIN:-}
     restart: unless-stopped
     read_only: true
     tmpfs:
       - /tmp
-      - /app/apps/web/.svelte-kit
 volumes:
   phavo-data:
