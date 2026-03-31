@@ -12,15 +12,15 @@
     },
     "apps/desktop": {
       "name": "@phavo/desktop",
-      "version": "0.0.1",
+      "version": "1.0.0",
     },
     "apps/mobile": {
       "name": "@phavo/mobile",
-      "version": "0.0.1",
+      "version": "1.0.0",
     },
     "apps/web": {
       "name": "@phavo/web",
-      "version": "0.0.1",
+      "version": "1.0.0",
       "dependencies": {
         "@phavo/agent": "workspace:*",
         "@phavo/db": "workspace:*",
@@ -43,7 +43,7 @@
     },
     "packages/agent": {
       "name": "@phavo/agent",
-      "version": "0.0.1",
+      "version": "1.0.0",
       "dependencies": {
         "@phavo/types": "workspace:*",
         "systeminformation": "^5.22.0",
@@ -52,7 +52,7 @@
     },
     "packages/db": {
       "name": "@phavo/db",
-      "version": "0.0.1",
+      "version": "1.0.0",
       "dependencies": {
         "@libsql/client": "^0.14.0",
         "@phavo/types": "workspace:*",
@@ -65,7 +65,7 @@
     },
     "packages/types": {
       "name": "@phavo/types",
-      "version": "0.0.1",
+      "version": "1.0.0",
       "dependencies": {
         "zod": "^3.23.0",
       },
@@ -75,9 +75,10 @@
     },
     "packages/ui": {
       "name": "@phavo/ui",
-      "version": "0.0.1",
+      "version": "1.0.0",
       "dependencies": {
         "@phavo/types": "workspace:*",
+        "tailwindcss": "^4.1.0",
         "zod": "^3.23.0",
       },
       "devDependencies": {
@@ -535,6 +536,8 @@
     "svelte-check": ["svelte-check@4.4.5", "", { "dependencies": { "@jridgewell/trace-mapping": "^0.3.25", "chokidar": "^4.0.1", "fdir": "^6.2.0", "picocolors": "^1.0.0", "sade": "^1.7.4" }, "peerDependencies": { "svelte": "^4.0.0 || ^5.0.0-next.0", "typescript": ">=5.0.0" }, "bin": { "svelte-check": "bin/svelte-check" } }, "sha512-1bSwIRCvvmSHrlK52fOlZmVtUZgil43jNL/2H18pRpa+eQjzGt6e3zayxhp1S7GajPFKNM/2PMCG+DZFHlG9fw=="],
 
     "systeminformation": ["systeminformation@5.31.5", "", { "os": "!aix", "bin": { "systeminformation": "lib/cli.js" } }, "sha512-5SyLdip4/3alxD4Kh+63bUQTJmu7YMfYQTC+koZy7X73HgNqZSD2P4wOZQWtUncvPvcEmnfIjCoygN4MRoEejQ=="],
+
+    "tailwindcss": ["tailwindcss@4.2.2", "", {}, "sha512-KWBIxs1Xb6NoLdMVqhbhgwZf2PGBpPEiwOqgI4pFIYbNTfBXiKYyWoTsXgBQ9WFg/OlhnvHaY+AEpW7wSmFo2Q=="],
 
     "timers-ext": ["timers-ext@0.1.8", "", { "dependencies": { "es5-ext": "^0.10.64", "next-tick": "^1.1.0" } }, "sha512-wFH7+SEAcKfJpfLPkrgMPvvwnEtj8W4IurvEyrKsDleXnKLCDw71w8jltvfLa8Rm4qQxxT4jmDBYbJG/z7qoww=="],
 

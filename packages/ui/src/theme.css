@@ -1,45 +1,106 @@
-@import url('https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600&family=Geist+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Manrope:wght@200;300;400;500;600;700;800&display=swap');
+@import "tailwindcss";
+@source "./**/*.{svelte,ts}";
 
 /* IRON RULE: Every component in @phavo/ui uses ONLY these variables.
    Zero hardcoded hex values anywhere in component files. */
 
 :root,
 :root[data-theme="dark"] {
+  /* Google Stitch / Material 3 palette */
+  --stitch-primary:                       #ffb954;
+  --stitch-primary-container:             #d4922a;
+  --stitch-primary-fixed:                 #ffddb4;
+  --stitch-primary-fixed-dim:             #ffb954;
+  --stitch-on-primary:                    #452b00;
+  --stitch-on-primary-container:          #4d3000;
+  --stitch-on-primary-fixed:              #291800;
+  --stitch-on-primary-fixed-variant:      #633f00;
+  --stitch-inverse-primary:               #835500;
+
+  --stitch-secondary:                     #e7c08e;
+  --stitch-secondary-container:           #5d421b;
+  --stitch-secondary-fixed:               #ffddb4;
+  --stitch-secondary-fixed-dim:           #e7c08e;
+  --stitch-on-secondary:                  #432c06;
+  --stitch-on-secondary-container:        #d5af7e;
+  --stitch-on-secondary-fixed:            #291800;
+  --stitch-on-secondary-fixed-variant:    #5d421b;
+
+  --stitch-tertiary:                      #8dcdff;
+  --stitch-tertiary-container:            #4ea7e2;
+  --stitch-tertiary-fixed:                #cae6ff;
+  --stitch-tertiary-fixed-dim:            #8dcdff;
+  --stitch-on-tertiary:                   #00344f;
+  --stitch-on-tertiary-container:         #003a58;
+  --stitch-on-tertiary-fixed:             #001e30;
+  --stitch-on-tertiary-fixed-variant:     #004b70;
+
+  --stitch-error:                         #ffb4ab;
+  --stitch-error-container:               #93000a;
+  --stitch-on-error:                      #690005;
+  --stitch-on-error-container:            #ffdad6;
+
+  --stitch-background:                    #000000;
+  --stitch-on-background:                 #e2e2e2;
+  --stitch-surface:                       #131313;
+  --stitch-surface-dim:                   #131313;
+  --stitch-surface-bright:                #393939;
+  --stitch-surface-variant:               #353535;
+  --stitch-surface-container-lowest:      #0e0e0e;
+  --stitch-surface-container-low:         #1b1b1b;
+  --stitch-surface-container:             #1f1f1f;
+  --stitch-surface-container-high:        #2a2a2a;
+  --stitch-surface-container-highest:     #353535;
+  --stitch-on-surface:                    #e2e2e2;
+  --stitch-on-surface-variant:            #d6c4b0;
+  --stitch-outline:                       #9e8e7c;
+  --stitch-outline-variant:               #514536;
+  --stitch-surface-tint:                  #ffb954;
+  --stitch-inverse-surface:               #e2e2e2;
+  --stitch-inverse-on-surface:            #303030;
+
+  --phavo-font-ui-source: 'Manrope', -apple-system, BlinkMacSystemFont, sans-serif;
+  --phavo-font-mono-source: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+
   /* Backgrounds */
-  --color-bg:             #000000;  /* alias for --color-bg-base; used as on-accent text color */
-  --color-bg-base:        #000000;
-  --color-bg-surface:     #0a0a0a;
-  --color-bg-elevated:    #141414;
-  --color-bg-hover:       #1c1c1e;
+  --color-bg:             var(--stitch-background);  /* alias for --color-bg-base; used as on-accent text color */
+  --color-bg-base:        var(--stitch-background);
+  --color-bg-surface:     var(--stitch-surface-container-low);
+  --color-bg-elevated:    var(--stitch-surface-container);
+  --color-bg-hover:       var(--stitch-surface-container-high);
 
   /* Borders */
-  --color-border:         #2a2a2a;
-  --color-border-subtle:  #1c1c1c;
-  --color-border-strong:  #3a3a3a;
+  --color-border:         var(--stitch-outline-variant);
+  --color-border-subtle:  color-mix(in srgb, var(--stitch-outline-variant) 40%, transparent);
+  --color-border-strong:  var(--stitch-outline);
+  --color-border-hover:   var(--stitch-outline);
 
   /* Text */
-  --color-text-primary:   #f5f5f7;
-  --color-text-secondary: #86868b;
-  --color-text-muted:     #48484a;
-  --color-text-inverse:   #000000;
+  --color-text:           var(--stitch-on-surface);
+  --color-text-primary:   var(--stitch-on-surface);
+  --color-text-secondary: var(--stitch-outline);
+  --color-text-muted:     var(--stitch-outline-variant);
+  --color-text-inverse:   var(--stitch-inverse-on-surface);
 
   /* Accent */
-  --color-accent:         #d4922a;
-  --color-accent-subtle:  #b07820;
-  --color-accent-hover:   #d4922a;
-  --color-accent-t:       rgba(212,146,42,.10);
-  --color-accent-text:    #d4922a;
+  --color-accent:         var(--stitch-primary-container);
+  --color-accent-subtle:  var(--stitch-secondary-container);
+  --color-accent-hover:   var(--stitch-primary);
+  --color-accent-t:       color-mix(in srgb, var(--stitch-primary-container) 12%, transparent);
+  --color-accent-text:    var(--stitch-primary);
 
   /* Semantic */
-  --color-danger:         #993c1d;
-  --color-danger-subtle:  #4a1b0c;
-  --color-warning:        #854f0b;
-  --color-warning-subtle: #412402;
-  --color-success:        #d4922a;
+  --color-danger:         var(--stitch-error-container);
+  --color-danger-subtle:  color-mix(in srgb, var(--stitch-error-container) 48%, transparent);
+  --color-warning:        var(--stitch-secondary);
+  --color-warning-subtle: color-mix(in srgb, var(--stitch-secondary-container) 75%, transparent);
+  --color-success:        var(--stitch-primary);
+  --color-info:           var(--stitch-tertiary);
 
   /* Typography */
-  --font-ui:   'Geist', -apple-system, BlinkMacSystemFont, sans-serif;
-  --font-mono: 'Geist Mono', 'SF Mono', monospace;
+  --font-ui:   var(--phavo-font-ui-source);
+  --font-mono: var(--phavo-font-mono-source);
 
   /* Radii */
   --radius-sm: 6px;
@@ -71,6 +132,81 @@
   /* Widget grid */
   --grid-cols: 12;
   --grid-gap: 12px;
+}
+
+@theme inline {
+  --color-background: var(--stitch-background);
+  --color-on-background: var(--stitch-on-background);
+  --color-surface: var(--stitch-surface);
+  --color-surface-dim: var(--stitch-surface-dim);
+  --color-surface-bright: var(--stitch-surface-bright);
+  --color-surface-variant: var(--stitch-surface-variant);
+  --color-surface-container-lowest: var(--stitch-surface-container-lowest);
+  --color-surface-container-low: var(--stitch-surface-container-low);
+  --color-surface-container: var(--stitch-surface-container);
+  --color-surface-container-high: var(--stitch-surface-container-high);
+  --color-surface-container-highest: var(--stitch-surface-container-highest);
+  --color-on-surface: var(--stitch-on-surface);
+  --color-on-surface-variant: var(--stitch-on-surface-variant);
+  --color-outline: var(--stitch-outline);
+  --color-outline-variant: var(--stitch-outline-variant);
+  --color-surface-tint: var(--stitch-surface-tint);
+  --color-inverse-surface: var(--stitch-inverse-surface);
+  --color-inverse-on-surface: var(--stitch-inverse-on-surface);
+
+  --color-primary: var(--stitch-primary);
+  --color-primary-container: var(--stitch-primary-container);
+  --color-primary-fixed: var(--stitch-primary-fixed);
+  --color-primary-fixed-dim: var(--stitch-primary-fixed-dim);
+  --color-on-primary: var(--stitch-on-primary);
+  --color-on-primary-container: var(--stitch-on-primary-container);
+  --color-on-primary-fixed: var(--stitch-on-primary-fixed);
+  --color-on-primary-fixed-variant: var(--stitch-on-primary-fixed-variant);
+  --color-inverse-primary: var(--stitch-inverse-primary);
+
+  --color-secondary: var(--stitch-secondary);
+  --color-secondary-container: var(--stitch-secondary-container);
+  --color-secondary-fixed: var(--stitch-secondary-fixed);
+  --color-secondary-fixed-dim: var(--stitch-secondary-fixed-dim);
+  --color-on-secondary: var(--stitch-on-secondary);
+  --color-on-secondary-container: var(--stitch-on-secondary-container);
+  --color-on-secondary-fixed: var(--stitch-on-secondary-fixed);
+  --color-on-secondary-fixed-variant: var(--stitch-on-secondary-fixed-variant);
+
+  --color-tertiary: var(--stitch-tertiary);
+  --color-tertiary-container: var(--stitch-tertiary-container);
+  --color-tertiary-fixed: var(--stitch-tertiary-fixed);
+  --color-tertiary-fixed-dim: var(--stitch-tertiary-fixed-dim);
+  --color-on-tertiary: var(--stitch-on-tertiary);
+  --color-on-tertiary-container: var(--stitch-on-tertiary-container);
+  --color-on-tertiary-fixed: var(--stitch-on-tertiary-fixed);
+  --color-on-tertiary-fixed-variant: var(--stitch-on-tertiary-fixed-variant);
+
+  --color-error: var(--stitch-error);
+  --color-error-container: var(--stitch-error-container);
+  --color-on-error: var(--stitch-on-error);
+  --color-on-error-container: var(--stitch-on-error-container);
+
+  --color-phavo-bg: var(--color-bg);
+  --color-phavo-bg-base: var(--color-bg-base);
+  --color-phavo-bg-surface: var(--color-bg-surface);
+  --color-phavo-bg-elevated: var(--color-bg-elevated);
+  --color-phavo-bg-hover: var(--color-bg-hover);
+  --color-phavo-border: var(--color-border);
+  --color-phavo-border-subtle: var(--color-border-subtle);
+  --color-phavo-border-strong: var(--color-border-strong);
+  --color-phavo-text: var(--color-text-primary);
+  --color-phavo-text-secondary: var(--color-text-secondary);
+  --color-phavo-text-muted: var(--color-text-muted);
+  --color-phavo-accent: var(--color-accent);
+  --color-phavo-accent-subtle: var(--color-accent-subtle);
+  --color-phavo-danger: var(--color-danger);
+  --color-phavo-warning: var(--color-warning);
+  --color-phavo-success: var(--color-success);
+
+  --font-sans: var(--phavo-font-ui-source);
+  --font-ui: var(--phavo-font-ui-source);
+  --font-mono: var(--phavo-font-mono-source);
 }
 
 /* Base reset */

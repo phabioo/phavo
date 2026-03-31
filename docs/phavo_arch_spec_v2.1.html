@@ -244,8 +244,8 @@ pre {
   border-radius: 20px;
   letter-spacing: .04em;
 }
-.b-free    { background: rgba(15,110,86,.2); color: #d4922a; border: 1px solid #d4922a; }
-.b-std     { background: rgba(83,74,183,.2); color: #cecbf6; border: 1px solid #534ab7; }
+.b-free    { background: rgba(15,110,86,.2); color: #d4922a; border: 1px solid #d4922a; } /* standard+ tier (all tiers) */
+.b-std     { background: rgba(83,74,183,.2); color: #cecbf6; border: 1px solid #534ab7; } /* pro+ tier */
 .b-local   { background: rgba(24,95,165,.2); color: #b5d4f4; border: 1px solid #185fa5; }
 .b-any     { background: var(--bg-elevated); color: var(--text-2); border: 1px solid var(--border-str); }
 .b-auth    { background: rgba(153,60,29,.2); color: #f5c4b3; border: 1px solid #993c1d; }
@@ -523,88 +523,94 @@ pre {
 <body>
 
 <nav id="nav">
-  <div class="nav-logo">
-    <div class="name">Phavo</div>
-    <div class="sub">arch-spec · v1.9</div>
-  </div>
+<div class="nav-logo">
+  <div class="name">Phavo</div>
+  <div class="sub">arch-spec · v2.1</div>
+</div>
 
-  <div class="nav-group">
-    <div class="nav-label">Overview</div>
-    <a href="#overview">System Architecture</a>
-    <a href="#monorepo">Monorepo Layout</a>
-    <a href="#request-lifecycle">Request Lifecycle</a>
-  </div>
+<div class="nav-group">
+  <div class="nav-label">Foundation</div>
+  <a href="#overview">System Architecture</a>
+  <a href="#monorepo">Monorepo Layout</a>
+  <a href="#request-lifecycle">Request Lifecycle</a>
+</div>
 
-  <div class="nav-group">
-    <div class="nav-label">Data</div>
-    <a href="#db-schema">Database Schema</a>
-    <a href="#encryption">Encryption Model</a>
-  </div>
+<div class="nav-group">
+  <div class="nav-label">Database</div>
+  <a href="#db-schema">Database Schema</a>
+  <a href="#plugin-data-table">plugin_data Table</a>
+  <a href="#encryption">Encryption Model</a>
+</div>
 
-  <div class="nav-group">
-    <div class="nav-label">Auth</div>
-    <a href="#auth-free-std">Free / Standard Flow</a>
-    <a href="#auth-local">Local Tier Flow</a>
-    <a href="#auth-session">Session Validation</a>
-    <a href="#tier-enforcement">Tier Enforcement</a>
-  </div>
+<div class="nav-group">
+  <div class="nav-label">Auth</div>
+  <a href="#auth-free-std">Standard / Pro Flow</a>
+  <a href="#auth-local">Local Tier Flow</a>
+  <a href="#auth-session">Session Validation</a>
+  <a href="#tier-enforcement">Tier Enforcement</a>
+</div>
 
-  <div class="nav-group">
-    <div class="nav-label">API</div>
-    <a href="#api-conventions">Conventions</a>
-    <a href="#api-auth">Auth Endpoints</a>
-    <a href="#api-config">Config Endpoints</a>
-    <a href="#api-widgets">Widget Manifest</a>
-    <a href="#api-metrics">Metric Endpoints</a>
-    <a href="#api-integrations">Integration Endpoints</a>
-    <a href="#api-phavio">phavo.net Endpoints</a>
-  </div>
+<div class="nav-group">
+  <div class="nav-label">API</div>
+  <a href="#api-conventions">Conventions</a>
+  <a href="#api-auth">Auth Endpoints</a>
+  <a href="#api-config">Config Endpoints</a>
+  <a href="#api-widgets">Widget Manifest</a>
+  <a href="#api-metrics">Metric Endpoints</a>
+  <a href="#api-integrations">Integration Endpoints</a>
+  <a href="#api-plugins">Plugin Endpoints</a>
+  <a href="#api-phavio">phavo.net Endpoints</a>
+</div>
 
-  <div class="nav-group">
-    <div class="nav-label">Widgets</div>
-    <a href="#widget-manifest">Split Manifest</a>
-    <a href="#widget-data-flow">Data Flow</a>
-    <a href="#widget-registry">Registry</a>
-  </div>
+<div class="nav-group">
+  <div class="nav-label">Widgets</div>
+  <a href="#widget-manifest">Split Manifest</a>
+  <a href="#widget-data-flow">Data Flow</a>
+  <a href="#widget-registry">Registry</a>
+</div>
 
-  <div class="nav-group">
-    <div class="nav-label">Plugins</div>
-    <a href="#plugin-loading">Loading Pipeline</a>
-    <a href="#plugin-permissions">Permission System</a>
-    <a href="#plugin-sandbox">Sandboxing</a>
-    <a href="#plugin-sdk-api">SDK API Reference</a>
-    <a href="#plugin-versioning">API Versioning</a>
-    <a href="#plugin-devloop">Dev Loop</a>
-  </div>
+<div class="nav-group">
+  <div class="nav-label">Plugins</div>
+  <a href="#plugin-loading">Loading Pipeline</a>
+  <a href="#plugin-permissions">Permission System</a>
+  <a href="#plugin-sandbox">Sandboxing</a>
+  <a href="#plugin-sdk-api">SDK API Reference</a>
+  <a href="#plugin-versioning">API Versioning</a>
+  <a href="#plugin-devloop">Dev Loop</a>
+</div>
 
-  <div class="nav-group">
-    <div class="nav-label">Platform</div>
-    <a href="#platform-abstraction">Platform Abstraction</a>
-    <a href="#tauri-sidecar">Tauri Sidecar (Phase 2)</a>
-  </div>
+<div class="nav-group">
+  <div class="nav-label">Platform</div>
+  <a href="#platform-abstraction">Platform Abstraction</a>
+  <a href="#tauri-sidecar">Desktop App (Phase 2)</a>
+</div>
 
-  <div class="nav-group">
-    <div class="nav-label">Features</div>
-    <a href="#command-palette">Command Palette</a>
-    <a href="#version-management">Version Management</a>
-    <a href="#web-presence">Web Presence</a>
-    <a href="#widget-states">Widget States</a>
-    <a href="#schema-renderer">Schema Renderer</a>
-    <a href="#plugin-discovery">Plugin Discovery</a>
-    <a href="#setup-wizard">Setup Wizard</a>
-    <a href="#update-mechanism">Update Mechanism</a>
-    <a href="#license-ui">Licence UI</a>
-    <a href="#widget-settings">Widget Config (Settings)</a>
-    <a href="#import-export">Import / Export</a>
-    <a href="#mobile">Mobile Responsiveness</a>
-  </div>
+<div class="nav-group">
+  <div class="nav-label">Features</div>
+  <a href="#widget-states">Widget States</a>
+  <a href="#schema-renderer">Schema Renderer</a>
+  <a href="#plugin-discovery">Plugin Discovery</a>
+  <a href="#version-management">Version Management</a>
+  <a href="#web-presence">Web Presence</a>
+  <a href="#setup-wizard">Setup Wizard</a>
+  <a href="#update-mechanism">Update Mechanism</a>
+  <a href="#license-ui">Licence UI</a>
+  <a href="#widget-settings">Widget Config (Settings)</a>
+  <a href="#command-palette">Command Palette</a>
+  <a href="#settings-plugins">Settings → Plugins</a>
+  <a href="#settings-appearance">Settings → Appearance</a>
+  <a href="#backup-export">Backup &amp; Export</a>
+  <a href="#mobile">Mobile Responsiveness</a>
+  <a href="#telemetry">Opt-In Telemetry</a>
+</div>
 
-  <div class="nav-group">
-    <div class="nav-label">Security</div>
-    <a href="#csp">CSP Headers</a>
-    <a href="#rate-limits">Rate Limits</a>
-    <a href="#sec-decisions">Security Decisions</a>
-  </div>
+<div class="nav-group">
+  <div class="nav-label">Security</div>
+  <a href="#csp">CSP Headers</a>
+  <a href="#rate-limits">Rate Limits</a>
+  <a href="#sec-decisions">Security Decisions</a>
+</div>
+
 </nav>
 
 <main>
@@ -659,14 +665,15 @@ pre {
 │   ├── db/                     <span class="cm">← @phavo/db — Drizzle schema + libSQL client</span>
 │   │   └── src/crypto.ts       <span class="cm">← AES-256-GCM encrypt/decrypt (Web Crypto)</span>
 │   ├── types/                  <span class="cm">← @phavo/types — Zod schemas, shared types</span>
-│   └── agent/                  <span class="cm">← @phavo/agent — metric functions (library)</span>
+│   ├── agent/                  <span class="cm">← @phavo/agent — metric functions (library)</span>
+│   └── plugin-sdk/             <span class="cm">← @phavo/plugin-sdk — internal SDK (Phase 1); npm publish in Phase 4</span>
 ├── turbo.json
 ├── biome.json
 ├── Dockerfile
 └── docker-compose.yml</pre>
 
 <div class="callout">
-  <strong>Dependency direction:</strong> apps/web → packages/{ui,db,types,agent}. Packages never import from apps. @phavo/db → @phavo/types. @phavo/agent → @phavo/types. @phavo/ui has no package dependencies (peer: svelte).
+  <strong>Dependency direction:</strong> apps/web → packages/{ui,db,types,agent,plugin-sdk}. Packages never import from apps. @phavo/db → @phavo/types. @phavo/agent → @phavo/types. @phavo/plugin-sdk → @phavo/types. @phavo/ui has no package dependencies (peer: svelte).
 </div>
 </section>
 
@@ -736,7 +743,7 @@ pre {
     <tbody>
       <tr><td class="pk">id</td><td class="type">text PK</td><td class="nn">NOT NULL</td><td class="note">32-byte random, base64url — the cookie value</td></tr>
       <tr><td class="fk">userId</td><td class="type">text FK</td><td class="nn">NOT NULL</td><td class="note">→ users.id</td></tr>
-      <tr><td>tier</td><td class="type">text</td><td class="nn">NOT NULL</td><td class="note">'free' | 'standard' | 'local' — set by server on login only</td></tr>
+      <tr><td>tier</td><td class="type">text</td><td class="nn">NOT NULL</td><td class="note">'standard' | 'pro' | 'local' — set by server on login only</td></tr>
       <tr><td>authMode</td><td class="type">text</td><td class="nn">NOT NULL</td><td class="note">'phavo-net' | 'local' <em>(migrated from 'phavo-io')</em></td></tr>
       <tr><td>validatedAt</td><td class="type">integer</td><td class="nn">NOT NULL</td><td class="note">Unix ms. Last successful phavo.net validation.</td></tr>
       <tr><td>graceUntil</td><td class="type">integer</td><td>nullable</td><td class="note">Unix ms. Session valid offline until this time. Free: +24h, Std: +72h from validatedAt.</td></tr>
@@ -763,7 +770,7 @@ pre {
 <div class="schema-table">
   <div class="schema-header">
     <span class="schema-name">tabs</span>
-    <span class="schema-desc">Named dashboard tabs. Free tier: server enforces max 1 tab via requireTier.</span>
+    <span class="schema-desc">Named dashboard tabs. Standard tier: server enforces max 1 tab via requireTier.</span>
   </div>
   <table>
     <thead><tr><th>Column</th><th>Type</th><th>Null</th><th>Notes</th></tr></thead>
@@ -826,7 +833,7 @@ pre {
       <tr><td class="pk">id</td><td class="type">text PK</td><td class="nn">NOT NULL</td><td class="note">UUID</td></tr>
       <tr><td>licenseKey</td><td class="type">text</td><td class="nn">NOT NULL</td><td class="note">Gumroad licence key</td></tr>
       <tr><td>tier</td><td class="type">text</td><td class="nn">NOT NULL</td><td class="note">'local' (only Local tier activates here)</td></tr>
-      <tr><td>activationJwt</td><td class="type">text</td><td class="nn">NOT NULL</td><td class="note">Signed JWT from phavo.net. Payload: { instanceId, tier, activatedAt }. RS256.</td></tr>
+      <tr><td>activationJwt</td><td class="type">text</td><td class="nn">NOT NULL</td><td class="note">Signed JWT from phavo.net. Payload: { instanceId, tier, licenseKey, activatedAt, iss }. Ed25519.</td></tr>
       <tr><td>instanceIdentifier</td><td class="type">text</td><td class="nn">NOT NULL</td><td class="note">Stable UUID bound to Docker volume (generated once, stored in /data/instance.id)</td></tr>
       <tr><td>activatedAt</td><td class="type">integer</td><td class="nn">NOT NULL</td><td class="note">Unix ms</td></tr>
     </tbody>
@@ -835,8 +842,51 @@ pre {
 </section>
 
 <!-- ══════════════════════════════════════════════════ -->
+<section id="plugin-data-table">
+<h2>plugin_data Table</h2>
+
+<p>Key-value store for plugin persistence. Plugins cannot create new DB tables — all persistent data goes through this table via <code>WidgetContext.store</code>.</p>
+
+<div class="schema-block">
+  <div class="schema-header">
+    <span class="schema-name">plugin_data</span>
+    <span class="schema-desc">Plugin key-value persistence. Namespaced per plugin_id.</span>
+  </div>
+  <table>
+    <thead><tr><th>Column</th><th>Type</th><th>Null</th><th>Notes</th></tr></thead>
+    <tbody>
+      <tr><td class="pk">plugin_id</td><td class="type">text PK</td><td class="nn">NOT NULL</td><td class="note">Reverse-DNS plugin ID (e.g. "io.phavo.cpu"). Part of composite primary key.</td></tr>
+      <tr><td class="pk">key</td><td class="type">text PK</td><td class="nn">NOT NULL</td><td class="note">Arbitrary key string. Part of composite primary key.</td></tr>
+      <tr><td>value</td><td class="type">text</td><td>nullable</td><td class="note">JSON-serialised value. Null = deleted / unset.</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<pre><span class="cm">// Accessed via WidgetContext.store (never via raw SQL):
+// ctx.store.set('lastRun', JSON.stringify(timestamp))
+// ctx.store.get('lastRun')   // returns string | null
+// ctx.store.delete('lastRun')
+
+// Quota: 10MB per plugin_id — enforced in ctx.store.set()
+// Exceeding quota → { ok: false, error: 'Plugin data quota exceeded (10MB)'}
+
+// Automatic cleanup: when a plugin is deleted, all plugin_data rows
+// with that plugin_id are deleted in the same transaction.</span></pre>
+</section>
+
+<!-- ══════════════════════════════════════════════════ -->
 <section id="encryption">
 <h2>Encryption Model</h2>
+
+<div class="callout info">
+  <strong>Algorithm scope — important distinction:</strong>
+  <ul style="margin:.4rem 0 0 1.2rem;line-height:1.8">
+    <li><strong>AES-256-GCM</strong> — data encryption at rest (credentials, config exports). Symmetric, uses a key derived from <code>PHAVO_SECRET</code> via HKDF-SHA256.</li>
+    <li><strong>Ed25519</strong> — digital signatures only (activation JWT verification, first-party plugin signing, Tauri update signing). Never used for encryption.</li>
+    <li><strong>Argon2id</strong> — password hashing. One-way, not reversible.</li>
+    <li><strong>PBKDF2-SHA256</strong> — key derivation for passphrase-protected config exports only.</li>
+  </ul>
+</div>
 
 <p>All sensitive values (credentials, widget configs containing secrets, TOTP secrets) are encrypted using AES-256-GCM via the Web Crypto API (<code>crypto.subtle</code>), available natively in Bun.</p>
 
@@ -868,7 +918,13 @@ pre {
 }</pre>
 
 <h3>Local Tier — Activation JWT</h3>
-<p>For Local tier, phavo.net issues an RS256-signed JWT after activation. The JWT public key is embedded in the Phavo binary at build time.</p>
+
+<div class="callout info">
+  <strong>Ed25519 = signing only, not encryption.</strong> Ed25519 is used exclusively to <em>sign and verify</em> the activation JWT — it does not encrypt any data. Credential encryption is handled separately by AES-256-GCM. These are distinct systems.
+</div>
+
+<p>phavo.net issues an <strong>Ed25519-signed JWT</strong> after activation. <strong>Two</strong> Ed25519 public keys are embedded in the Phavo binary (current + next), enabling key rotation without breaking existing installs.</p>
+
 <pre><span class="cm">JWT Payload (issued by phavo.net):</span>
 {
   <span class="str">"instanceId"</span>: <span class="str">"uuid-of-docker-volume"</span>,
@@ -878,17 +934,27 @@ pre {
   <span class="str">"iss"</span>:         <span class="str">"phavo.net"</span>
 }
 
-<span class="cm">On every server start:</span>
+<span class="cm">On every server start — verifies against BOTH embedded keys:</span>
 <span class="kw">const</span> jwt = db.select(licenseActivation).activationJwt
-<span class="kw">const</span> valid = verifyRS256(jwt, EMBEDDED_PUBLIC_KEY)
-<span class="kw">if</span> (!valid) → fall back to <span class="str">'free'</span> tier behaviour</pre>
+<span class="kw">const</span> valid = verifyEd25519(jwt, CURRENT_PUBLIC_KEY) || verifyEd25519(jwt, NEXT_PUBLIC_KEY)
+<span class="kw">if</span> (!valid) → fall back to <span class="str">'standard'</span> tier behaviour</pre>
+
+<h3>Key Rotation Policy</h3>
+<div class="tbl-wrap"><table>
+<thead><tr><th>Key</th><th>Location</th><th>Rotation trigger</th><th>Process</th></tr></thead>
+<tbody>
+  <tr><td>Activation JWT signing key</td><td class="note">phavo.net server (private key never leaves phavo.net)</td><td class="note">Compromise or annual schedule</td><td class="note">Ship Phavo release embedding new public key as NEXT_PUBLIC_KEY → 90-day overlap period → retire old key in following release</td></tr>
+  <tr><td>First-party plugin signing key</td><td class="note">GitHub Actions Secret only</td><td class="note">Compromise</td><td class="note">Revoke old key, generate new keypair, update Secret, ship release with new public key + re-signed plugins</td></tr>
+  <tr><td>Tauri update signing key</td><td class="note">GitHub Actions Secret only</td><td class="note">Compromise</td><td class="note">Same process as plugin key — new release required</td></tr>
+</tbody>
+</table></div>
 </section>
 
 <!-- ══════════════════════════════════════════════════ -->
 <section id="auth-free-std">
-<h2>Auth Flow — Free / Standard (phavo.net)</h2>
+<h2>Auth Flow — Standard / Pro (phavo.net)</h2>
 
-<p>Free and Standard users authenticate via phavo.net OAuth. The local Phavo server never sees or stores phavo.net passwords.</p>
+<p>Standard and Pro users authenticate via phavo.net OAuth. The local Phavo server never sees or stores phavo.net passwords.</p>
 
 <div class="seq">
   <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;margin-bottom:12px;">
@@ -906,7 +972,7 @@ pre {
 <span class="acc">6.</span>            Server  ─── POST /api/oauth/token ──────────►  phavo.net
 <span class="acc">7.</span>                    ◄── { access_token, user } ──────────  phavo.net
 <span class="acc">8.</span>            Server  ─── POST /api/license/validate ──────►  phavo.net
-<span class="acc">9.</span>                    ◄── { tier: 'free'|'standard' } ──────  phavo.net
+<span class="acc">9.</span>                    ◄── { tier: 'standard'|'pro' } ──  phavo.net
 <span class="acc">10.</span>           Server  ─── INSERT sessions({ tier, graceUntil }) ─►  libSQL
 <span class="acc">11.</span>           Server  ─── INSERT/UPDATE users ───────────────►  libSQL
 <span class="acc">12.</span> Browser   ◄─── Set-Cookie: session=&lt;32-byte-token&gt;  ──  Server
@@ -915,7 +981,7 @@ pre {
 </div>
 
 <div class="callout warn">
-  <strong>Grace period:</strong> At step 9, the server calculates <code>graceUntil = Date.now() + (tier === 'free' ? 86400000 : 259200000)</code>. If phavo.net is unreachable at step 8, the server checks whether the existing session's <code>graceUntil</code> is still in the future. If yes, the existing session is refreshed. If no, login is rejected with a "phavo.net unreachable — grace period expired" error.
+  <strong>Grace period:</strong> At step 9, the server calculates <code>graceUntil = Date.now() + (tier === 'standard' ? 86400000 : 259200000)</code>. If phavo.net is unreachable at step 8, the server checks whether the existing session's <code>graceUntil</code> is still in the future. If yes, the existing session is refreshed. If no, login is rejected with a "phavo.net unreachable — grace period expired" error. Standard tier: 24h grace. Pro tier: 72h grace.
 </div>
 </section>
 
@@ -929,7 +995,7 @@ pre {
 <div class="seq">
   <pre style="margin:0;background:transparent;border:none;padding:0;font-size:11.5px;line-height:1.9;color:var(--text-2)"><span class="acc">1.</span> Browser  ──── POST /api/v1/auth/login { licenseKey, username, password } ─►  Server
 <span class="acc">2.</span>          Server  ─── POST /api/license/activate { licenseKey, instanceId } ──►  phavo.net
-<span class="acc">3.</span>                  ◄── { activationJwt: &lt;RS256-signed-JWT&gt; } ─────────────────  phavo.net
+<span class="acc">3.</span>                  ◄── { activationJwt: &lt;Ed25519-signed-JWT&gt; } ─────────────────  phavo.net
 <span class="acc">4.</span>          Server  ─── INSERT licenseActivation({ activationJwt }) ─────────────►  libSQL
 <span class="acc">5.</span>          Server  ─── INSERT users({ passwordHash: argon2id(password) }) ────►  libSQL
 <span class="acc">6.</span>          Server  ─── INSERT sessions({ tier: 'local', graceUntil: null }) ──►  libSQL
@@ -942,7 +1008,7 @@ pre {
 <span class="acc">2.</span>          Server  ─── SELECT passwordHash FROM users ────────────────────────►  libSQL
 <span class="acc">3.</span>          Server  ─── argon2id.verify(password, hash) <span class="cm">[in-process]</span>
 <span class="acc">4.</span>          Server  ─── SELECT activationJwt FROM licenseActivation ───────────►  libSQL
-<span class="acc">5.</span>          Server  ─── verifyRS256(jwt, EMBEDDED_PUBLIC_KEY) <span class="cm">[in-process]</span>
+<span class="acc">5.</span>          Server  ─── verifyEd25519(jwt, EMBEDDED_PUBLIC_KEY) <span class="cm">[in-process — no network call]</span>
 <span class="acc">6.</span>          Server  ─── INSERT sessions({ tier: 'local' }) ─────────────────────►  libSQL
 <span class="acc">7.</span> Browser  ◄──────── Set-Cookie: session=&lt;32-byte-token&gt; ──────────────────  Server
           <span class="cm">         ← No network call to phavo.net required at any point</span></pre>
@@ -973,7 +1039,7 @@ pre {
 <h3>Middleware Implementation</h3>
 <pre><span class="cm">// apps/web/src/lib/server/middleware/requireTier.ts</span>
 
-<span class="kw">const</span> TIER_RANK: <span class="ty">Record</span>&lt;<span class="ty">Tier</span>, <span class="ty">number</span>&gt; = { free: <span class="num">0</span>, standard: <span class="num">1</span>, local: <span class="num">2</span> }
+<span class="kw">const</span> TIER_RANK: <span class="ty">Record</span>&lt;<span class="ty">Tier</span>, <span class="ty">number</span>&gt; = { standard: <span class="num">0</span>, pro: <span class="num">1</span>, local: <span class="num">2</span> }
 
 <span class="kw">export function</span> <span class="fn">requireTier</span>(minimum: <span class="ty">Tier</span>) {
   <span class="kw">return async</span> (c: <span class="ty">Context</span>, next: <span class="ty">Next</span>) =&gt; {
@@ -1000,9 +1066,9 @@ pre {
 <tbody>
   <tr><td><code>POST /auth/login</code></td><td><span class="badge b-pub">public</span></td><td class="note">No session required. Rate-limited.</td></tr>
   <tr><td><code>GET /widgets</code>, <code>GET /config</code>, <code>GET /auth/session</code></td><td><span class="badge b-any">any (session)</span></td><td class="note">Any authenticated user</td></tr>
-  <tr><td><code>GET /cpu</code>, <code>/memory</code>, <code>/disk</code>, <code>/network</code>, <code>/temperature</code>, <code>/uptime</code>, <code>/weather</code></td><td><span class="badge b-free">free+</span></td><td class="note">All tiers — requireSession()</td></tr>
-  <tr><td><code>GET /pihole</code>, <code>POST /pihole/test</code>, <code>GET /rss</code>, <code>GET /links</code></td><td><span class="badge b-std">standard+</span></td><td class="note">requireTier('standard') — local counts as ≥ standard</td></tr>
-  <tr><td><code>POST /config</code>, <code>GET /config/export</code>, <code>POST /config/import</code></td><td><span class="badge b-any">any (session)</span></td><td class="note">Tab limit enforced separately: Free max 1 tab checked in handler</td></tr>
+  <tr><td><code>GET /cpu</code>, <code>/memory</code>, <code>/disk</code>, <code>/network</code>, <code>/temperature</code>, <code>/uptime</code>, <code>/weather</code></td><td><span class="badge b-free">pro+</span></td><td class="note">All tiers — requireSession()</td></tr>
+  <tr><td><code>GET /pihole</code>, <code>POST /pihole/test</code>, <code>GET /rss</code>, <code>GET /links</code></td><td><span class="badge b-std">pro+</span></td><td class="note">requireTier('pro') — Pro and Local tiers</td></tr>
+  <tr><td><code>POST /config</code>, <code>GET /config/export</code>, <code>POST /config/import</code></td><td><span class="badge b-any">any (session)</span></td><td class="note">Tab limit enforced separately: Standard max 1 tab checked in handler</td></tr>
   <tr><td><code>GET /update/check</code></td><td><span class="badge b-any">any (session)</span></td><td class="note">Rate-limited: 1/hour. Cached in-memory.</td></tr>
   <tr><td><code>GET /api/v1/plugins/:id/*</code></td><td>per plugin manifest</td><td class="note">Plugin's declared tier enforced by same middleware</td></tr>
 </tbody>
@@ -1057,7 +1123,7 @@ pre {
 <span class="cm">// Local auth (first activation)</span>
 { <span class="str">"authMode"</span>: <span class="str">"local"</span>, <span class="str">"username"</span>: <span class="ty">string</span>, <span class="str">"password"</span>: <span class="ty">string</span>, <span class="str">"licenseKey"</span>: <span class="ty">string</span> }</pre>
     <div class="ep-label">Response 200</div>
-    <pre>{ <span class="str">"ok"</span>: <span class="kw">true</span>, <span class="str">"data"</span>: { <span class="str">"tier"</span>: <span class="str">"free"</span> | <span class="str">"standard"</span> | <span class="str">"local"</span> } }
+    <pre>{ <span class="str">"ok"</span>: <span class="kw">true</span>, <span class="str">"data"</span>: { <span class="str">"tier"</span>: <span class="str">"standard"</span> | <span class="str">"pro"</span> | <span class="str">"local"</span> } }
 <span class="cm">// + Set-Cookie: session=&lt;token&gt; (HttpOnly, Secure, SameSite=Strict)</span></pre>
     <div class="ep-label">Rate limit</div>
     <pre><span class="num">10</span> requests per <span class="num">5</span> min per IP + per account. Returns <span class="num">429</span> on exceed.</pre>
@@ -1121,7 +1187,7 @@ pre {
 {
   setupComplete: <span class="ty">boolean</span>,
   dashboardName: <span class="ty">string</span>,
-  tier: <span class="str">"free"</span> | <span class="str">"standard"</span> | <span class="str">"local"</span>,  <span class="cm">// read from session.tier</span>
+  tier: <span class="str">"standard"</span> | <span class="str">"pro"</span> | <span class="str">"local"</span>,  <span class="cm">// read from session.tier</span>
   tabs: <span class="ty">Tab</span>[],
   location?: { name: <span class="ty">string</span>, latitude: <span class="ty">number</span>, longitude: <span class="ty">number</span> }
 }</pre>
@@ -1138,7 +1204,7 @@ pre {
   <div class="endpoint-body">
     <div class="ep-label">Request</div>
     <pre><span class="ty">Partial</span>&lt;<span class="ty">DashboardConfig</span>&gt;   <span class="cm">// Zod-validated. Merged into existing config.</span>
-<span class="cm">// Tab count > 1 rejected with 403 for free tier (checked in handler)</span></pre>
+<span class="cm">// Tab count > 1 rejected with 403 for standard tier (checked in handler)</span></pre>
   </div>
 </div>
 
@@ -1153,7 +1219,7 @@ pre {
     <div class="ep-label">Query params</div>
     <pre>?includeCredentials=true   <span class="cm">// optional. If present, requires body: { passphrase: string }</span></pre>
     <div class="ep-label">Response 200</div>
-    <pre><span class="cm">Content-Disposition: attachment; filename="phavo-config-export.json"</span>
+    <pre><span class="cm">Content-Disposition: attachment; filename="phavo-backup-YYYY-MM-DD.phavo"</span>
 {
   version: <span class="str">"1"</span>,
   exportedAt: <span class="ty">number</span>,
@@ -1177,7 +1243,7 @@ pre {
     <pre>{ exportJson: <span class="ty">string</span>, passphrase?: <span class="ty">string</span> }
 <span class="cm">// Zod-validates the export envelope before applying.
 // Widgets with missing credentials get configEncrypted = null + a notification queued.
-// Tab count capped to 1 for free tier if import contains multiple tabs.
+// Tab count capped to 1 for standard tier if import contains multiple tabs.
 // setupComplete is NOT imported — preserves the instance's own setup state.</span></pre>
   </div>
 </div>
@@ -1200,11 +1266,11 @@ pre {
   widgets: (<span class="ty">WidgetDefinition</span> | <span class="ty">WidgetTeaserDefinition</span>)[]
 }}
 
-<span class="cm">// For a FREE user, response contains:</span>
+<span class="cm">// For a STANDARD user (free tier), response contains:</span>
 <span class="cm">// 7 full WidgetDefinitions (cpu, memory, disk, network, temp, uptime, weather)</span>
 <span class="cm">// 3 WidgetTeaserDefinitions (pihole, rss, links) — only { id, name, description, tier, locked: true }</span>
 
-<span class="cm">// For STANDARD / LOCAL user, response contains:</span>
+<span class="cm">// For PRO / LOCAL user, response contains:</span>
 <span class="cm">// 10 full WidgetDefinitions — no teasers</span></pre>
   </div>
 </div>
@@ -1219,13 +1285,13 @@ pre {
 <div class="tbl-wrap"><table>
 <thead><tr><th>Method</th><th>Path</th><th>Tier</th><th>Cache TTL</th><th>Response data type</th></tr></thead>
 <tbody>
-  <tr><td class="method get">GET</td><td><code>/api/v1/cpu</code></td><td class="tier-free">free+</td><td>5 000 ms</td><td class="type">CpuMetrics</td></tr>
-  <tr><td class="method get">GET</td><td><code>/api/v1/memory</code></td><td class="tier-free">free+</td><td>5 000 ms</td><td class="type">MemoryMetrics</td></tr>
-  <tr><td class="method get">GET</td><td><code>/api/v1/disk</code></td><td class="tier-free">free+</td><td>5 000 ms</td><td class="type">DiskMetrics[]</td></tr>
-  <tr><td class="method get">GET</td><td><code>/api/v1/network</code></td><td class="tier-free">free+</td><td>5 000 ms</td><td class="type">NetworkMetrics</td></tr>
-  <tr><td class="method get">GET</td><td><code>/api/v1/temperature</code></td><td class="tier-free">free+</td><td>10 000 ms</td><td class="type">TemperatureMetrics</td></tr>
-  <tr><td class="method get">GET</td><td><code>/api/v1/uptime</code></td><td class="tier-free">free+</td><td>30 000 ms</td><td class="type">UptimeMetrics</td></tr>
-  <tr><td class="method get">GET</td><td><code>/api/v1/weather</code></td><td class="tier-free">free+</td><td>900 000 ms</td><td class="type">WeatherMetrics</td></tr>
+  <tr><td class="method get">GET</td><td><code>/api/v1/cpu</code></td><td class="tier-free">standard+</td><td>5 000 ms</td><td class="type">CpuMetrics</td></tr>
+  <tr><td class="method get">GET</td><td><code>/api/v1/memory</code></td><td class="tier-free">standard+</td><td>5 000 ms</td><td class="type">MemoryMetrics</td></tr>
+  <tr><td class="method get">GET</td><td><code>/api/v1/disk</code></td><td class="tier-free">standard+</td><td>5 000 ms</td><td class="type">DiskMetrics[]</td></tr>
+  <tr><td class="method get">GET</td><td><code>/api/v1/network</code></td><td class="tier-free">standard+</td><td>5 000 ms</td><td class="type">NetworkMetrics</td></tr>
+  <tr><td class="method get">GET</td><td><code>/api/v1/temperature</code></td><td class="tier-free">standard+</td><td>10 000 ms</td><td class="type">TemperatureMetrics</td></tr>
+  <tr><td class="method get">GET</td><td><code>/api/v1/uptime</code></td><td class="tier-free">standard+</td><td>30 000 ms</td><td class="type">UptimeMetrics</td></tr>
+  <tr><td class="method get">GET</td><td><code>/api/v1/weather</code></td><td class="tier-free">standard+</td><td>900 000 ms</td><td class="type">WeatherMetrics</td></tr>
 </tbody>
 </table></div>
 
@@ -1241,13 +1307,119 @@ pre {
 
 <!-- ══════════════════════════════════════════════════ -->
 <section id="api-integrations">
-<h2>API — Integration Endpoints</h2>
+<h2>API — Integration, System &amp; New Widget Endpoints</h2>
+
+<div class="endpoint">
+  <div class="endpoint-header">
+    <span class="ep-method m-get">GET</span>
+    <span class="ep-path">/api/v1/system</span>
+    <span class="badge b-free">standard+</span>
+    <span class="ep-desc">Combined system overview (all metrics in one call)</span>
+  </div>
+  <div class="endpoint-body">
+    <div class="ep-label">Response data</div>
+    <pre>{ cpu: <span class="ty">CpuMetrics</span>, memory: <span class="ty">MemoryMetrics</span>, disk: <span class="ty">DiskMetrics</span>[], uptime: <span class="ty">UptimeMetrics</span>, temperature: <span class="ty">TemperatureMetrics</span> }
+<span class="cm">// Convenience endpoint — same data as individual metric endpoints but in one request
+// Useful for setup wizard and initial dashboard load</span></pre>
+  </div>
+</div>
+
+<div class="endpoint">
+  <div class="endpoint-header">
+    <span class="ep-method m-post">POST</span>
+    <span class="ep-path">/api/v1/ai/chat</span>
+    <span class="badge b-std">pro+</span>
+    <span class="ep-desc">AI assistant — Command Palette chat mode</span>
+  </div>
+  <div class="endpoint-body">
+    <div class="ep-label">Request</div>
+    <pre>{ message: <span class="ty">string</span>, provider: <span class="str">'ollama'</span> | <span class="str">'openai'</span> | <span class="str">'anthropic'</span> }
+<span class="cm">// API keys read from credentials table — never from request body
+// Ollama: connects to localhost:11434 — works offline for Local tier</span></pre>
+    <div class="ep-label">Response 200</div>
+    <pre>{ ok: <span class="kw">true</span>, data: { reply: <span class="ty">string</span> } }
+<span class="cm">// Iron rule: API keys NEVER reach the browser. All AI calls server-side only.</span></pre>
+  </div>
+</div>
+
+<div class="endpoint">
+  <div class="endpoint-header">
+    <span class="ep-method m-get">GET</span>
+    <span class="ep-path">/api/v1/docker</span>
+    <span class="badge b-std">pro+</span>
+    <span class="ep-desc">Docker container status. Requires Docker socket access (opt-in).</span>
+  </div>
+  <div class="endpoint-body">
+    <div class="ep-label">Response data</div>
+    <pre>{
+  containers: {
+    id: <span class="ty">string</span>, name: <span class="ty">string</span>, image: <span class="ty">string</span>,
+    status: <span class="str">'running'</span> | <span class="str">'stopped'</span> | <span class="str">'paused'</span> | <span class="str">'exited'</span>,
+    cpu: <span class="ty">number</span>, memUsed: <span class="ty">number</span>, memLimit: <span class="ty">number</span>
+  }[]
+}
+<span class="cm">// Docker socket: /var/run/docker.sock — must be mounted (opt-in in docker-compose.yml)
+// If socket not mounted: { ok: true, data: { containers: [], socketAvailable: false } }</span></pre>
+    <div class="ep-label">Permissions required</div>
+    <pre><span class="str">'network:local'</span>   <span class="cm">// accesses Docker socket (LAN-equivalent)</span></pre>
+  </div>
+</div>
+
+<div class="endpoint">
+  <div class="endpoint-header">
+    <span class="ep-method m-get">GET</span>
+    <span class="ep-path">/api/v1/health</span>
+    <span class="badge b-std">pro+</span>
+    <span class="ep-desc">Service health checks — HTTP/Ping for configured endpoints.</span>
+  </div>
+  <div class="endpoint-body">
+    <div class="ep-label">Response data</div>
+    <pre>{
+  services: {
+    name: <span class="ty">string</span>, url: <span class="ty">string</span>,
+    status: <span class="str">'up'</span> | <span class="str">'down'</span> | <span class="str">'timeout'</span>,
+    responseMs: <span class="ty">number</span> | <span class="kw">null</span>, checkedAt: <span class="ty">number</span>
+  }[]
+}
+<span class="cm">// URLs configured in widget configSchema — validated via assertNotCloudMetadata()
+// Checks run server-side — client never makes direct requests to monitored services</span></pre>
+  </div>
+</div>
+
+<div class="endpoint">
+  <div class="endpoint-header">
+    <span class="ep-method m-post">POST</span>
+    <span class="ep-path">/api/v1/speedtest/run</span>
+    <span class="badge b-std">pro+</span>
+    <span class="ep-desc">Trigger an internet speed test. Returns result + persists to plugin_data.</span>
+  </div>
+  <div class="endpoint-body">
+    <div class="ep-label">Response data</div>
+    <pre>{ downloadMbps: <span class="ty">number</span>, uploadMbps: <span class="ty">number</span>, latencyMs: <span class="ty">number</span>, testedAt: <span class="ty">number</span> }
+<span class="cm">// History stored in plugin_data — last 30 results. Rate-limited: 1 test per 5 min.</span></pre>
+  </div>
+</div>
+
+<div class="endpoint">
+  <div class="endpoint-header">
+    <span class="ep-method m-get">GET</span>
+    <span class="ep-path">/api/v1/calendar</span>
+    <span class="badge b-std">pro+</span>
+    <span class="ep-desc">Upcoming calendar events. CalDAV or local.</span>
+  </div>
+  <div class="endpoint-body">
+    <div class="ep-label">Response data</div>
+    <pre>{ events: { title: <span class="ty">string</span>, start: <span class="ty">number</span>, end: <span class="ty">number</span>, allDay: <span class="ty">boolean</span>, calendar: <span class="ty">string</span> }[] }
+<span class="cm">// CalDAV credentials stored in credentials table (AES-256-GCM encrypted)
+// Local: simple event list stored in plugin_data</span></pre>
+  </div>
+</div>
 
 <div class="endpoint">
   <div class="endpoint-header">
     <span class="ep-method m-get">GET</span>
     <span class="ep-path">/api/v1/pihole</span>
-    <span class="badge b-std">standard+</span>
+    <span class="badge b-std">pro+</span>
     <span class="ep-desc">Pi-hole stats. Credentials read from DB, never returned to client.</span>
   </div>
   <div class="endpoint-body">
@@ -1268,7 +1440,7 @@ pre {
   <div class="endpoint-header">
     <span class="ep-method m-post">POST</span>
     <span class="ep-path">/api/v1/pihole/test</span>
-    <span class="badge b-std">standard+</span>
+    <span class="badge b-std">pro+</span>
     <span class="ep-desc">Test Pi-hole connection with given credentials</span>
   </div>
   <div class="endpoint-body">
@@ -1284,7 +1456,7 @@ pre {
   <div class="endpoint-header">
     <span class="ep-method m-get">GET</span>
     <span class="ep-path">/api/v1/rss</span>
-    <span class="badge b-std">standard+</span>
+    <span class="badge b-std">pro+</span>
     <span class="ep-desc">Aggregated RSS feed items. Partial results on per-feed failure.</span>
   </div>
   <div class="endpoint-body">
@@ -1301,7 +1473,7 @@ pre {
   <div class="endpoint-header">
     <span class="ep-method m-get">GET</span>
     <span class="ep-path">/api/v1/links</span>
-    <span class="badge b-std">standard+</span>
+    <span class="badge b-std">pro+</span>
     <span class="ep-desc">Saved bookmarks/links</span>
   </div>
   <div class="endpoint-body">
@@ -1327,6 +1499,107 @@ pre {
 </section>
 
 <!-- ══════════════════════════════════════════════════ -->
+<section id="api-plugins">
+<h2>API — Plugin Endpoints</h2>
+
+<div class="endpoint">
+  <div class="endpoint-header">
+    <span class="ep-method m-get">GET</span>
+    <span class="ep-path">/api/v1/plugins</span>
+    <span class="badge b-any">any session</span>
+    <span class="ep-desc">List all installed plugins with status</span>
+  </div>
+  <div class="endpoint-body">
+    <div class="ep-label">Response 200</div>
+    <pre>{ ok: <span class="kw">true</span>, data: {
+  plugins: {
+    id: <span class="ty">string</span>,
+    name: <span class="ty">string</span>,
+    version: <span class="ty">string</span>,
+    author: <span class="ty">string</span>,
+    status: <span class="str">'active'</span> | <span class="str">'error'</span>,
+    permissions: <span class="ty">WidgetPermission</span>[],
+    source: <span class="str">'builtin'</span> | <span class="str">'user'</span>,
+    errorMessage?: <span class="ty">string</span>
+  }[]
+}}</pre>
+  </div>
+</div>
+
+<div class="endpoint">
+  <div class="endpoint-header">
+    <span class="ep-method m-post">POST</span>
+    <span class="ep-path">/api/v1/plugins/upload</span>
+    <span class="badge b-any">any session</span>
+    <span class="ep-desc">Upload a .phwidget file. Two-phase: validate first, then confirm.</span>
+  </div>
+  <div class="endpoint-body">
+    <div class="ep-label">Phase 1 — Validate (multipart/form-data)</div>
+    <pre>FormData: { file: .phwidget }
+<span class="cm">// Validates manifest, static analysis, extracts permissions
+// Returns permissions for user approval — does NOT activate yet</span>
+→ { ok: <span class="kw">true</span>, data: { permissions: <span class="ty">WidgetPermission</span>[], name: <span class="ty">string</span>, description: <span class="ty">string</span>, uploadToken: <span class="ty">string</span> } }</pre>
+    <div class="ep-label">Phase 2 — Confirm</div>
+    <pre>POST /api/v1/plugins/upload?confirm=true
+{ uploadToken: <span class="ty">string</span> }
+<span class="cm">// Activates the plugin: mounts handler, registers component, hot-reload
+// Notification pushed: "Plugin X installed"</span>
+→ { ok: <span class="kw">true</span>, data: { pluginId: <span class="ty">string</span> } }</pre>
+    <div class="ep-label">Rate limit</div>
+    <pre><span class="num">5</span> complete uploads (validate + confirm pairs) per <span class="num">10</span> min per session.
+<span class="cm">// Each upload = 2 requests (phase 1: validate, phase 2: confirm)</span></pre>
+  </div>
+</div>
+
+<div class="endpoint">
+  <div class="endpoint-header">
+    <span class="ep-method m-get">GET</span>
+    <span class="ep-path">/api/v1/plugins/:pluginId/status</span>
+    <span class="badge b-any">any session</span>
+    <span class="ep-desc">Health + error detail for a specific plugin</span>
+  </div>
+  <div class="endpoint-body">
+    <div class="ep-label">Response 200</div>
+    <pre>{ ok: <span class="kw">true</span>, data: { status: <span class="str">'active'</span> | <span class="str">'error'</span>, errorMessage?: <span class="ty">string</span>, loadedAt?: <span class="ty">number</span> } }</pre>
+  </div>
+</div>
+
+<div class="endpoint">
+  <div class="endpoint-header">
+    <span class="ep-method m-delete">DELETE</span>
+    <span class="ep-path">/api/v1/plugins/:pluginId</span>
+    <span class="badge b-any">any session</span>
+    <span class="ep-desc">Remove a user-installed plugin. Built-in plugins cannot be deleted.</span>
+  </div>
+  <div class="endpoint-body">
+    <div class="ep-label">Response 200</div>
+    <pre>{ ok: <span class="kw">true</span>, data: null }
+<span class="cm">// Plugin unloaded, .phwidget file removed from /data/plugins/
+// All widget instances of this plugin enter 'error' state
+// plugin_data rows for this plugin_id deleted in same transaction</span></pre>
+    <div class="ep-label">Response 403</div>
+    <pre>{ ok: <span class="kw">false</span>, error: <span class="str">'Cannot delete built-in plugin'</span> }</pre>
+  </div>
+</div>
+
+<div class="endpoint">
+  <div class="endpoint-header">
+    <span class="ep-method m-any">ANY</span>
+    <span class="ep-path">/api/v1/plugins/:pluginId/*</span>
+    <span class="badge b-std">per manifest</span>
+    <span class="ep-desc">Plugin's own namespaced endpoints</span>
+  </div>
+  <div class="endpoint-body">
+    <div class="ep-label">Notes</div>
+    <pre><span class="cm">// Wrapped with: requireSession() + requireTier(manifest.tier) + permissionMiddleware
+// Plugin handles routing internally via its Hono handler
+// Namespace guaranteed: plugin 'com.example.foo' can only register under /plugins/com.example.foo/
+// Core routes cannot be shadowed — namespacing enforced at registration time</span></pre>
+  </div>
+</div>
+</section>
+
+<!-- ══════════════════════════════════════════════════ -->
 <section id="api-phavio">
 <h2>API — phavo.net Infrastructure Endpoints</h2>
 
@@ -1335,10 +1608,9 @@ pre {
 <div class="tbl-wrap"><table>
 <thead><tr><th>Method</th><th>Path (phavo.net)</th><th>Called by</th><th>Purpose</th></tr></thead>
 <tbody>
-  <tr><td class="method post">POST</td><td><code>/api/license/validate</code></td><td>Local server on login</td><td class="note">Returns { tier } for a valid phavo.net session. Called every login for Free/Standard.</td></tr>
+  <tr><td class="method post">POST</td><td><code>/api/license/validate</code></td><td>Local server on login</td><td class="note">Returns { tier } for a valid phavo.net session. Called every login for Standard/Pro.</td></tr>
   <tr><td class="method post">POST</td><td><code>/api/license/activate</code></td><td>Local server on first setup (Local tier)</td><td class="note">Validates licence key + instanceId. Returns signed activationJwt.</td></tr>
   <tr><td class="method post">POST</td><td><code>/api/license/deactivate</code></td><td>Local server via Settings UI</td><td class="note">Frees the instance slot so a new instance can activate the same key.</td></tr>
-  <tr><td class="method post">POST</td><td><code>/api/license/upgrade</code></td><td>Local server via Settings UI</td><td class="note">Standard → Local: validates upgrade payment, returns new activationJwt.</td></tr>
   <tr><td class="method post">POST</td><td><code>/api/oauth/spotify/callback</code></td><td>Spotify OAuth redirect</td><td class="note">Phase 1.x. Stateless relay — exchanges Spotify code for tokens, returns to local instance.</td></tr>
 </tbody>
 </table></div>
@@ -1348,7 +1620,7 @@ pre {
 <section id="widget-manifest">
 <h2>Widget Manifest — Split Design</h2>
 
-<p>The widget manifest endpoint returns two kinds of entries in a single array. This resolves the tension between security (never send Standard secrets to Free clients) and conversion UX (Free users need to see locked widgets to be prompted to upgrade).</p>
+<p>The widget manifest endpoint returns two kinds of entries in a single array. This resolves the tension between security (never send Pro secrets to Standard clients) and conversion UX (Standard users need to see locked widgets to be prompted to upgrade).</p>
 
 <div class="tbl-wrap"><table>
 <thead><tr><th>Field</th><th>WidgetDefinition (full)</th><th>WidgetTeaserDefinition (locked)</th></tr></thead>
@@ -1419,50 +1691,67 @@ pre {
 
 <span class="kw">export const</span> registry = <span class="kw">new</span> <span class="ty">WidgetRegistry</span>()
 
-<span class="cm">// All 10 launch widgets registered at module load time:</span>
-registry.<span class="fn">register</span>({ id: <span class="str">'io.phavo.cpu'</span>, tier: <span class="str">'free'</span>, ... })
-registry.<span class="fn">register</span>({ id: <span class="str">'io.phavo.pihole'</span>, tier: <span class="str">'standard'</span>, ... })
-<span class="cm">// ... etc.</span></pre>
+<span class="cm">// v1.0: First-party widgets loaded directly — no bundle format yet</span>
+<span class="cm">// Source: packages/plugin-sdk/src/widgets/&lt;id&gt;/  (same structure as future .phwidget)</span>
+registry.<span class="fn">register</span>({ id: <span class="str">'io.phavo.cpu'</span>, tier: <span class="str">'standard'</span>, _source: <span class="str">'builtin'</span>, ... })
+registry.<span class="fn">register</span>({ id: <span class="str">'io.phavo.pihole'</span>, tier: <span class="str">'pro'</span>, _source: <span class="str">'builtin'</span>, ... })
+<span class="cm">// v1.1: Build-step adds .phwidget bundles — same widget logic, new load path:</span>
+<span class="cm">// registry.registerPlugin() from /app/builtin-plugins/*.phwidget</span>
+<span class="cm">// User plugins: /data/plugins/*.phwidget — hot-reload on upload</span>
+<span class="cm">// _source flag: 'builtin' | 'user-plugin' — never sent to client</span></pre>
 </section>
 
 <!-- ══════════════════════════════════════════════════ -->
 <section id="plugin-loading">
-<h2>Plugin Loading Pipeline (Phase 1.x)</h2>
+<h2>Plugin Loading Pipeline (Phase 1)</h2>
 
-<p>Local plugins are placed in the Docker volume at <code>/data/plugins/&lt;plugin-id&gt;/</code>. The registry scans this directory on server start.</p>
+<p>Phavo has two plugin sources:</p>
+<ul style="margin:.5rem 0 .5rem 1.5rem;color:var(--text-2)">
+  <li><strong>First-party plugins</strong> — written in <code>packages/plugin-sdk/src/widgets/</code> using <code>createHandler()</code> from SDK (dogfooding). v1.0: loaded via <code>registry.register()</code> directly — no ZIP bundle. v1.1: build-step produces <code>.phwidget</code> bundles from same source, shipped in Docker image at <code>/app/builtin-plugins/</code>. Cannot be deleted by users.</li>
+  <li><strong>User plugins</strong> — <code>.phwidget</code> ZIP files uploaded via Settings → Plugins, stored in <code>/data/plugins/</code>. Hot-reload on upload — no server restart needed.</li>
+</ul>
+<p>On server start, both sources are scanned. On user plugin upload, the registry hot-reloads without restart.</p>
 
-<pre><span class="cm">Server Start
+<pre><span class="cm">Server Start / Plugin Upload
     │</span>
     ▼
-<span class="acc">scanPluginDir('/data/plugins/')</span>
-    │  for each subdirectory:
+<span class="acc">scanPluginSources()</span>
+    │  1. /app/builtin-plugins/ (read-only, first-party, Ed25519-signed)
+    │  2. /data/plugins/*.phwidget  (user-uploaded ZIP bundles)
     ▼
-<span class="acc">loadManifest('manifest.json')</span>
-    │  ├─ invalid JSON           → log error, skip
-    │  ├─ Zod validation fails   → log error, skip
-    │  └─ id ≠ dirname           → log error, skip
+<span class="acc">extractAndValidate(plugin.phwidget)</span>
+    │  ├─ unzip .phwidget bundle
+    │  ├─ parse manifest.json (Zod validation)
+    │  ├─ verify Ed25519 signature (production only)
+    │  └─ id mismatch → log error, reject
     ▼
 <span class="acc">staticAnalyseImports('handler.ts')</span>
-    │  ├─ import outside allowlist → log error, reject plugin
-    │  ├─ eval() / new Function() → log error, reject plugin
-    │  └─ dynamic import()        → log error, reject plugin
+    │  ├─ import outside allowlist → log error, reject
+    │  ├─ eval() / new Function() → log error, reject
+    │  └─ dynamic import()        → log error, reject
+    ▼
+<span class="acc">showPermissionDialog(manifest.permissions)</span>
+    │  user must approve — user-uploaded plugins only
+    │  (first-party plugins auto-approved)
     ▼
 <span class="acc">mountHonoHandler('/api/v1/plugins/&lt;id&gt;/')</span>
     │  wrapped with: requireSession() + requireTier(manifest.tier)
     │               + permissionMiddleware(manifest.permissions)
     ▼
-<span class="acc">registerSvelteComponent('Widget.svelte')</span>
-    │  dynamic import — component available to widget drawer
+<span class="acc">loadPrecompiledComponent('widget.js')</span>
+    │  no Svelte compiler at runtime — widget.js is pre-compiled
     ▼
 <span class="acc">registry.registerPlugin(def, handlerPath)</span>
     │
     ▼
-<span class="acc">Plugin active</span>   <span class="cm">← user sees it in widget drawer after restart</span></pre>
+<span class="acc">Plugin active</span>   <span class="cm">← appears in widget drawer immediately (hot-reload)</span>
+<span class="acc">pushNotification</span> <span class="cm">← "Plugin X installed — open widget drawer to add it"</span></pre>
 
 <h3>Allowed Imports for Plugin Handlers</h3>
 <div class="tbl-wrap"><table>
 <thead><tr><th>Import</th><th>Allowed</th><th>Why</th></tr></thead>
 <tbody>
+  <tr><td><code>@phavo/plugin-sdk</code></td><td>✓</td><td class="note">Primary SDK — defineWidget, createHandler, PluginError, WidgetContext</td></tr>
   <tr><td><code>@phavo/types</code></td><td>✓</td><td class="note">Shared type definitions, Zod, notification types</td></tr>
   <tr><td><code>@phavo/agent</code></td><td>✓ if permission declared</td><td class="note">System metric functions — requires <code>agent:metrics</code> permission</td></tr>
   <tr><td><code>hono</code></td><td>✓</td><td class="note">Route handler context</td></tr>
@@ -1491,7 +1780,7 @@ registry.<span class="fn">register</span>({ id: <span class="str">'io.phavo.piho
 <p>Permissions declared in <code>manifest.json</code> are shown to the user before the plugin activates. At runtime, the permission middleware blocks any call to a capability not in the manifest — it does not rely on the plugin being "well-behaved".</p>
 
 <div class="callout warn">
-  <strong>Sandboxing caveat (Phase 1.x):</strong> Plugins run in the same Bun process as the SvelteKit server. The import allowlist and permission middleware are code-level guards, not OS-level isolation. A sophisticated plugin could theoretically bypass these using Bun's native APIs. This is an acceptable trade-off for a self-hosted tool where the user chose to install the plugin. Phase 4 marketplace plugins use process-level sandboxing.
+  <strong>Sandboxing caveat (Phase 1):</strong> Plugins run in the same Bun process as the SvelteKit server. The import allowlist and permission middleware are code-level guards, not OS-level isolation. This is an acceptable trade-off for a self-hosted tool where the user chose to install the plugin. Phase 4 marketplace plugins use process-level sandboxing.
 </div>
 </section>
 
@@ -1500,14 +1789,15 @@ registry.<span class="fn">register</span>({ id: <span class="str">'io.phavo.piho
 <h2>Sandboxing Strategy by Phase</h2>
 
 <div class="tbl-wrap"><table>
-<thead><tr><th>Mechanism</th><th>Phase 1.x (Local)</th><th>Phase 4 (Marketplace)</th></tr></thead>
+<thead><tr><th>Mechanism</th><th>Phase 1 (Local)</th><th>Phase 4 (Marketplace)</th></tr></thead>
 <tbody>
   <tr><td>Import allowlist</td><td>✓ Static analysis at load time</td><td>✓ + automated CI check</td></tr>
   <tr><td>Permission middleware</td><td>✓ Runtime enforcement</td><td>✓</td></tr>
   <tr><td>Svelte component isolation</td><td>✓ Inside &lt;WidgetCard&gt; slot</td><td>✓</td></tr>
   <tr><td>Process isolation</td><td>✗ Same Bun process</td><td>✓ Worker thread or subprocess</td></tr>
   <tr><td>Security review</td><td>User responsibility</td><td>✓ Automated + manual</td></tr>
-  <tr><td>Code signing</td><td>✗</td><td>✓ phavo.net developer key</td></tr>
+  <tr><td>Code signing</td><td>✓ First-party: Ed25519 at build time<br>✗ User plugins: unsigned in Phase 1</td><td>✓ phavo.net developer key</td></tr>
+  <tr><td>Hot-reload</td><td>✓ On upload via Settings UI</td><td>✓</td></tr>
 </tbody>
 </table></div>
 </section>
@@ -1516,7 +1806,7 @@ registry.<span class="fn">register</span>({ id: <span class="str">'io.phavo.piho
 <section id="plugin-sdk-api">
 <h2>Plugin SDK — Full API Reference</h2>
 
-<p><code>@phavo/plugin-sdk</code> is the only public surface of the Phavo plugin system. Published on npm at Phase 1.x launch. Internal packages (<code>@phavo/db</code>, raw Drizzle) are never exported.</p>
+<p><code>@phavo/plugin-sdk</code> is the only public surface of the Phavo plugin system. Lives in <code>packages/plugin-sdk/</code> in Phase 1 (internal use). Published on npm in Phase 4 when Marketplace launches. Internal packages (<code>@phavo/db</code>, raw Drizzle) are never exported.</p>
 
 <h3>Complete Export Surface</h3>
 <pre><span class="kw">export</span> { <span class="fn">defineWidget</span> }         <span class="cm">// typed WidgetDefinition helper — validates at call time</span>
@@ -1566,10 +1856,11 @@ registry.<span class="fn">register</span>({ id: <span class="str">'io.phavo.piho
   name:            <span class="str">'My Widget'</span>,
   description:     <span class="str">'Fetches data from example.com'</span>,
   version:         <span class="str">'1.0.0'</span>,
-  author:          <span class="str">'your-phavo-net-username'</span>,
   schemaVersion:   <span class="str">'1'</span>,
+  phavoRequires:   <span class="str">'&gt;=1.1.0'</span>,
+  author:          <span class="str">'your-phavo-net-username'</span>,
   category:        <span class="str">'integration'</span>,
-  tier:            <span class="str">'standard'</span>,
+  tier:            <span class="str">'pro'</span>,
   permissions:     [<span class="str">'network:outbound'</span>, <span class="str">'credentials:read'</span>],
   defaultSize:     { w: <span class="num">6</span>, h: <span class="num">4</span> },
   minSize:         { w: <span class="num">3</span>, h: <span class="num">2</span> },
@@ -1615,7 +1906,7 @@ registry.<span class="fn">register</span>({ id: <span class="str">'io.phavo.piho
   <span class="cm">// '2': '2.0.0'  — added when first breaking schema change ships</span>
 }
 <span class="cm">// Plugin loader checks manifest.schemaVersion (default: '1' if absent)
-// Phase 1.x: old schema version → deprecation warning, plugin still loads
+// Phase 1: old schema version → deprecation warning, plugin still loads
 // Phase 4 Marketplace: old schema version → rejected, developer must update</span></pre>
 </section>
 
@@ -1632,25 +1923,33 @@ cd my-widget
 <span class="cm"># In .env: PHAVO_PLUGIN_DEV_DIR=/path/to/my-widget</span>
 <span class="cm"># Dev server watches this dir and hot-reloads on file change</span>
 
-<span class="cm"># 3. Validate before deploying</span>
+<span class="cm"># 3. Validate before packaging</span>
 bun run validate   <span class="cm"># static analysis: import allowlist + permission audit + Zod schema check</span>
-bun run build      <span class="cm"># compile handler.ts (Bun), validate Widget.svelte, output to dist/</span>
+bun run build      <span class="cm"># compile handler.ts → widget.js, validate Widget.svelte, zip → my-widget.phwidget</span>
 
-<span class="cm"># 4. Deploy to running Phavo instance</span>
-cp -r dist/ /path/to/phavo-data/plugins/my-widget/
-<span class="cm"># Phavo must be restarted to pick up new plugins (no hot-reload in production)</span></pre>
+<span class="cm"># 4a. Upload via Settings UI (recommended)</span>
+<span class="cm"># Settings → Plugins → Upload Plugin → select my-widget.phwidget</span>
+<span class="cm"># Phavo hot-reloads — no restart needed</span>
+
+<span class="cm"># 4b. Or copy to volume manually (advanced)</span>
+cp my-widget.phwidget /path/to/phavo-data/plugins/
+<span class="cm"># Phavo detects new .phwidget file and hot-reloads automatically</span></pre>
 
 <h3>Template Package Structure</h3>
-<pre>my-widget/
+<pre>my-widget/                     <span class="cm">← source directory</span>
 ├── manifest.json        <span class="cm">← WidgetDefinition, validated at load time</span>
 ├── handler.ts           <span class="cm">← createHandler() call, no arbitrary imports</span>
-├── Widget.svelte        <span class="cm">← CSS variables only, skeleton + error states</span>
-├── config.schema.json   <span class="cm">← Zod-compatible, auto-renders in Settings</span>
-├── README.md            <span class="cm">← required sections: description, permissions, config fields</span>
+├── Widget.svelte        <span class="cm">← source component — compiled to widget.js on build</span>
+├── README.md            <span class="cm">← required: description, permissions, config fields</span>
 ├── package.json         <span class="cm">← devDependencies: @phavo/plugin-sdk only</span>
-└── tsconfig.json        <span class="cm">← extends @phavo/types tsconfig, strict: true</span></pre>
+└── tsconfig.json        <span class="cm">← extends @phavo/types tsconfig, strict: true</span>
 
-<h3>docs.phavo.net/plugins — Minimum Viable Content at SDK Launch</h3>
+my-widget.phwidget (ZIP) <span class="cm">← build output, uploaded to Phavo</span>
+├── manifest.json
+├── widget.js            <span class="cm">← pre-compiled Svelte component (no runtime compiler)</span>
+└── handler.ts</pre>
+
+<h3>docs.phavo.net/plugins — Minimum Viable Content at Phase 4 npm Publish</h3>
 <div class="tbl-wrap"><table>
 <thead><tr><th>Page</th><th>Content</th></tr></thead>
 <tbody>
@@ -1730,7 +2029,7 @@ cp -r dist/ /path/to/phavo-data/plugins/my-widget/
 <thead><tr><th>installMethod</th><th>Update panel shows</th></tr></thead>
 <tbody>
   <tr><td><code>docker-compose</code></td><td class="note"><code>docker compose pull && docker compose up -d</code></td></tr>
-  <tr><td><code>docker-run</code></td><td class="note"><code>docker pull getphavo/phavo && docker run ...</code></td></tr>
+  <tr><td><code>docker-run</code></td><td class="note"><code>docker pull phavo/phavo && docker run ...</code></td></tr>
   <tr><td><code>bun-direct</code></td><td class="note"><code>bun upgrade && bun run build && bun run start</code></td></tr>
   <tr><td><code>tauri</code></td><td class="note">"Updates werden automatisch durch die App verwaltet." — no command shown</td></tr>
 </tbody>
@@ -1752,7 +2051,23 @@ cp -r dist/ /path/to/phavo-data/plugins/my-widget/
 
 <!-- ══════════════════════════════════════════════════ -->
 <section id="tauri-sidecar">
-<h2>Tauri Sidecar Architecture (Phase 2)</h2>
+<h2>Desktop App — Phase 2</h2>
+
+<div class="callout info">
+  <strong>Mobile deferred:</strong> Responsive web (≥375px) covers tablet/phone use cases adequately. Desktop installer prioritised — removes Docker barrier for Persona B with no changes to <code>apps/web/</code>.
+</div>
+
+<h3>Installer Roadmap</h3>
+<div class="tbl-wrap"><table>
+<thead><tr><th>Version</th><th>Platform</th><th>Format</th><th>Signing</th><th>Notes</th></tr></thead>
+<tbody>
+  <tr><td>v1.1</td><td>Linux</td><td>.deb + AppImage</td><td>None required</td><td class="note">First installer. Homelab primary platform.</td></tr>
+  <tr><td>v1.2</td><td>macOS</td><td>.dmg (Universal)</td><td>Apple Developer ID + Notarization</td><td class="note">99$/year. ⚠️ Register Apple Developer Program before this milestone — review takes several days.</td></tr>
+  <tr><td>v1.3</td><td>Windows</td><td>.msi + .exe</td><td>None or Standard Cert</td><td class="note">SmartScreen warning acceptable for homelab audience. EV cert deferred until traction justifies cost.</td></tr>
+</tbody>
+</table></div>
+
+<h3>Tauri Sidecar Architecture</h3>
 
 <p>Phase 2 wraps the existing Bun server as a Tauri sidecar. No changes to <code>apps/web/</code> are needed beyond the platform abstraction above.</p>
 
@@ -2082,8 +2397,8 @@ bun run release:major   <span class="cm"># 1.0.0 → 2.0.0</span></pre>
 <div class="tbl-wrap"><table>
 <thead><tr><th>Trigger</th><th>Action</th><th>Docker tags</th></tr></thead>
 <tbody>
-  <tr><td>push to <code>main</code></td><td class="note">Build amd64+arm64</td><td class="note"><code>getphavo/phavo:latest</code></td></tr>
-  <tr><td>push tag <code>v*.*.*</code></td><td class="note">Build + GitHub Release</td><td class="note"><code>getphavo/phavo:1.0.0</code> + <code>:latest</code></td></tr>
+  <tr><td>push to <code>main</code></td><td class="note">Build amd64+arm64</td><td class="note"><code>phavo/phavo:latest</code></td></tr>
+  <tr><td>push tag <code>v*.*.*</code></td><td class="note">Build + GitHub Release</td><td class="note"><code>phavo/phavo:1.0.0</code> + <code>:latest</code></td></tr>
 </tbody>
 </table></div>
 </section>
@@ -2099,11 +2414,13 @@ bun run release:major   <span class="cm"># 1.0.0 → 2.0.0</span></pre>
   <tr><td><code>phavo.net</code></td><td class="note">Landing page</td><td class="note">Hetzner Webhosting S</td></tr>
   <tr><td><code>www.phavo.net</code></td><td class="note">→ Redirect to phavo.net</td><td class="note">Cloudflare CNAME</td></tr>
   <tr><td><code>docs.phavo.net</code></td><td class="note">Documentation</td><td class="note">GitHub Pages / Netlify</td></tr>
+  <tr><td><code>store.phavo.net</code></td><td class="note">Widget &amp; Theme Store (Phase 4 — traction-dependent)</td><td class="note">TBD</td></tr>
   <tr><td><code>api.phavo.net</code></td><td class="note">Licence backend (Phase 1+)</td><td class="note">Hetzner VPS</td></tr>
 </tbody>
 </table></div>
 
 <p>DNS managed via Cloudflare. MX records point to Hetzner mail servers (<code>mx1/2/3.hetzner.com</code>).</p>
+<div class="callout">Open source release is deferred to post-v1.0. The codebase is closed source at launch (all rights reserved). Dual-licence (AGPL-3.0 + commercial) evaluated after v1.0 proves commercial viability.</div>
 
 <h3>Email addresses</h3>
 <div class="tbl-wrap"><table>
@@ -2118,8 +2435,8 @@ bun run release:major   <span class="cm"># 1.0.0 → 2.0.0</span></pre>
 
 <h3>Docker Hub</h3>
 <pre><span class="cm"># Public repository</span>
-docker pull getphavo/phavo:latest
-docker pull getphavo/phavo:1.0.0
+docker pull phavo/phavo:latest
+docker pull phavo/phavo:1.0.0
 
 <span class="cm"># GitHub Secrets required for CI:</span>
 DOCKERHUB_USERNAME = <a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="aacec5c9c1cfd8eadac2cbdcc584c4cfde">[email&#160;protected]</a> username
@@ -2158,7 +2475,8 @@ DOCKERHUB_TOKEN    = Docker Hub access token</pre>
   | <span class="str">'dashboard-name'</span>    <span class="cm">// 4</span>
   | <span class="str">'location'</span>          <span class="cm">// 5  — skippable</span>
   | <span class="str">'tabs'</span>              <span class="cm">// 6</span>
-  | <span class="str">'widgets'</span>           <span class="cm">// 7</span>
+  | <span class="str">'plugin-install'</span>    <span class="cm">// 7  — optional: upload .phwidget files before widget selection</span>
+  | <span class="str">'widgets'</span>           <span class="cm">// 7b — dynamic grid from GET /api/v1/widgets (incl. newly installed plugins)</span>
   | <span class="str">'widget-assign'</span>     <span class="cm">// 8</span>
   | <span class="str">'widget-config'</span>     <span class="cm">// 9  — only for widgets with configSchema</span>
   | <span class="str">'done'</span>              <span class="cm">// 10</span>
@@ -2180,12 +2498,13 @@ DOCKERHUB_TOKEN    = Docker Hub access token</pre>
 <thead><tr><th>Step</th><th>Component</th><th>API calls</th><th>Skip?</th></tr></thead>
 <tbody>
   <tr><td>1 · Welcome</td><td class="note"><code>SetupWelcome.svelte</code> — logo, tagline, two CTAs</td><td>none</td><td>—</td></tr>
-  <tr><td>2 · Tier Select</td><td class="note"><code>SetupTierSelect.svelte</code> — 3 cards with feature diff. Selecting sets <code>state.tier</code></td><td>none</td><td>—</td></tr>
+  <tr><td>2 · Tier Select</td><td class="note"><code>SetupTierSelect.svelte</code> — 3 cards: Standard (Free) / Pro / Local with feature diff. Selecting sets <code>state.tier</code></td><td>none</td><td>—</td></tr>
   <tr><td>3 · Auth</td><td class="note"><code>SetupAuth.svelte</code> — branches on <code>state.tier</code>. phavo.net: OAuth button. Local: username/pw/licenceKey fields</td><td><code>POST /auth/login</code></td><td>—</td></tr>
   <tr><td>4 · Dashboard Name</td><td class="note"><code>SetupName.svelte</code> — text input, default "My Dashboard", 1–40 chars</td><td>none (saved at step 10)</td><td>—</td></tr>
   <tr><td>5 · Location</td><td class="note"><code>SetupLocation.svelte</code> — city search via Open-Meteo geocoding, live weather preview after selection</td><td><code>GET https://geocoding-api.open-meteo.com/v1/search</code></td><td>✓</td></tr>
-  <tr><td>6 · Tabs</td><td class="note"><code>SetupTabs.svelte</code> — add/rename/delete/reorder. Free: max 1 tab (add button disabled with upgrade prompt). Default: ["Home"]</td><td>none (saved at step 10)</td><td>—</td></tr>
-  <tr><td>7 · Widget Select</td><td class="note"><code>SetupWidgetSelect.svelte</code> — grid from <code>GET /api/v1/widgets</code>. Locked teasers shown with lock icon. Multi-select.</td><td><code>GET /api/v1/widgets</code></td><td>—</td></tr>
+  <tr><td>6 · Tabs</td><td class="note"><code>SetupTabs.svelte</code> — add/rename/delete/reorder. Standard: max 1 tab (add button disabled with upgrade prompt). Default: ["Home"]</td><td>none (saved at step 10)</td><td>—</td></tr>
+  <tr><td>7 · Plugin Install</td><td class="note"><code>SetupPluginInstall.svelte</code> — optional step: "Want to add third-party widgets?" Drag-and-drop or file picker for <code>.phwidget</code> files. Permissions shown per plugin. User approves or skips. Installed plugins immediately available in next step.</td><td><code>POST /api/v1/plugins/upload</code></td><td>✓ (Skip available)</td></tr>
+  <tr><td>7b · Widget Select</td><td class="note"><code>SetupWidgetSelect.svelte</code> — dynamic grid from <code>GET /api/v1/widgets</code>. Includes plugins installed in Step 7. Locked teasers shown with lock icon. Multi-select.</td><td><code>GET /api/v1/widgets</code></td><td>—</td></tr>
   <tr><td>8 · Widget Assign</td><td class="note"><code>SetupWidgetAssign.svelte</code> — drop widgets onto tab columns. Mobile: select dropdown per widget.</td><td>none</td><td>—</td></tr>
   <tr><td>9 · Widget Config</td><td class="note"><code>SetupWidgetConfig.svelte</code> — renders per widget. Only for widgets with <code>configSchema</code>. Skipped if none selected need config.</td><td><code>POST /api/v1/pihole/test</code> (Pi-hole)</td><td>✓ (auto-skip if no configurable widgets)</td></tr>
   <tr><td>10 · Done</td><td class="note"><code>SetupDone.svelte</code> — animated success, "Go to dashboard" CTA. Saves all state.</td><td><code>POST /api/v1/config</code></td><td>—</td></tr>
@@ -2289,16 +2608,16 @@ bun upgrade && bun run build && bun run start
 
 <p>The Licence tab in Settings renders differently per tier. Tier is read from <code>GET /api/v1/config</code> response (the only place the server sends the tier to the client — read-only, for display purposes only).</p>
 
-<h3>Free Tier View</h3>
+<h3>Standard Tier View</h3>
 <pre><span class="cm">┌─────────────────────────────────────────────────────┐
-│  Current plan   [FREE]                              │
+│  Current plan   [STANDARD]                          │
 │                                                     │
 │  ┌─────────────────────────────────────────────┐   │
 │  │ 🔒  Unlock all widgets                      │   │
 │  │     Pi-hole · RSS · Links + future widgets  │   │
 │  │     Unlimited tabs · No Phavo branding      │   │
 │  │                                             │   │
-│  │     [Upgrade to Standard — €8.99]           │   │
+│  │     [Upgrade to Pro — €8.99]           │   │
 │  │     [Upgrade to Local — €24.99]             │   │
 │  └─────────────────────────────────────────────┘   │
 │                                                     │
@@ -2306,16 +2625,20 @@ bun upgrade && bun run build && bun run start
 │  [________________] [Activate]                      │
 └─────────────────────────────────────────────────────┘</span></pre>
 
-<h3>Standard Tier View</h3>
+<h3>Pro Tier View</h3>
 <pre><span class="cm">┌─────────────────────────────────────────────────────┐
-│  Current plan   [STANDARD]                          │
+│  Current plan   [PRO]                               │
 │  Licence key    XXXX-XXXX-••••-••••  [Copy]         │
-│  Account        <a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="b0c5c3d5c2f0d5c8d1ddc0dcd59ed3dfdd">[email&#160;protected]</a> (phavo.net)         │
+│  Account        user@phavo.net (phavo.net)           │
 │  Validated      3 minutes ago  (grace: 71h 57m)     │
 │                                                     │
-│  [Upgrade to Local — pay €12.00 difference]         │
+│  [Refresh licence]   ← re-validates with phavo.net  │
 │  [Deactivate licence]  (requires internet)          │
 └─────────────────────────────────────────────────────┘</span></pre>
+
+<div class="callout info">
+  <strong>Standard → Pro upgrade flow:</strong> User purchases Pro on phavo.net. Returns to Phavo and clicks "Refresh licence" — this re-calls <code>POST /api/license/validate</code>, receives <code>{ tier: 'pro' }</code>, invalidates current session, creates new session with updated tier. No webhook required. Local Variant is a separate product — no cross-upgrade path exists.
+</div>
 
 <h3>Local Tier View</h3>
 <pre><span class="cm">┌─────────────────────────────────────────────────────┐
@@ -2343,7 +2666,7 @@ bun upgrade && bun run build && bun run start
 // On success: writes activationJwt to DB, invalidates current session, creates new session with new tier
 // Client receives new Set-Cookie and must reload</span></pre>
     <div class="ep-label">Response 200</div>
-    <pre>{ ok: <span class="kw">true</span>, data: { tier: <span class="str">'standard'</span> | <span class="str">'local'</span>, reload: <span class="kw">true</span> } }</pre>
+    <pre>{ ok: <span class="kw">true</span>, data: { tier: <span class="str">'pro'</span> | <span class="str">'local'</span>, reload: <span class="kw">true</span> } }</pre>
     <div class="ep-label">Response 400</div>
     <pre>{ ok: <span class="kw">false</span>, error: <span class="str">'Invalid licence key'</span> | <span class="str">'Licence already in use'</span> | <span class="str">'phavo.net unreachable'</span> }</pre>
   </div>
@@ -2353,14 +2676,14 @@ bun upgrade && bun run build && bun run start
   <div class="endpoint-header">
     <span class="ep-method m-post">POST</span>
     <span class="ep-path">/api/v1/license/deactivate</span>
-    <span class="badge b-std">standard+</span>
+    <span class="badge b-std">pro+</span>
     <span class="ep-desc">Release licence from this instance</span>
   </div>
   <div class="endpoint-body">
     <div class="ep-label">Notes</div>
     <pre><span class="cm">// Calls phavo.net /api/license/deactivate
 // Deletes licenseActivation row from DB
-// Downgrades session.tier to 'free'
+// Downgrades session.tier to 'standard'
 // Frees instance slot on phavo.net — another instance can activate the same key
 // Requires internet connection (400 if phavo.net unreachable)</span></pre>
   </div>
@@ -2472,7 +2795,7 @@ bun upgrade && bun run build && bun run start
 <span class="str">'search_engine'</span>   → <span class="str">'https://duckduckgo.com/?q={query}'</span></pre>
 
 <h3>AI chat endpoint</h3>
-<pre><span class="cm">// POST /api/v1/ai/chat — requireTier('standard') — Standard+ only</span>
+<pre><span class="cm">// POST /api/v1/ai/chat — requireTier('pro') — Pro/Local only</span>
 <span class="cm">// Request:</span>
 { provider: <span class="str">'ollama'</span> | <span class="str">'openai'</span> | <span class="str">'claude'</span>, query: <span class="ty">string</span> }
 
@@ -2486,10 +2809,132 @@ bun upgrade && bun run build && bun run start
 </section>
 
 <!-- ══════════════════════════════════════════════════ -->
-<section id="import-export">
-<h2>Import / Export — Full Spec</h2>
+<section id="settings-plugins">
+<h2>Settings → Plugins</h2>
 
-<p>Config Import/Export is fully specified in the API sections (<a href="#api-config">Config Endpoints</a>). This section covers the frontend behaviour and edge cases.</p>
+<p>Manages installed <code>.phwidget</code> plugins and <code>.phtheme</code> themes. Only user-installed plugins appear here — first-party built-in widgets are not listed (they are managed via Settings → Widgets).</p>
+
+<h3>Plugin Management UI</h3>
+<pre><span class="cm">┌─────────────────────────────────────────────────────────────────┐
+│  Settings → Plugins                                             │
+├─────────────────────────────────────────────────────────────────┤
+│  [+ Upload Plugin (.phwidget)]   [+ Upload Theme (.phtheme)]    │
+├───────────────────────────┬─────────────────────────────────────┤
+│  Installed Plugins        │  Plugin Detail                      │
+│                           │                                     │
+│  🔌 My Widget    ✓ Active │  My Widget  v1.2.0                  │
+│  🔌 Broken Plugin ✗ Error │  by developer-name                  │
+│                           │                                     │
+│                           │  Permissions granted:               │
+│                           │  · network:outbound                 │
+│                           │  · credentials:read                 │
+│                           │                                     │
+│  Installed Themes         │  Status: ✓ Active                   │
+│  🎨 Midnight Blue ● Active│                                     │
+│  🎨 Ocean        ○ Idle   │  [Delete Plugin]                    │
+└───────────────────────────┴─────────────────────────────────────┘</span></pre>
+
+<h3>Upload Flow</h3>
+<pre><span class="cm">// POST /api/v1/plugins/upload (multipart/form-data, .phwidget file)
+// 1. Server unzips .phwidget bundle
+// 2. Validates manifest.json (Zod schema + id uniqueness)
+// 3. Runs static import analysis on handler.ts
+// 4. Extracts declared permissions
+// 5. Returns { permissions, name, description } to client for approval dialog
+// 6. Client shows: "This plugin wants to: [permission list]"
+// 7. User clicks Approve → POST /api/v1/plugins/upload?confirm=true
+// 8. Plugin hot-loaded, notification pushed, appears in widget drawer immediately</span></pre>
+
+<h3>Error State</h3>
+<pre><span class="cm">// Plugin that fails at load time → status: error
+// Plugin that throws at runtime → widget instance enters error state
+// Error message shown in plugin detail panel (sanitised, no stack trace)
+// Notification pushed: "Plugin X encountered an error — check Settings → Plugins"
+// Phavo process continues normally — failed plugin does not crash other widgets</span></pre>
+</section>
+
+<!-- ══════════════════════════════════════════════════ -->
+<section id="settings-appearance">
+<h2>Settings → Appearance</h2>
+
+<p>Theme management. Dark theme is the only shipped theme at v1.0. Additional themes installed via <code>.phtheme</code> ZIP bundles appear here.</p>
+
+<h3>Theme Structure</h3>
+<pre><span class="cm">my-theme.phtheme (ZIP)
+├── manifest.json    // id, name, version, author, description, preview: "preview.png", signature
+├── theme.css        // required: CSS variable overrides for :root[data-theme="&lt;id&gt;"]
+├── icons/           // optional: per-icon SVG files (e.g. icons/cpu.svg)
+└── fonts/           // optional: WOFF2 font files</span></pre>
+
+<h3>Icon Abstraction Layer</h3>
+<pre><span class="cm">&lt;!-- packages/ui/src/components/Icon.svelte --&gt;</span>
+<span class="cm">&lt;!-- Checks active theme for icons/&lt;name&gt;.svg first, falls back to Lucide --&gt;</span>
+<span class="kw">&lt;Icon</span> name=<span class="str">"cpu"</span> <span class="kw">/&gt;</span>   <span class="cm">&lt;!-- theme icon if available, else LucideCpu --&gt;</span></pre>
+
+<h3>CSS Token System (full set)</h3>
+<pre><span class="kw">:root</span>[data-theme=<span class="str">"dark"</span>] {
+  <span class="cm">/* Colours */</span>
+  --color-bg-base: <span class="str">#000000</span>;  --color-bg-surface: <span class="str">#0a0a0a</span>;
+  --color-bg-elevated: <span class="str">#141414</span>;  --color-bg-hover: <span class="str">#1c1c1e</span>;
+  --color-border: <span class="str">#2a2a2a</span>;  --color-border-subtle: <span class="str">#1c1c1c</span>;
+  --color-border-strong: <span class="str">#3a3a3a</span>;
+  --color-text-primary: <span class="str">#f5f5f7</span>;  --color-text-secondary: <span class="str">#86868b</span>;
+  --color-text-muted: <span class="str">#48484a</span>;
+  --color-accent: <span class="str">#d4922a</span>;  --color-accent-subtle: <span class="str">#b07820</span>;
+  --color-accent-t: <span class="kw">rgba</span>(212,146,42,.10);
+
+  <span class="cm">/* Shape (theme-overridable) */</span>
+  --radius-sm: <span class="str">6px</span>;  --radius-md: <span class="str">10px</span>;
+  --radius-lg: <span class="str">14px</span>;  --radius-xl: <span class="str">20px</span>;
+
+  <span class="cm">/* Elevation */</span>
+  --shadow-sm: <span class="str">0 1px 2px rgba(0,0,0,.3)</span>;
+  --shadow-md: <span class="str">0 4px 12px rgba(0,0,0,.4)</span>;
+  --shadow-lg: <span class="str">0 8px 24px rgba(0,0,0,.5)</span>;
+
+  <span class="cm">/* Spacing scale */</span>
+  --space-1: <span class="str">4px</span>;  --space-2: <span class="str">8px</span>;  --space-3: <span class="str">12px</span>;
+  --space-4: <span class="str">16px</span>;  --space-6: <span class="str">24px</span>;  --space-8: <span class="str">32px</span>;
+
+  <span class="cm">/* Typography */</span>
+  --font-ui: <span class="str">'Geist'</span>, -apple-system, sans-serif;
+  --font-mono: <span class="str">'Geist Mono'</span>, <span class="str">'SF Mono'</span>, monospace;
+  --font-size-xs: <span class="str">11px</span>;  --font-size-sm: <span class="str">12px</span>;
+  --font-size-md: <span class="str">13px</span>;  --font-size-lg: <span class="str">15px</span>;
+}</pre>
+
+<div class="callout info">
+  <strong>Theme signing:</strong> User-uploaded <code>.phtheme</code> bundles are unsigned in Phase 1 — consistent with user plugin policy. The <code>signature</code> field in <code>manifest.json</code> is validated only for first-party themes. Marketplace themes (Phase 4) require signing via phavo.net developer key.
+</div>
+
+<div class="callout info">
+  <strong>Iron rule:</strong> All components use CSS variables exclusively. No hardcoded hex values anywhere in <code>packages/ui/</code> or <code>apps/web/src/lib/</code>. This is what makes themes work — overriding tokens in <code>:root[data-theme="X"]</code> re-themes the entire UI without touching component code.
+</div>
+
+<h3>Theme Activation</h3>
+<pre><span class="cm">// Active theme stored in config table as 'activeTheme' key
+// On page load: document.documentElement.setAttribute('data-theme', activeTheme)
+// Default: 'dark' (built-in)
+// Multiple themes can be installed — user selects one active theme
+// Switching is immediate (CSS variable change), no reload required</span></pre>
+</section>
+
+<!-- ══════════════════════════════════════════════════ -->
+<section id="backup-export">
+<h2>Backup &amp; Export — Full Spec</h2>
+
+<p>Backup &amp; Export (formerly Import/Export) is fully specified in the API sections (<a href="#api-config">Config Endpoints</a>). This section covers the frontend behaviour and edge cases.</p>
+
+<div class="callout info">
+  <strong>BackupProvider interface</strong> — defined in <code>packages/types/src/backup.ts</code>:
+<pre style="margin:.5rem 0 0;background:transparent;border:none;padding:0"><span class="kw">interface</span> <span class="ty">IBackupProvider</span> {
+  <span class="fn">export</span>(config: <span class="ty">DashboardConfig</span>, options: <span class="ty">BackupExportOptions</span>): <span class="ty">Promise</span>&lt;<span class="ty">Blob</span>&gt;
+  <span class="fn">import</span>(blob: <span class="ty">Blob</span>, passphrase?: <span class="ty">string</span>): <span class="ty">Promise</span>&lt;<span class="ty">DashboardConfig</span>&gt;
+  <span class="fn">listBackups</span>?(): <span class="ty">Promise</span>&lt;<span class="ty">BackupEntry</span>[]&gt;   <span class="cm">// optional — CloudBackupProvider only</span>
+  <span class="fn">deleteBackup</span>?(id: <span class="ty">string</span>): <span class="ty">Promise</span>&lt;<span class="kw">void</span>&gt;  <span class="cm">// optional — CloudBackupProvider only</span>
+}</pre>
+  Phase 1: <code>LocalBackupProvider</code> (manual export/import). Phase 4: <code>CloudBackupProvider</code> — same interface, no code changes to callers needed.
+</div>
 
 <h3>Export Flow</h3>
 <pre><span class="kw">async function</span> <span class="fn">handleExport</span>(includeCredentials: <span class="ty">boolean</span>, passphrase?: <span class="ty">string</span>) {
@@ -2511,8 +2956,8 @@ bun upgrade && bun run build && bun run start
 <div class="tbl-wrap"><table>
 <thead><tr><th>Scenario</th><th>Behaviour</th></tr></thead>
 <tbody>
-  <tr><td>Free tier imports config with 3 tabs</td><td class="note">Server caps at 1 tab, discards the rest, returns <code>{ warnings: ['Tab count reduced to 1 (Free tier)'] }</code></td></tr>
-  <tr><td>Import contains Standard widgets, but current tier is Free</td><td class="note">Widgets added to DB but data endpoints return 403 — they appear locked in drawer until upgrade</td></tr>
+  <tr><td>Standard tier imports config with 3 tabs</td><td class="note">Server caps at 1 tab, discards the rest, returns <code>{ warnings: ['Tab count reduced to 1 (Standard tier limit)'] }</code></td></tr>
+  <tr><td>Import contains Pro widgets, but current tier is Standard</td><td class="note">Widgets added to DB but data endpoints return 403 — they appear locked in drawer until upgrade to Pro</td></tr>
   <tr><td>Import contains credentials but no passphrase provided</td><td class="note">Credentials blob ignored, widgets show "configure me" state in Settings</td></tr>
   <tr><td>Import file is malformed JSON</td><td class="note">Client-side check before submit — shows "Invalid file" error, no request sent</td></tr>
   <tr><td>Import version mismatch (future)</td><td class="note">Server checks <code>version</code> field. Version 1 always accepted. Future versions: migration applied or 400 with "Unsupported export version"</td></tr>
@@ -2558,6 +3003,61 @@ Focus rings: visible on keyboard navigation (never removed with outline: none wi
 </section>
 
 <!-- ══════════════════════════════════════════════════ -->
+</section>
+
+<!-- ══════════════════════════════════════════════════ -->
+<section id="telemetry">
+<h2>Opt-In Telemetry</h2>
+
+<p>Standard and Pro users are shown a one-time toggle at first dashboard launch. Local Variant has no telemetry whatsoever — no toggle, no data, no network calls.</p>
+
+<h3>What is collected</h3>
+<div class="tbl-wrap"><table>
+<thead><tr><th>Field</th><th>Value example</th><th>Purpose</th></tr></thead>
+<tbody>
+  <tr><td><code>widgetTypes</code></td><td class="note">["io.phavo.cpu", "io.phavo.weather"]</td><td class="note">Which widgets are popular — drives development priority</td></tr>
+  <tr><td><code>tier</code></td><td class="note">"standard" | "pro"</td><td class="note">Conversion rate tracking</td></tr>
+  <tr><td><code>platform</code></td><td class="note">"docker-compose" | "bun-direct"</td><td class="note">Build target priorities</td></tr>
+  <tr><td><code>version</code></td><td class="note">"1.1.0"</td><td class="note">Update adoption rate</td></tr>
+</tbody>
+</table></div>
+
+<div class="callout warn">
+  <strong>Never collected:</strong> IP address, user behaviour, widget config values, credentials, dashboard layout, user identifiers. phavo.net stores only aggregated anonymous counts — no per-instance data retained.
+</div>
+
+<h3>Implementation</h3>
+<pre><span class="cm">// Background job — runs once per day after server start
+// Random 0–4h offset to avoid server-side spikes
+
+setInterval(() => {
+  if (!telemetryEnabled) return
+  if (env.platform === 'local') return  // Local Variant: never
+
+  const payload = {
+    widgetTypes: getActiveWidgetTypes(),    // IDs only, no config values
+    tier:        getSessionTier(),
+    platform:    env.installMethod,
+    version:     PHAVO_VERSION,
+  }
+  fetch('https://phavo.net/api/telemetry', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  }).catch(() => {})  // silent fail — telemetry never blocks the app
+}, 24 * 60 * 60 * 1000 + randomOffset(4 * 60 * 60 * 1000))</span></pre>
+
+<h3>User Controls</h3>
+<pre><span class="cm">// First launch: modal "Help improve Phavo?"
+// [Enable anonymous data sharing]  [No thanks]
+// Stored in config table as 'telemetryEnabled': true | false
+// Changeable at any time: Settings → General → "Share anonymous usage data" toggle
+// Local Variant: this setting does not exist — section hidden entirely</span></pre>
+</section>
+
+<!-- ══════════════════════════════════════════════════ -->
+
+<!-- ══════════════════════════════════════════════════ -->
+<section id="csp">
 <h2>Content Security Policy</h2>
 
 <p>Applied as an HTTP response header on all dashboard pages. Managed as a Hono middleware.</p>
@@ -2580,20 +3080,28 @@ Focus rings: visible on keyboard navigation (never removed with outline: none wi
 </section>
 
 <!-- ══════════════════════════════════════════════════ -->
+
+<!-- ══════════════════════════════════════════════════ -->
 <section id="rate-limits">
 <h2>Rate Limits</h2>
 
 <p>Implemented as in-memory counters (Phase 1 — single instance). Counters are per-IP for unauthenticated endpoints and per-session-token for authenticated ones.</p>
+<div class="callout info">
+  <strong>PHAVO_TRUST_PROXY:</strong> Set <code>PHAVO_TRUST_PROXY=true</code> when running behind a reverse proxy (nginx, Caddy, Traefik) that sets <code>X-Forwarded-For</code>. Without this, the proxy IP is used for rate limiting instead of the real client IP. Default: false (use socket IP directly).
+</div>
 
 <div class="tbl-wrap"><table>
 <thead><tr><th>Endpoint group</th><th>Limit</th><th>Window</th><th>Key</th></tr></thead>
 <tbody>
   <tr><td><code>POST /auth/login</code></td><td>10 req</td><td>5 min</td><td>per IP + per account</td></tr>
+  <tr><td><code>POST /auth/totp</code></td><td>5 req</td><td>5 min</td><td>per IP</td></tr>
   <tr><td><code>POST /auth/*</code> (all other)</td><td>30 req</td><td>1 min</td><td>per IP</td></tr>
   <tr><td><code>GET /pihole</code>, <code>/rss</code>, <code>/links</code></td><td>60 req</td><td>1 min</td><td>per session</td></tr>
   <tr><td><code>GET /update/check</code></td><td>1 req</td><td>1 hour</td><td>per session (cached)</td></tr>
-  <tr><td><code>POST /config</code>, <code>/config/import</code></td><td>20 req</td><td>1 min</td><td>per session</td></tr>
-  <tr><td>Metric endpoints (<code>/cpu</code>, etc.)</td><td>120 req</td><td>1 min</td><td>per session</td></tr>
+  <tr><td><code>POST /config/import</code></td><td>5 req</td><td>10 min</td><td>per session</td></tr>
+  <tr><td><code>POST /config</code></td><td>20 req</td><td>1 min</td><td>per session</td></tr>
+  <tr><td>Metric endpoints (<code>/cpu</code>, etc.)</td><td>60 req</td><td>1 min</td><td>per session</td></tr>
+  <tr><td><code>POST /plugins/upload</code></td><td>5 complete uploads (10 req)</td><td>10 min</td><td>per session</td></tr>
 </tbody>
 </table></div>
 </section>
@@ -2608,7 +3116,7 @@ Focus rings: visible on keyboard navigation (never removed with outline: none wi
   <tr><td>33</td><td class="note">requireTier() re-reads tier from DB session record on every request</td><td class="note">Cookie modification has no effect — tier is server-controlled only</td></tr>
   <tr><td>34</td><td class="note">Session token is 32-byte random base64url — no JWT, no payload</td><td class="note">Nothing to decode, nothing to forge</td></tr>
   <tr><td>35</td><td class="note">No tier column in users or config tables</td><td class="note">DB editing cannot elevate tier</td></tr>
-  <tr><td>36</td><td class="note">Local activation JWT verified against embedded RS256 public key on startup</td><td class="note">Tampered JWT fails verification → Free behaviour</td></tr>
+  <tr><td>36</td><td class="note">Local activation JWT verified against two embedded Ed25519 public keys (current + next) on every server start. Two keys enable key rotation without breaking existing installs.</td><td class="note">Tampered JWT fails Ed25519 verification → standard tier behaviour</td></tr>
   <tr><td>37</td><td class="note">Widget manifest returns teasers (no dataEndpoint) for locked tiers</td><td class="note">Client has no information to call locked endpoints</td></tr>
   <tr><td>38</td><td class="note">Tier never serialised into client HTML or stores</td><td class="note">Upgrade prompts are cosmetic — server enforces independently</td></tr>
   <tr><td>39</td><td class="note">SRI applied to external resources only (fonts/CDN), not self-hosted bundles</td><td class="note">Same-origin file tampering defeats self-hosted SRI</td></tr>

@@ -15,6 +15,7 @@
   },
   "dependencies": {
     "@phavo/types": "workspace:*",
+    "tailwindcss": "^4.1.0",
     "zod": "^3.23.0"
   },
   "devDependencies": {
