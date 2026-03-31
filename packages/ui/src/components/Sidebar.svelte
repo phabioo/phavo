@@ -1,5 +1,6 @@
 <script lang="ts">
 import type { Snippet } from 'svelte';
+import Icon from './Icon.svelte';
 
 interface NavItem {
   id: string;
@@ -7,41 +8,122 @@ interface NavItem {
   icon?: string;
 }
 
+interface TabItem {
+  id: string;
+  label: string;
+}
+
 interface Props {
   collapsed?: boolean;
+  tier?: 'standard' | 'pro' | 'local';
+  deviceName?: string;
   items?: NavItem[];
   bottomItems?: NavItem[];
+  tabs?: TabItem[];
+  activeTab?: string;
   activeItem?: string;
   ontoggle?: () => void;
   onnavigate?: (id: string) => void;
+  onTabSelect?: (id: string) => void;
+  onNewTab?: () => void;
   children?: Snippet;
 }
 
 let {
   collapsed = $bindable(false),
+  tier = 'standard',
+  deviceName = '',
   items = [],
   bottomItems = [],
+  tabs = [],
+  activeTab = '',
   activeItem = '',
   ontoggle,
   onnavigate,
+  onTabSelect,
+  onNewTab,
   children,
 }: Props = $props();
+
+let dashExpanded = $state(true);
+
+const tierLabel = $derived(tier.toUpperCase());
+const showUpgrade = $derived(tier === 'standard');
 </script>
 
 <aside class="sidebar" class:collapsed>
-  <div class="sidebar-header">
-    {#if !collapsed}
-      <span class="sidebar-logo">Phavo</span>
-    {/if}
-    <button class="sidebar-toggle" onclick={ontoggle} type="button" aria-label="Toggle sidebar">
-      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-        <path d="M3 4h10M3 8h10M3 12h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-      </svg>
-    </button>
-  </div>
+  <div class="sidebar-top">
+    <!-- Logo + collapse toggle -->
+    <div class="sidebar-header">
+      <div class="logo-area">
+        {#if !collapsed}
+          <span class="sidebar-logo">PHAVO</span>
+        {/if}
+        <button class="sidebar-toggle" onclick={ontoggle} type="button" aria-label="Toggle sidebar">
+          <Icon name={collapsed ? 'menu' : 'panel-left'} size={18} />
+        </button>
+      </div>
+      {#if !collapsed}
+        <span class="tier-badge">{tierLabel}</span>
+        {#if deviceName}
+          <span class="device-pill">{deviceName}</span>
+        {/if}
+      {/if}
+    </div>
 
-  <div class="sidebar-nav-shell">
+    <!-- Navigation -->
     <nav class="sidebar-nav sidebar-nav-top">
+      <!-- Dashboard section (collapsible) -->
+      <button
+        class="nav-item"
+        class:active={activeItem === 'home'}
+        onclick={() => {
+          if (collapsed) {
+            onnavigate?.('home');
+          } else {
+            dashExpanded = !dashExpanded;
+            onnavigate?.('home');
+          }
+        }}
+        type="button"
+      >
+        <span class="nav-icon"><Icon name="layout-dashboard" size={18} /></span>
+        {#if !collapsed}
+          <span class="nav-label">Dashboard</span>
+          <span class="nav-chevron">
+            <Icon name={dashExpanded ? 'chevron-down' : 'chevron-right'} size={14} />
+          </span>
+        {/if}
+      </button>
+
+      <!-- Tab sub-items (visible when dashboard expanded) -->
+      {#if !collapsed && dashExpanded}
+        <div class="sub-nav">
+          {#each tabs as tab}
+            <button
+              class="sub-nav-item"
+              class:sub-nav-active={activeTab === tab.id}
+              onclick={() => onTabSelect?.(tab.id)}
+              type="button"
+            >
+              <span class="sub-nav-dot"></span>
+              <span class="sub-nav-label">{tab.label}</span>
+            </button>
+          {/each}
+          {#if onNewTab}
+            <button
+              class="sub-nav-item sub-nav-add"
+              onclick={() => onNewTab?.()}
+              type="button"
+            >
+              <Icon name="plus" size={12} />
+              <span class="sub-nav-label">New Page</span>
+            </button>
+          {/if}
+        </div>
+      {/if}
+
+      <!-- Standard nav items -->
       {#each items as item}
         <button
           class="nav-item"
@@ -50,7 +132,7 @@ let {
           type="button"
         >
           {#if item.icon}
-            <span class="nav-icon">{@html item.icon}</span>
+            <span class="nav-icon"><Icon name={item.icon} size={18} /></span>
           {/if}
           {#if !collapsed}
             <span class="nav-label">{item.label}</span>
@@ -71,7 +153,7 @@ let {
             type="button"
           >
             {#if item.icon}
-              <span class="nav-icon">{@html item.icon}</span>
+              <span class="nav-icon"><Icon name={item.icon} size={18} /></span>
             {/if}
             {#if !collapsed}
               <span class="nav-label">{item.label}</span>
@@ -82,16 +164,36 @@ let {
     {/if}
   </div>
 
-  {#if children}
-    <div class="sidebar-footer">
-      {@render children()}
-    </div>
+  <!-- Bottom section: upgrade card or children -->
+  {#if !collapsed}
+    {#if children}
+      <div class="sidebar-footer">
+        {@render children()}
+      </div>
+    {:else if showUpgrade}
+      <div class="upgrade-card">
+        <p class="upgrade-text">Unlock detailed metrics and remote access features.</p>
+        <button class="upgrade-btn" onclick={() => onnavigate?.('license')} type="button">
+          Upgrade to Pro
+        </button>
+      </div>
+    {/if}
   {/if}
 </aside>
 
 <!-- Mobile bottom navigation bar (visible only <640px) -->
 <nav class="bottom-nav" aria-label="Main navigation">
-  {#each [...items, ...bottomItems].slice(0, 4) as item}
+  <button
+    class="bottom-nav-item"
+    class:bottom-nav-active={activeItem === 'home'}
+    onclick={() => onnavigate?.('home')}
+    type="button"
+    aria-label="Dashboard"
+  >
+    <span class="bottom-nav-icon"><Icon name="layout-dashboard" size={20} /></span>
+    <span class="bottom-nav-label">Dashboard</span>
+  </button>
+  {#each [...items, ...bottomItems].slice(0, 3) as item}
     <button
       class="bottom-nav-item"
       class:bottom-nav-active={activeItem === item.id}
@@ -100,7 +202,7 @@ let {
       aria-label={item.label}
     >
       {#if item.icon}
-        <span class="bottom-nav-icon">{@html item.icon}</span>
+        <span class="bottom-nav-icon"><Icon name={item.icon} size={20} /></span>
       {/if}
       <span class="bottom-nav-label">{item.label}</span>
     </button>
@@ -118,65 +220,97 @@ let {
     border-right: 1px solid var(--color-border-subtle);
     display: flex;
     flex-direction: column;
-    transition: width 0.2s;
+    justify-content: space-between;
+    transition: width 0.3s ease;
     z-index: 100;
+    overflow: hidden;
   }
 
   .sidebar.collapsed {
     width: var(--sidebar-collapsed-width);
   }
 
+  .sidebar-top {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+  }
+
+  /* ── Header ──────────────────────────────────────────────────────────── */
   .sidebar-header {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    padding: var(--space-6);
+  }
+
+  .logo-area {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: var(--space-4);
-    border-bottom: 1px solid var(--color-border-subtle);
   }
 
-  .sidebar.collapsed .sidebar-header {
+  .collapsed .logo-area {
     justify-content: center;
-    padding-inline: var(--space-2);
   }
 
   .sidebar-logo {
-    font-size: 18px;
-    font-weight: 700;
-    color: var(--color-accent-text);
+    font-size: 22px;
+    font-weight: 900;
+    letter-spacing: -0.05em;
+    color: var(--color-accent);
+    text-transform: uppercase;
+    font-family: var(--font-ui);
   }
 
   .sidebar-toggle {
     background: none;
     border: none;
-    color: var(--color-text-secondary);
+    color: var(--color-text-muted);
     cursor: pointer;
     padding: var(--space-1);
     border-radius: var(--radius-sm);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    min-width: 44px;
+    transition: color 0.15s;
   }
 
   .sidebar-toggle:hover {
+    color: var(--color-accent);
+  }
+
+  .tier-badge {
+    font-size: var(--font-size-xs);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.25em;
+    color: var(--color-text-muted);
+    font-family: var(--font-ui);
+  }
+
+  .device-pill {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px var(--space-2);
+    border-radius: var(--radius-sm);
     background: var(--color-bg-hover);
-    color: var(--color-text-primary);
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-xs);
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    width: fit-content;
+    margin-top: var(--space-3);
   }
 
-  .sidebar.collapsed .sidebar-toggle {
-    width: 100%;
-    padding: 0;
-  }
-
-  .sidebar-nav-shell {
-    flex: 1;
-    min-height: 0;
-    display: flex;
-    flex-direction: column;
-  }
-
+  /* ── Navigation ──────────────────────────────────────────────────────── */
   .sidebar-nav {
-    padding: var(--space-2);
-  }
-
-  .sidebar-nav-top {
-    overflow-y: auto;
+    padding: 0 var(--space-2);
   }
 
   .sidebar-nav-bottom {
@@ -194,29 +328,32 @@ let {
     align-items: center;
     gap: var(--space-3);
     width: 100%;
-    padding: var(--space-2) var(--space-3);
+    padding: var(--space-3);
     background: none;
     border: none;
-    border-radius: var(--radius-sm);
-    color: var(--color-text-secondary);
+    border-radius: var(--radius-lg);
+    color: var(--color-text-muted);
     font-family: var(--font-ui);
-    font-size: 14px;
+    font-size: var(--font-size-sm);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
     cursor: pointer;
     transition: background 0.15s, color 0.15s;
     text-align: left;
+    min-height: 44px;
   }
 
   .nav-item:hover {
-    background: var(--color-bg-hover);
     color: var(--color-text-primary);
   }
 
   .nav-item.active {
-    background: var(--color-accent-subtle);
-    color: var(--color-bg);
+    background: var(--color-bg-hover);
+    color: var(--color-accent);
   }
 
-  .sidebar.collapsed .nav-item {
+  .collapsed .nav-item {
     justify-content: center;
     padding: var(--space-2);
   }
@@ -224,8 +361,6 @@ let {
   .nav-icon {
     display: flex;
     align-items: center;
-    width: 16px;
-    height: 16px;
     flex-shrink: 0;
   }
 
@@ -233,53 +368,146 @@ let {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    flex: 1;
   }
 
+  .nav-chevron {
+    display: flex;
+    align-items: center;
+    color: var(--color-text-muted);
+    margin-left: auto;
+  }
+
+  /* ── Sub-nav (tabs) ──────────────────────────────────────────────────── */
+  .sub-nav {
+    padding: var(--space-2) 0 var(--space-2) calc(var(--space-6) + var(--space-4));
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+
+  .sub-nav-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    background: none;
+    border: none;
+    color: var(--color-text-muted);
+    font-family: var(--font-ui);
+    font-size: var(--font-size-xs);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    cursor: pointer;
+    transition: color 0.15s;
+    padding: var(--space-1) 0;
+    text-align: left;
+  }
+
+  .sub-nav-item:hover {
+    color: var(--color-accent);
+  }
+
+  .sub-nav-active {
+    color: var(--color-accent);
+  }
+
+  .sub-nav-dot {
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: currentColor;
+    flex-shrink: 0;
+  }
+
+  .sub-nav-label {
+    white-space: nowrap;
+  }
+
+  .sub-nav-add {
+    color: var(--color-text-muted);
+  }
+
+  /* ── Footer / Upgrade card ───────────────────────────────────────────── */
   .sidebar-footer {
-    padding: var(--space-4);
+    padding: var(--space-4) var(--space-6);
     border-top: 1px solid var(--color-border-subtle);
   }
 
-  /* ── TABLET (640px–1023px): icon-only rail, no toggle ─────────────────── */
+  .upgrade-card {
+    margin: var(--space-4) var(--space-6) var(--space-6);
+    padding: var(--space-4);
+    background: var(--color-bg-elevated);
+    border-radius: var(--radius-xl);
+  }
+
+  .upgrade-text {
+    font-size: var(--font-size-xs);
+    color: var(--color-text-secondary);
+    line-height: 1.5;
+    margin-bottom: var(--space-3);
+  }
+
+  .upgrade-btn {
+    width: 100%;
+    padding: var(--space-2) var(--space-4);
+    background: linear-gradient(135deg, var(--color-accent-hover), var(--color-accent));
+    color: var(--color-text-inverse);
+    font-family: var(--font-ui);
+    font-size: var(--font-size-sm);
+    font-weight: 700;
+    border: none;
+    border-radius: var(--radius-lg);
+    cursor: pointer;
+    transition: opacity 0.15s;
+    letter-spacing: -0.01em;
+  }
+
+  .upgrade-btn:hover {
+    opacity: 0.9;
+  }
+
+  /* ── TABLET (640px–1023px): icon-only rail ────────────────────────────── */
   @media (min-width: 640px) and (max-width: 1023px) {
     .sidebar {
       width: var(--sidebar-collapsed-width);
     }
 
-    .sidebar-logo {
+    .sidebar-logo,
+    .tier-badge,
+    .device-pill,
+    .sub-nav,
+    .nav-label,
+    .nav-chevron,
+    .upgrade-card,
+    .sidebar-footer {
       display: none;
+    }
+
+    .logo-area {
+      justify-content: center;
     }
 
     .sidebar-toggle {
       display: none;
     }
 
-    .sidebar-header {
-      justify-content: center;
-      padding: var(--space-4) var(--space-2);
-    }
-
-    .nav-label {
-      display: none;
-    }
-
     .nav-item {
       justify-content: center;
       padding: var(--space-2);
-      min-height: 44px;
     }
   }
 
-  /* ── MOBILE (<640px): hide sidebar, show bottom nav ───────────────────── */
+  /* ── MOBILE (<640px): hide sidebar ───────────────────────────────────── */
   @media (max-width: 639px) {
     .sidebar {
       display: none;
     }
   }
 
-  /* ── BOTTOM NAV (mobile only) ─────────────────────────────────────────── */
+  /* ── Bottom nav (mobile only) ────────────────────────────────────────── */
   .bottom-nav {
-    display: none; /* hidden on tablet and desktop */
+    display: none;
     position: fixed;
     bottom: 0;
     left: 0;
@@ -319,8 +547,6 @@ let {
   .bottom-nav-icon {
     display: flex;
     align-items: center;
-    width: 20px;
-    height: 20px;
   }
 
   .bottom-nav-label {
@@ -331,18 +557,5 @@ let {
     .bottom-nav {
       display: flex;
     }
-  }
-
-  /* ── TOUCH TARGETS (all screen sizes) ────────────────────────────────── */
-  .nav-item {
-    min-height: 44px;
-  }
-
-  .sidebar-toggle {
-    min-height: 44px;
-    min-width: 44px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
   }
 </style>

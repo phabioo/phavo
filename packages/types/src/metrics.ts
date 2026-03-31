@@ -91,4 +91,59 @@ export interface WeatherMetrics {
   forecast: WeatherForecastDay[];
   /** True when falling back to default Berlin coordinates (no location configured). */
   locationDefault?: boolean;
+  city?: string;
+}
+
+// ── Docker metrics ─────────────────────────────────────────────────────
+export interface DockerContainer {
+  id: string;
+  name: string;
+  status: 'running' | 'stopped' | 'paused';
+  cpuPercent: number;
+  memoryUsed: number;
+  memoryTotal: number;
+}
+
+export interface DockerMetrics {
+  containers: DockerContainer[];
+}
+
+// ── Service Health metrics ─────────────────────────────────────────────
+export interface ServiceHealthEntry {
+  name: string;
+  url: string;
+  status: 'up' | 'down' | 'timeout';
+  responseTimeMs: number;
+  lastChecked: number;
+}
+
+export interface ServiceHealthMetrics {
+  services: ServiceHealthEntry[];
+}
+
+// ── Speedtest metrics ──────────────────────────────────────────────────
+export interface SpeedtestResult {
+  downloadMbps: number;
+  uploadMbps: number;
+  latencyMs: number;
+  timestamp: number;
+}
+
+export interface SpeedtestMetrics {
+  lastResult: SpeedtestResult | null;
+  history: SpeedtestResult[];
+  testInProgress: boolean;
+  cooldownUntil: number | null;
+}
+
+// ── Calendar metrics ───────────────────────────────────────────────────
+export interface CalendarEvent {
+  title: string;
+  startTime: string;
+  endTime: string;
+  calendarName: string;
+}
+
+export interface CalendarMetrics {
+  events: CalendarEvent[];
 }

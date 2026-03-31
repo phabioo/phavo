@@ -212,6 +212,8 @@ export function registerConfigRoutes(app: Hono<{ Variables: AppVariables }>): vo
           .nullable()
           .optional(),
         tabs: z.array(ConfigTabSchema).max(50).optional(),
+        telemetryAsked: z.boolean().optional(),
+        telemetryEnabled: z.boolean().optional(),
       });
       const parsed = ConfigPostSchema.safeParse(rawBody);
       if (!parsed.success) return c.json(err('Invalid config'), 400);
@@ -230,6 +232,10 @@ export function registerConfigRoutes(app: Hono<{ Variables: AppVariables }>): vo
           value: body.dashboardName.trim() || 'My Dashboard',
         });
       if (body.sessionTimeout) upserts.push({ key: 'session_timeout', value: body.sessionTimeout });
+      if (body.telemetryAsked !== undefined)
+        upserts.push({ key: 'telemetry_asked', value: body.telemetryAsked ? 'true' : 'false' });
+      if (body.telemetryEnabled !== undefined)
+        upserts.push({ key: 'telemetry_enabled', value: body.telemetryEnabled ? 'true' : 'false' });
       if (body.location === null) {
         deletes.push('location_name', 'location_latitude', 'location_longitude');
       } else if (body.location) {

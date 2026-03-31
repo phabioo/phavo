@@ -1,13 +1,14 @@
 <script lang="ts">
-  import type { DiskMetrics } from '@phavo/types';
-  import { ProgressBar } from '@phavo/ui';
+  import type { DiskMetrics, WidgetSize } from '@phavo/types';
+  import { Icon, ProgressBar } from '@phavo/ui';
   import { formatBytes, formatPercentage, formatSpeed } from '$lib/utils/format';
 
   interface Props {
     data: DiskMetrics[];
+    size?: WidgetSize;
   }
 
-  let { data }: Props = $props();
+  let { data, size = 'M' }: Props = $props();
 
   // Show only real mounts: /  and /Volumes/*, exclude system internals
   const visibleDisks = $derived(
@@ -37,57 +38,47 @@
 </script>
 
 <div class="disk-widget">
-  {#if visibleDisks.length === 1}
-    {@const disk = visibleDisks[0]!}
-    <div class="primary-metric">
-      <span class="metric-value mono">{formatBytes(disk.used)}</span>
-      <span class="metric-label">of {formatBytes(disk.total)}</span>
-    </div>
-
-    <div class="progress-labeled">
-      <div class="progress-header">
-        <span class="progress-title">{disk.mount}</span>
-        <span class="progress-pct mono">{formatPercentage(disk.usePercent)}</span>
-      </div>
-      <ProgressBar value={disk.usePercent} color={diskColor(disk.usePercent)} />
+  {#if size === 'S'}
+    <div class="s-row">
+      <Icon name="hard-drive" size={16} class="text-accent" />
+      <span class="metric-value mono">{formatPercentage(totalPct, 0)}</span>
     </div>
   {:else}
-    <div class="disk-list">
-      {#each visibleDisks.slice(0, 4) as disk}
-        <div class="disk-row">
-          <div class="disk-info">
-            <span class="disk-mount">{disk.mount}</span>
-            <span class="disk-sizes mono">
-              {formatBytes(disk.used)} / {formatBytes(disk.total)}
-            </span>
-          </div>
-          <div class="disk-progress">
-            <ProgressBar value={disk.usePercent} color={diskColor(disk.usePercent)} />
-          </div>
-          <span class="disk-pct mono">{formatPercentage(disk.usePercent, 0)}</span>
-        </div>
-      {/each}
-    </div>
-  {/if}
+    {@const primary = visibleDisks[0]}
+    {#if primary}
+      <div class="primary-metric">
+        <span class="metric-value mono">{formatBytes(primary.used)}</span>
+        <span class="metric-label">of {formatBytes(primary.total)}</span>
+      </div>
 
-  <div class="io-row">
-    <div class="io-stat">
-      <span class="io-arrow io-read">↓</span>
-      <span class="io-label">Read</span>
-      <span class="io-value mono">{formatSpeed(ioRead)}</span>
-    </div>
-    <div class="io-stat">
-      <span class="io-arrow io-write">↑</span>
-      <span class="io-label">Write</span>
-      <span class="io-value mono">{formatSpeed(ioWrite)}</span>
-    </div>
-    {#if visibleDisks.length > 1}
-      <div class="io-stat">
-        <span class="io-label">Total</span>
-        <span class="io-value mono">{formatPercentage(totalPct, 0)} used</span>
+      <div class="health-label">{diskColor(primary.usePercent) === 'danger' ? 'Critical' : diskColor(primary.usePercent) === 'warning' ? 'Warning' : 'Healthy'}</div>
+
+      <div class="progress-labeled">
+        <div class="progress-header">
+          <span class="progress-title">{primary.mount}</span>
+          <span class="progress-pct mono">{formatPercentage(primary.usePercent)}</span>
+        </div>
+        <ProgressBar value={primary.usePercent} color={diskColor(primary.usePercent)} />
       </div>
     {/if}
-  </div>
+
+    {#if (size === 'L' || size === 'XL') && visibleDisks.length > 1}
+      <div class="disk-list">
+        {#each visibleDisks.slice(1) as disk}
+          <div class="disk-row">
+            <div class="disk-info">
+              <span class="disk-mount">{disk.mount}</span>
+              <span class="disk-sizes mono">{formatBytes(disk.used)} / {formatBytes(disk.total)}</span>
+            </div>
+            <div class="disk-progress">
+              <ProgressBar value={disk.usePercent} color={diskColor(disk.usePercent)} />
+            </div>
+            <span class="disk-pct mono">{formatPercentage(disk.usePercent, 0)}</span>
+          </div>
+        {/each}
+      </div>
+    {/if}
+  {/if}
 </div>
 
 <style>
@@ -95,6 +86,12 @@
     display: flex;
     flex-direction: column;
     gap: var(--space-3);
+  }
+
+  .s-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
   }
 
   .primary-metric {
@@ -110,9 +107,21 @@
     line-height: 1;
   }
 
+  .s-row .metric-value {
+    font-size: 20px;
+  }
+
   .metric-label {
     font-size: 12px;
     color: var(--color-text-muted);
+  }
+
+  .health-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--color-accent-text);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
   }
 
   .progress-labeled {
@@ -143,6 +152,8 @@
     display: flex;
     flex-direction: column;
     gap: var(--space-2);
+    padding-top: var(--space-2);
+    border-top: 1px solid var(--color-border-subtle);
   }
 
   .disk-row {
@@ -185,36 +196,5 @@
     grid-row: 2;
     grid-column: 2 / 3;
     text-align: right;
-  }
-
-  .io-row {
-    display: flex;
-    gap: var(--space-4);
-    padding-top: var(--space-2);
-    border-top: 1px solid var(--color-border-subtle);
-  }
-
-  .io-stat {
-    display: flex;
-    align-items: center;
-    gap: var(--space-1);
-  }
-
-  .io-arrow {
-    font-size: 12px;
-    line-height: 1;
-  }
-
-  .io-read  { color: var(--color-accent); }
-  .io-write { color: var(--color-warning); }
-
-  .io-label {
-    font-size: 11px;
-    color: var(--color-text-muted);
-  }
-
-  .io-value {
-    font-size: 12px;
-    color: var(--color-text-secondary);
   }
 </style>

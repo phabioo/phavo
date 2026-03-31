@@ -3,10 +3,10 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite dev",
-    "build": "vite build",
-    "preview": "vite preview",
-    "typecheck": "svelte-check --tsconfig ./tsconfig.json"
+    "dev": "node ./node_modules/vite/bin/vite.js dev",
+    "build": "node ./node_modules/vite/bin/vite.js build",
+    "preview": "node ./node_modules/vite/bin/vite.js preview",
+    "typecheck": "node ./node_modules/svelte-check/bin/svelte-check --tsconfig ./tsconfig.json"
   },
   "dependencies": {
     "@phavo/agent": "workspace:*",

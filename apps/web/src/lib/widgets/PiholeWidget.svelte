@@ -1,149 +1,114 @@
 <script lang="ts">
-  import type { PiholeMetrics } from '@phavo/types';
-  import { ProgressBar } from '@phavo/ui';
+  import type { PiholeMetrics, WidgetSize } from '@phavo/types';
+  import { Badge, Icon, ProgressBar } from '@phavo/ui';
+  import { formatPercentage } from '$lib/utils/format';
 
   interface Props {
     data: PiholeMetrics;
+    size?: WidgetSize;
   }
 
-  let { data }: Props = $props();
-
-  function formatNumber(n: number): string {
-    return n.toLocaleString('en-US');
-  }
-
-  // Colour the ProgressBar by how much is blocked — higher is better for Pi-hole
-  const barColor = $derived(
-    data.percentBlocked >= 25 ? 'accent' : data.percentBlocked >= 10 ? 'warning' : 'accent',
-  );
+  let { data, size = 'M' }: Props = $props();
 </script>
 
 <div class="pihole-widget">
-  <!-- Status badge -->
-  <div class="status-row">
-    <span
-      class="status-badge"
-      class:status-enabled={data.status === 'enabled'}
-      class:status-disabled={data.status === 'disabled'}
-    >
-      {data.status === 'enabled' ? 'Enabled' : 'Disabled'}
-    </span>
-    {#if data.status === 'disabled'}
-      <span class="configure-hint">Configure in Settings to activate</span>
+  {#if size === 'S'}
+    <div class="s-row">
+      <Icon name="shield" size={16} class="text-accent" />
+      <span class="metric-value mono">{formatPercentage(data.percentBlocked, 0)}</span>
+    </div>
+  {:else}
+    <div class="stat-row">
+      <div class="stat">
+        <span class="stat-label">Total queries</span>
+        <span class="stat-value mono">{data.totalQueries.toLocaleString()}</span>
+      </div>
+      <div class="stat">
+        <span class="stat-label">Blocked</span>
+        <span class="stat-value mono">{formatPercentage(data.percentBlocked)}</span>
+      </div>
+    </div>
+
+    <ProgressBar value={data.percentBlocked} color="accent" />
+
+    <Badge variant={data.status === 'enabled' ? 'success' : 'danger'}>
+      {data.status === 'enabled' ? 'Active' : 'Disabled'}
+    </Badge>
+
+    {#if size === 'L' || size === 'XL'}
+      <div class="extra">
+        <div class="extra-stat">
+          <span class="extra-label">Blocklists</span>
+          <span class="extra-value mono">{data.domainsOnBlocklist.toLocaleString()}</span>
+        </div>
+      </div>
     {/if}
-  </div>
-
-  <!-- Totals grid -->
-  <div class="stats-grid">
-    <div class="stat-item">
-      <span class="stat-value mono">{formatNumber(data.totalQueries)}</span>
-      <span class="stat-label">Total Queries</span>
-    </div>
-    <div class="stat-item">
-      <span class="stat-value mono">{formatNumber(data.domainsOnBlocklist)}</span>
-      <span class="stat-label">Blocklist Domains</span>
-    </div>
-  </div>
-
-  <!-- Blocked row with ProgressBar -->
-  <div class="blocked-section">
-    <div class="blocked-header">
-      <span class="stat-label">Blocked</span>
-      <span class="blocked-values mono">
-        {formatNumber(data.blockedQueries)}
-        <span class="pct">({data.percentBlocked.toFixed(1)}%)</span>
-      </span>
-    </div>
-    <ProgressBar value={data.percentBlocked} color={barColor} />
-  </div>
+  {/if}
 </div>
 
 <style>
   .pihole-widget {
     display: flex;
     flex-direction: column;
-    gap: var(--space-4);
+    gap: var(--space-3);
   }
 
-  /* --- Status badge --- */
-  .status-row {
+  .s-row {
     display: flex;
     align-items: center;
     gap: var(--space-2);
   }
 
-  .status-badge {
-    display: inline-block;
-    padding: 2px 10px;
-    border-radius: 999px;
-    font-size: 0.75rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
+  .metric-value {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--color-text-primary);
+    line-height: 1;
   }
 
-  .status-enabled {
-    background: color-mix(in srgb, var(--color-accent) 20%, transparent);
-    color: var(--color-accent);
+  .stat-row {
+    display: flex;
+    justify-content: space-between;
   }
 
-  .status-disabled {
-    background: color-mix(in srgb, var(--color-text-muted) 15%, transparent);
-    color: var(--color-text-muted);
-  }
-
-  .configure-hint {
-    font-size: 0.75rem;
-    color: var(--color-text-muted);
-  }
-
-  /* --- Stats grid --- */
-  .stats-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: var(--space-3);
-  }
-
-  .stat-item {
+  .stat {
     display: flex;
     flex-direction: column;
     gap: 2px;
   }
 
+  .stat-label {
+    font-size: 10px;
+    color: var(--color-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+  }
+
   .stat-value {
-    font-size: 1.4rem;
+    font-size: 22px;
     font-weight: 700;
-    color: var(--color-text);
+    color: var(--color-text-primary);
     line-height: 1;
   }
 
-  .stat-label {
-    font-size: 0.7rem;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: var(--color-text-muted);
+  .extra {
+    padding-top: var(--space-2);
+    border-top: 1px solid var(--color-border-subtle);
   }
 
-  /* --- Blocked row --- */
-  .blocked-section {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-2);
-  }
-
-  .blocked-header {
+  .extra-stat {
     display: flex;
     justify-content: space-between;
     align-items: center;
   }
 
-  .blocked-values {
-    font-size: 0.875rem;
-    color: var(--color-text);
+  .extra-label {
+    font-size: 11px;
+    color: var(--color-text-muted);
   }
 
-  .pct {
-    color: var(--color-text-muted);
-    margin-left: 4px;
+  .extra-value {
+    font-size: 13px;
+    color: var(--color-text-secondary);
   }
 </style>

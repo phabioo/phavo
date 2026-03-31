@@ -1,52 +1,43 @@
 <script lang="ts">
-  import type { RssFeedResult } from '@phavo/types';
+  import type { RssFeedResult, WidgetSize } from '@phavo/types';
+  import { Icon } from '@phavo/ui';
+  import { relativeTime } from '$lib/utils/time';
 
   interface Props {
     data: RssFeedResult;
+    size?: WidgetSize;
   }
 
-  let { data }: Props = $props();
+  let { data, size = 'M' }: Props = $props();
 
-  const hasItems = $derived(data.items.length > 0);
-
-  function timeAgo(dateStr: string): string {
-    const diff = Date.now() - new Date(dateStr).getTime();
-    if (diff < 0) return 'just now';
-    const mins = Math.floor(diff / 60_000);
-    if (mins < 1) return 'just now';
-    if (mins < 60) return `${mins}m ago`;
-    const hours = Math.floor(mins / 60);
-    if (hours < 24) return `${hours}h ago`;
-    return `${Math.floor(hours / 24)}d ago`;
-  }
+  const sources = $derived([...new Set(data.items.map(i => i.source))]);
 </script>
 
 <div class="rss-widget">
-  {#if !hasItems}
-    <div class="empty-state">
-      <span class="empty-icon" aria-hidden="true">📰</span>
-      <p class="empty-message">No feeds configured — add RSS URLs in Settings.</p>
+  {#if size === 'S'}
+    <div class="s-row">
+      <Icon name="rss" size={16} class="text-accent" />
+      <span class="metric-value mono">{data.items.length}</span>
+      <span class="s-label">items</span>
     </div>
   {:else}
-    <ul class="feed-list">
-      {#each data.items as item (item.link)}
-        <li class="feed-item">
-          <a
-            href={item.link}
-            target="_blank"
-            rel="noopener noreferrer"
-            class="item-title"
-          >{item.title}</a>
-          <div class="item-meta">
-            <span class="item-source">{item.source}</span>
-            <span class="item-time">{timeAgo(item.publishedAt)}</span>
-          </div>
-        </li>
-      {/each}
-    </ul>
-
-    {#if data.errors.length > 0}
-      <p class="failed-note">{data.errors.length} feed{data.errors.length > 1 ? 's' : ''} could not be loaded.</p>
+    {#if data.items.length === 0}
+      <div class="empty">
+        <Icon name="rss" size={20} />
+        <span>No feed items</span>
+      </div>
+    {:else}
+      <div class="item-list">
+        {#each data.items.slice(0, size === 'XL' ? 10 : 5) as item}
+          <a class="feed-item" href={item.link} target="_blank" rel="noopener noreferrer">
+            <span class="item-title">{item.title}</span>
+            <div class="item-meta">
+              <span class="item-source">{item.source}</span>
+              <span class="item-time">{relativeTime(new Date(item.publishedAt))}</span>
+            </div>
+          </a>
+        {/each}
+      </div>
     {/if}
   {/if}
 </div>
@@ -55,46 +46,50 @@
   .rss-widget {
     display: flex;
     flex-direction: column;
-  }
-
-  /* --- Empty state --- */
-  .empty-state {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
     gap: var(--space-3);
-    padding: var(--space-6) var(--space-4);
-    text-align: center;
   }
 
-  .empty-icon {
-    font-size: 2rem;
+  .s-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+  }
+
+  .metric-value {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--color-text-primary);
     line-height: 1;
   }
 
-  .empty-message {
-    font-size: 0.875rem;
+  .s-label {
+    font-size: 12px;
     color: var(--color-text-muted);
-    max-width: 20ch;
   }
 
-  /* --- Feed list --- */
-  .feed-list {
-    list-style: none;
-    padding: 0;
-    margin: 0;
+  .empty {
     display: flex;
     flex-direction: column;
-    gap: 1px;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-4) 0;
+    color: var(--color-text-muted);
+    font-size: 13px;
+  }
+
+  .item-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
   }
 
   .feed-item {
     display: flex;
     flex-direction: column;
-    gap: 4px;
-    padding: var(--space-2) 0;
-    border-bottom: 1px solid var(--color-border);
+    gap: 2px;
+    text-decoration: none;
+    padding: var(--space-1) 0;
+    border-bottom: 1px solid var(--color-border-subtle);
   }
 
   .feed-item:last-child {
@@ -102,43 +97,28 @@
   }
 
   .item-title {
-    font-size: 0.875rem;
-    color: var(--color-text);
-    text-decoration: none;
-    line-height: 1.4;
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 2;
-    line-clamp: 2;
+    font-size: 13px;
+    color: var(--color-text-primary);
     overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
-  .item-title:hover {
-    color: var(--color-accent);
-    text-decoration: underline;
+  .feed-item:hover .item-title {
+    color: var(--color-accent-text);
   }
 
   .item-meta {
     display: flex;
     gap: var(--space-2);
-    align-items: center;
+    font-size: 11px;
   }
 
   .item-source {
-    font-size: 0.72rem;
-    color: var(--color-accent);
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
+    color: var(--color-accent-text);
   }
 
   .item-time {
-    font-size: 0.72rem;
     color: var(--color-text-muted);
-  }
-
-  .failed-note {
-    margin: var(--space-2) 0 0;
-    font-size: 0.75rem;
-    color: var(--color-warning);
   }
 </style>

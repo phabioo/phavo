@@ -131,7 +131,7 @@ const TIER_RANK = { standard: 0, pro: 1, local: 2 }
 | `tabs` | Dashboard tabs | `order` for sort |
 | `widgetInstances` | Placed widgets | `configEncrypted` (non-credential) + `configSchemaVersion` |
 | `credentials` | Secrets | `valueEncrypted` — AES-256-GCM always |
-| `licenseActivation` | Local tier | `activationJwt` — Ed25519 signed, two public keys embedded |
+| `licenseActivation` | Local tier | `activationJwt` — Ed25519 **signed** (signing/verification only, not encryption), two public keys embedded |
 | `plugin_data` | Plugin persistence | `(plugin_id, key, value)` — 10MB quota per plugin_id |
 
 Migrations: `0001` canonical schema · `0002` configSchemaVersion · `0003` authMode rename
@@ -241,6 +241,7 @@ registry.register({ id: 'io.phavo.cpu', _source: 'builtin', tier: 'standard', ..
 - Tauri free port reservation — atomic reservation needed
 - Light theme — token system ready, not designed
 - `@fontsource/geist` — verify self-hosting works before Milestone 4
+- **svelte.config.js must NOT have `compilerOptions: { runes: true }`** — breaks lucide-svelte. Runes mode is auto-detected per component via $props()/$state() usage.
 
 ---
 

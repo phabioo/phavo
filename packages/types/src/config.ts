@@ -19,5 +19,7 @@ export const DashboardConfigSchema = z.object({
       longitude: z.number(),
     })
     .optional(),
+  telemetryAsked: z.boolean().optional(),
+  telemetryEnabled: z.boolean().optional(),
 });
 export type DashboardConfig = z.infer<typeof DashboardConfigSchema>;

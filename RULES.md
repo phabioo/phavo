@@ -20,8 +20,8 @@ Domain: **phavo.net** (not phavo.io)
 DB authMode: `'phavo-net'` | `'local'` (migrated from `'phavo-io'`)  
 Tiers: `'standard'` (€0) · `'pro'` (€8.99) · `'local'` (€24.99) · `TIER_RANK = { standard:0, pro:1, local:2 }`  
 Two product lines — no cross-upgrade (Standard/Pro ≠ Local)  
-Ed25519: signing/verification only — never for encryption  
-Encryption: AES-256-GCM always  
+Ed25519: **signing/verification only** — never for encryption (JWT verification, plugin signing, Tauri updates)  
+Encryption: AES-256-GCM always (credentials at rest, config exports)  
 
 ---
 
@@ -244,6 +244,21 @@ const rows = await db.select()...
 const client = createClient({ url: '...' })
 ```
 
+### SVELTE CONFIG — RUNES MODE
+```javascript
+// ❌ INVALID — breaks lucide-svelte and any Svelte 4 legacy components
+// svelte.config.js
+compilerOptions: { runes: true }
+
+// ✅ VALID — Svelte 5 auto-detects runes per component
+// svelte.config.js has NO compilerOptions.runes
+// Components using $props(), $state() etc. automatically run in runes mode
+// Components using $$props (e.g. lucide-svelte internals) run in legacy mode
+```
+
+Never add `runes: true` to svelte.config.js compilerOptions. Runes mode is
+opt-in per component via usage — not a global switch.
+
 ### MOCK AUTH
 ```typescript
 // ✅ VALID
@@ -358,6 +373,10 @@ Material Symbols, Font Awesome, or any icon system other than Lucide via `<Icon 
 
 ### ❌ FAIL: WRONG FONT
 Manrope, Inter, or any font other than Geist/Geist Mono referenced in component code.
+
+### ❌ FAIL: GLOBAL RUNES MODE
+`compilerOptions: { runes: true }` in svelte.config.js. This breaks lucide-svelte
+and any Svelte 4 legacy distributed components. Svelte 5 detects runes per component.
 
 ---
 

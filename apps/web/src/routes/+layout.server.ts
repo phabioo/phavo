@@ -47,6 +47,8 @@ export const load = async ({ cookies, url }: ServerLoadEvent) => {
               longitude: Number(entries.location_longitude),
             }
           : undefined,
+      telemetryAsked: entries.telemetry_asked === 'true' ? true : undefined,
+      telemetryEnabled: entries.telemetry_enabled === 'true' ? true : undefined,
     };
   } catch {
     // DB not yet initialised (first launch) — treat as incomplete

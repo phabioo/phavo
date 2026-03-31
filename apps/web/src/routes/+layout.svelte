@@ -2,7 +2,7 @@
 import '@phavo/ui/src/theme.css';
 import { onMount, type Snippet } from 'svelte';
 import { goto } from '$app/navigation';
-import { icons, Sidebar, Header, NotificationPanel } from '@phavo/ui';
+import { Sidebar, Header, NotificationPanel } from '@phavo/ui';
 import type { SearchEntry } from '@phavo/ui';
 import type { DashboardConfig, Notification, Session } from '@phavo/types';
 import en from '$lib/i18n/en.json';
@@ -39,11 +39,11 @@ let latestUpdateVersion = $state('');
 let currentPathname = $state('/');
 
 const sidebarItems = [
-  { id: 'home', label: 'Dashboard', icon: icons.cpu() },
+  { id: 'home', label: 'Dashboard', icon: 'layout-dashboard' },
 ];
 
 const sidebarBottomItems = [
-  { id: 'settings', label: en.settings.title, icon: icons.settings() },
+  { id: 'settings', label: en.settings.title, icon: 'settings' },
 ];
 
 /**

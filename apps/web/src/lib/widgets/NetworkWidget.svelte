@@ -1,13 +1,15 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import type { NetworkMetrics } from '@phavo/types';
+  import type { NetworkMetrics, WidgetSize } from '@phavo/types';
+  import { Icon } from '@phavo/ui';
   import { formatBytes, formatSpeed } from '$lib/utils/format';
 
   interface Props {
     data: NetworkMetrics;
+    size?: WidgetSize;
   }
 
-  let { data }: Props = $props();
+  let { data, size = 'M' }: Props = $props();
 
   // Track the max seen speed for a mini spark-like visual proportion
   let maxSpeed = $state(1);
@@ -26,42 +28,50 @@
 </script>
 
 <div class="network-widget">
-  <div class="speed-blocks">
-    <div class="speed-block">
-      <div class="speed-direction">
-        <span class="arrow down">↓</span>
-        <span class="speed-label">Download</span>
-      </div>
+  {#if size === 'S'}
+    <div class="s-row">
+      <Icon name="globe" size={16} class="text-accent" />
       <span class="speed-value mono">{formatSpeed(data.downloadSpeed)}</span>
-      <div class="speed-bar-wrap">
-        <div class="speed-bar bar-down" style:width="{downPct}%"></div>
+    </div>
+  {:else}
+    <div class="speed-blocks">
+      <div class="speed-block">
+        <div class="speed-direction">
+          <span class="arrow down">↓</span>
+          <span class="speed-label">Download</span>
+        </div>
+        <span class="speed-value mono">{formatSpeed(data.downloadSpeed)}</span>
+      </div>
+
+      <div class="speed-divider"></div>
+
+      <div class="speed-block">
+        <div class="speed-direction">
+          <span class="arrow up">↑</span>
+          <span class="speed-label">Upload</span>
+        </div>
+        <span class="speed-value mono">{formatSpeed(data.uploadSpeed)}</span>
       </div>
     </div>
 
-    <div class="speed-divider"></div>
+    <div class="online-row">
+      <span class="online-dot"></span>
+      <span class="online-label">Online</span>
+    </div>
 
-    <div class="speed-block">
-      <div class="speed-direction">
-        <span class="arrow up">↑</span>
-        <span class="speed-label">Upload</span>
+    {#if (size === 'L' || size === 'XL')}
+      <div class="totals-row">
+        <div class="total-stat">
+          <span class="total-label">Total Received</span>
+          <span class="total-value mono">{formatBytes(data.totalReceived)}</span>
+        </div>
+        <div class="total-stat">
+          <span class="total-label">Total Sent</span>
+          <span class="total-value mono">{formatBytes(data.totalSent)}</span>
+        </div>
       </div>
-      <span class="speed-value mono">{formatSpeed(data.uploadSpeed)}</span>
-      <div class="speed-bar-wrap">
-        <div class="speed-bar bar-up" style:width="{upPct}%"></div>
-      </div>
-    </div>
-  </div>
-
-  <div class="totals-row">
-    <div class="total-stat">
-      <span class="total-label">Total Received</span>
-      <span class="total-value mono">{formatBytes(data.totalReceived)}</span>
-    </div>
-    <div class="total-stat">
-      <span class="total-label">Total Sent</span>
-      <span class="total-value mono">{formatBytes(data.totalSent)}</span>
-    </div>
-  </div>
+    {/if}
+  {/if}
 </div>
 
 <style>
@@ -69,6 +79,12 @@
     display: flex;
     flex-direction: column;
     gap: var(--space-4);
+  }
+
+  .s-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
   }
 
   .speed-blocks {
@@ -113,27 +129,32 @@
     line-height: 1;
   }
 
-  .speed-bar-wrap {
-    height: 4px;
-    background: var(--color-bg-hover);
-    border-radius: 2px;
-    overflow: hidden;
+  .s-row .speed-value {
+    font-size: 20px;
   }
-
-  .speed-bar {
-    height: 100%;
-    border-radius: 2px;
-    transition: width 0.5s ease;
-    min-width: 2px;
-  }
-
-  .bar-down { background: var(--color-accent); }
-  .bar-up   { background: var(--color-accent-text); }
 
   .speed-divider {
     width: 1px;
     background: var(--color-border-subtle);
     align-self: stretch;
+  }
+
+  .online-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+  }
+
+  .online-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--color-success);
+  }
+
+  .online-label {
+    font-size: 12px;
+    color: var(--color-text-secondary);
   }
 
   .totals-row {

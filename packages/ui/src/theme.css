@@ -1,13 +1,17 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Manrope:wght@200;300;400;500;600;700;800&display=swap');
+/* Self-hosted fonts — replaces Google Fonts CDN */
+@import "@fontsource-variable/geist";
+@import "@fontsource-variable/geist-mono";
+
 @import "tailwindcss";
 @source "./**/*.{svelte,ts}";
 
 /* IRON RULE: Every component in @phavo/ui uses ONLY these variables.
-   Zero hardcoded hex values anywhere in component files. */
+   Zero hardcoded hex values anywhere in component files.
+   .phtheme overrides re-theme the entire UI by overriding :root vars. */
 
 :root,
 :root[data-theme="dark"] {
-  /* Google Stitch / Material 3 palette */
+  /* ── Stitch / Material 3 palette (source tokens) ────────────────────── */
   --stitch-primary:                       #ffb954;
   --stitch-primary-container:             #d4922a;
   --stitch-primary-fixed:                 #ffddb4;
@@ -60,37 +64,38 @@
   --stitch-inverse-surface:               #e2e2e2;
   --stitch-inverse-on-surface:            #303030;
 
-  --phavo-font-ui-source: 'Manrope', -apple-system, BlinkMacSystemFont, sans-serif;
-  --phavo-font-mono-source: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  /* ── Font sources (overridable by .phtheme) ─────────────────────────── */
+  --phavo-font-ui-source: 'Geist Variable', 'Geist', -apple-system, BlinkMacSystemFont, sans-serif;
+  --phavo-font-mono-source: 'Geist Mono Variable', 'Geist Mono', 'SF Mono', ui-monospace, monospace;
 
-  /* Backgrounds */
-  --color-bg:             var(--stitch-background);  /* alias for --color-bg-base; used as on-accent text color */
+  /* ── Semantic background tokens ─────────────────────────────────────── */
+  --color-bg:             var(--stitch-background);
   --color-bg-base:        var(--stitch-background);
   --color-bg-surface:     var(--stitch-surface-container-low);
   --color-bg-elevated:    var(--stitch-surface-container);
   --color-bg-hover:       var(--stitch-surface-container-high);
 
-  /* Borders */
+  /* ── Border tokens ──────────────────────────────────────────────────── */
   --color-border:         var(--stitch-outline-variant);
   --color-border-subtle:  color-mix(in srgb, var(--stitch-outline-variant) 40%, transparent);
   --color-border-strong:  var(--stitch-outline);
   --color-border-hover:   var(--stitch-outline);
 
-  /* Text */
+  /* ── Text tokens ────────────────────────────────────────────────────── */
   --color-text:           var(--stitch-on-surface);
   --color-text-primary:   var(--stitch-on-surface);
   --color-text-secondary: var(--stitch-outline);
   --color-text-muted:     var(--stitch-outline-variant);
   --color-text-inverse:   var(--stitch-inverse-on-surface);
 
-  /* Accent */
+  /* ── Accent tokens ──────────────────────────────────────────────────── */
   --color-accent:         var(--stitch-primary-container);
   --color-accent-subtle:  var(--stitch-secondary-container);
   --color-accent-hover:   var(--stitch-primary);
   --color-accent-t:       color-mix(in srgb, var(--stitch-primary-container) 12%, transparent);
   --color-accent-text:    var(--stitch-primary);
 
-  /* Semantic */
+  /* ── Semantic status tokens ─────────────────────────────────────────── */
   --color-danger:         var(--stitch-error-container);
   --color-danger-subtle:  color-mix(in srgb, var(--stitch-error-container) 48%, transparent);
   --color-warning:        var(--stitch-secondary);
@@ -98,17 +103,23 @@
   --color-success:        var(--stitch-primary);
   --color-info:           var(--stitch-tertiary);
 
-  /* Typography */
+  /* ── Typography ─────────────────────────────────────────────────────── */
   --font-ui:   var(--phavo-font-ui-source);
   --font-mono: var(--phavo-font-mono-source);
 
-  /* Radii */
+  --font-size-xs: 11px;
+  --font-size-sm: 12px;
+  --font-size-md: 13px;
+  --font-size-lg: 15px;
+  --font-size-xl: 18px;
+
+  /* ── Radii ──────────────────────────────────────────────────────────── */
   --radius-sm: 6px;
   --radius-md: 10px;
   --radius-lg: 14px;
   --radius-xl: 20px;
 
-  /* Spacing scale */
+  /* ── Spacing scale ──────────────────────────────────────────────────── */
   --space-1: 4px;
   --space-2: 8px;
   --space-3: 12px;
@@ -116,28 +127,38 @@
   --space-5: 20px;
   --space-6: 24px;
   --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
 
-  /* Shadows — flat design, minimal */
-  --shadow-sm: 0 1px 2px rgba(0,0,0,0.4);
-  --shadow-md: 0 2px 8px rgba(0,0,0,0.5);
+  /* ── Shadows ────────────────────────────────────────────────────────── */
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.3);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.4);
+  --shadow-lg: 0 8px 24px rgba(0,0,0,0.5);
 
-  /* Sidebar width */
-  --sidebar-width: 220px;
-  --sidebar-collapsed-width: 56px;
+  /* ── Sidebar dimensions ─────────────────────────────────────────────── */
+  --sidebar-width: 256px;
+  --sidebar-collapsed-width: 80px;
 
-  /* Breakpoint reference — documentation only, cannot be used in @media queries */
-  --bp-mobile:  640px;  /* <640px  = mobile  */
-  --bp-tablet: 1024px;  /* <1024px = tablet  */
-
-  /* Widget grid */
+  /* ── Widget grid ────────────────────────────────────────────────────── */
   --grid-cols: 12;
-  --grid-gap: 12px;
+  --grid-gap: 1.5rem;
 }
 
+/* ── Tailwind v4 @theme bridge ─────────────────────────────────────────
+   Maps Phavo CSS variables to Tailwind utilities so both `class="bg-base"`
+   and `style="background: var(--color-bg-base)"` work identically.
+   .phtheme overrides change the CSS vars → utilities update automatically. */
+
 @theme inline {
+  /* Surface / background */
   --color-background: var(--stitch-background);
+  --color-base: var(--color-bg-base);
+  --color-surface: var(--color-bg-surface);
+  --color-elevated: var(--color-bg-elevated);
+  --color-hover: var(--color-bg-hover);
+
+  /* Stitch elevation layers (direct access) */
   --color-on-background: var(--stitch-on-background);
-  --color-surface: var(--stitch-surface);
   --color-surface-dim: var(--stitch-surface-dim);
   --color-surface-bright: var(--stitch-surface-bright);
   --color-surface-variant: var(--stitch-surface-variant);
@@ -154,6 +175,23 @@
   --color-inverse-surface: var(--stitch-inverse-surface);
   --color-inverse-on-surface: var(--stitch-inverse-on-surface);
 
+  /* Border */
+  --color-border: var(--color-border);
+  --color-border-subtle: var(--color-border-subtle);
+  --color-border-strong: var(--color-border-strong);
+
+  /* Text */
+  --color-text: var(--color-text-primary);
+  --color-text-muted: var(--color-text-secondary);
+  --color-text-dim: var(--color-text-muted);
+
+  /* Accent */
+  --color-accent: var(--color-accent);
+  --color-accent-subtle: var(--color-accent-subtle);
+  --color-accent-hover: var(--color-accent-hover);
+  --color-accent-text: var(--color-accent-text);
+
+  /* Primary palette */
   --color-primary: var(--stitch-primary);
   --color-primary-container: var(--stitch-primary-container);
   --color-primary-fixed: var(--stitch-primary-fixed);
@@ -164,6 +202,7 @@
   --color-on-primary-fixed-variant: var(--stitch-on-primary-fixed-variant);
   --color-inverse-primary: var(--stitch-inverse-primary);
 
+  /* Secondary palette */
   --color-secondary: var(--stitch-secondary);
   --color-secondary-container: var(--stitch-secondary-container);
   --color-secondary-fixed: var(--stitch-secondary-fixed);
@@ -173,6 +212,7 @@
   --color-on-secondary-fixed: var(--stitch-on-secondary-fixed);
   --color-on-secondary-fixed-variant: var(--stitch-on-secondary-fixed-variant);
 
+  /* Tertiary palette */
   --color-tertiary: var(--stitch-tertiary);
   --color-tertiary-container: var(--stitch-tertiary-container);
   --color-tertiary-fixed: var(--stitch-tertiary-fixed);
@@ -182,37 +222,48 @@
   --color-on-tertiary-fixed: var(--stitch-on-tertiary-fixed);
   --color-on-tertiary-fixed-variant: var(--stitch-on-tertiary-fixed-variant);
 
+  /* Error / semantic */
   --color-error: var(--stitch-error);
   --color-error-container: var(--stitch-error-container);
   --color-on-error: var(--stitch-on-error);
   --color-on-error-container: var(--stitch-on-error-container);
+  --color-danger: var(--color-danger);
+  --color-danger-subtle: var(--color-danger-subtle);
+  --color-warning: var(--color-warning);
+  --color-success: var(--color-success);
+  --color-info: var(--color-info);
 
-  --color-phavo-bg: var(--color-bg);
-  --color-phavo-bg-base: var(--color-bg-base);
-  --color-phavo-bg-surface: var(--color-bg-surface);
-  --color-phavo-bg-elevated: var(--color-bg-elevated);
-  --color-phavo-bg-hover: var(--color-bg-hover);
-  --color-phavo-border: var(--color-border);
-  --color-phavo-border-subtle: var(--color-border-subtle);
-  --color-phavo-border-strong: var(--color-border-strong);
-  --color-phavo-text: var(--color-text-primary);
-  --color-phavo-text-secondary: var(--color-text-secondary);
-  --color-phavo-text-muted: var(--color-text-muted);
-  --color-phavo-accent: var(--color-accent);
-  --color-phavo-accent-subtle: var(--color-accent-subtle);
-  --color-phavo-danger: var(--color-danger);
-  --color-phavo-warning: var(--color-warning);
-  --color-phavo-success: var(--color-success);
+  /* Shape */
+  --radius-sm:  var(--radius-sm);
+  --radius-md:  var(--radius-md);
+  --radius-lg:  var(--radius-lg);
+  --radius-xl:  var(--radius-xl);
 
+  /* Elevation */
+  --shadow-sm:  var(--shadow-sm);
+  --shadow-md:  var(--shadow-md);
+  --shadow-lg:  var(--shadow-lg);
+
+  /* Typography */
   --font-sans: var(--phavo-font-ui-source);
   --font-ui: var(--phavo-font-ui-source);
   --font-mono: var(--phavo-font-mono-source);
+
+  /* Spacing */
+  --spacing-1: 4px;
+  --spacing-2: 8px;
+  --spacing-3: 12px;
+  --spacing-4: 16px;
+  --spacing-5: 20px;
+  --spacing-6: 24px;
+  --spacing-8: 32px;
+  --spacing-10: 40px;
+  --spacing-12: 48px;
 }
 
-/* Base reset */
+/* ── Base reset ────────────────────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-/* Prevent horizontal scroll at any viewport width */
 html { max-width: 100%; overflow-x: hidden; }
 
 body {

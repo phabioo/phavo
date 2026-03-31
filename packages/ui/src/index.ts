@@ -1,11 +1,13 @@
 // Components
 
 export { default as Badge } from './components/Badge.svelte';
+export { default as BentoGrid } from './components/BentoGrid.svelte';
 export { default as Button } from './components/Button.svelte';
 export { default as Card } from './components/Card.svelte';
 export { default as Header } from './components/Header.svelte';
 export type { AiProviders, SearchEntry } from './components/HeaderSearch.svelte';
 export { default as HeaderSearch } from './components/HeaderSearch.svelte';
+export { default as Icon } from './components/Icon.svelte';
 export { default as Input } from './components/Input.svelte';
 export { default as Modal } from './components/Modal.svelte';
 export { default as NotificationPanel } from './components/NotificationPanel.svelte';

@@ -7,12 +7,12 @@
     "packages/*"
   ],
   "scripts": {
-    "dev": "turbo run dev",
-    "build": "turbo run build",
-    "lint": "biome check .",
-    "format": "biome format --write .",
-    "typecheck": "turbo run typecheck",
-    "clean": "turbo run clean",
+    "dev": "node ./node_modules/turbo/bin/turbo run dev",
+    "build": "node ./node_modules/turbo/bin/turbo run build",
+    "lint": "node ./node_modules/@biomejs/biome/bin/biome check .",
+    "format": "node ./node_modules/@biomejs/biome/bin/biome format --write .",
+    "typecheck": "node ./node_modules/turbo/bin/turbo run typecheck",
+    "clean": "node ./node_modules/turbo/bin/turbo run clean",
     "release:patch": "npm version patch && git push && git push --tags",
     "release:minor": "npm version minor && git push && git push --tags",
     "release:major": "npm version major && git push && git push --tags"

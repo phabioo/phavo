@@ -1,63 +1,75 @@
 <script lang="ts">
-  import type { CpuMetrics } from '@phavo/types';
-  import { ProgressBar } from '@phavo/ui';
+  import type { CpuMetrics, WidgetSize } from '@phavo/types';
+  import { Icon, ProgressBar } from '@phavo/ui';
   import { formatPercentage } from '$lib/utils/format';
 
   interface Props {
     data: CpuMetrics;
+    size?: WidgetSize;
   }
 
-  let { data }: Props = $props();
+  let { data, size = 'M' }: Props = $props();
 
   const usageColor = $derived(
     data.usage >= 90 ? 'danger' : data.usage >= 70 ? 'warning' : 'accent',
   );
+
+  const statusLabel = $derived(
+    data.usage >= 90 ? 'Critical' : data.usage >= 70 ? 'High' : 'Stable',
+  );
 </script>
 
 <div class="cpu-widget">
-  <div class="primary-metric">
-    <span class="metric-value mono">{formatPercentage(data.usage)}</span>
-    <span class="metric-label">CPU Usage</span>
-  </div>
+  {#if size === 'S'}
+    <div class="s-row">
+      <Icon name="cpu" size={16} class="text-accent" />
+      <span class="metric-value mono">{formatPercentage(data.usage, 0)}</span>
+    </div>
+  {:else}
+    <div class="primary-metric">
+      <span class="metric-value mono">{formatPercentage(data.usage)}</span>
+      <span class="status-label" class:status-danger={data.usage >= 90} class:status-warning={data.usage >= 70 && data.usage < 90}>{statusLabel}</span>
+    </div>
 
-  <div class="progress-row">
-    <ProgressBar value={data.usage} color={usageColor} />
-  </div>
+    <div class="core-count">
+      <Icon name="cpu" size={14} />
+      <span>{data.cores.length} cores</span>
+    </div>
 
-  <div class="model-row">
-    <span class="model-name">{data.model}</span>
-    <span class="speed mono">{data.speed} GHz</span>
-  </div>
+    <div class="progress-row">
+      <ProgressBar value={data.usage} color={usageColor} />
+    </div>
 
-  {#if data.cores.length > 0}
-    <div class="cores-grid">
-      {#each data.cores as coreLoad, i}
-        <div class="core-item">
-          <div class="core-label">C{i + 1}</div>
-          <div class="core-bar-wrap">
-            <div
-              class="core-bar"
-              class:bar-danger={coreLoad >= 90}
-              class:bar-warning={coreLoad >= 70 && coreLoad < 90}
-              style:width="{Math.min(100, coreLoad)}%"
-            ></div>
+    {#if (size === 'L' || size === 'XL') && data.cores.length > 0}
+      <div class="cores-grid">
+        {#each data.cores as coreLoad, i}
+          <div class="core-item">
+            <span class="core-label">C{i + 1}</span>
+            <div class="core-bar-wrap">
+              <div
+                class="core-bar"
+                class:bar-danger={coreLoad >= 90}
+                class:bar-warning={coreLoad >= 70 && coreLoad < 90}
+                style:width="{Math.min(100, coreLoad)}%"
+              ></div>
+            </div>
+            <span class="core-pct mono">{Math.round(coreLoad)}%</span>
           </div>
-          <div class="core-pct mono">{Math.round(coreLoad)}%</div>
-        </div>
-      {/each}
-    </div>
-  {/if}
+        {/each}
+      </div>
 
-  <div class="load-avg-row">
-    <span class="load-label">Load avg</span>
-    <div class="load-values">
-      {#each data.loadAvg as val, i}
-        <span class="load-item mono">
-          {val.toFixed(2)}<span class="load-period">{['1m', '5m', '15m'][i]}</span>
-        </span>
-      {/each}
-    </div>
-  </div>
+      <div class="load-avg-row">
+        <span class="load-label">Load avg</span>
+        <div class="load-values">
+          {#each data.loadAvg as val, i}
+            <span class="load-item mono">
+              {val.toFixed(2)}<span class="load-period">{['1m', '5m', '15m'][i]}</span>
+            </span>
+          {/each}
+        </div>
+      </div>
+    {/if}
+  {/if}
 </div>
 
 <style>
@@ -65,6 +77,12 @@
     display: flex;
     flex-direction: column;
     gap: var(--space-3);
+  }
+
+  .s-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
   }
 
   .primary-metric {
@@ -80,36 +98,31 @@
     line-height: 1;
   }
 
-  .metric-label {
-    font-size: 12px;
-    color: var(--color-text-muted);
+  .s-row .metric-value {
+    font-size: 20px;
+  }
+
+  .status-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--color-accent-text);
     text-transform: uppercase;
     letter-spacing: 0.5px;
   }
 
-  .progress-row {
-    margin: var(--space-1) 0;
-  }
+  .status-warning { color: var(--color-warning); }
+  .status-danger { color: var(--color-danger); }
 
-  .model-row {
+  .core-count {
     display: flex;
-    justify-content: space-between;
     align-items: center;
-  }
-
-  .model-name {
+    gap: var(--space-1);
     font-size: 12px;
     color: var(--color-text-secondary);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
   }
 
-  .speed {
-    font-size: 12px;
-    color: var(--color-text-muted);
-    flex-shrink: 0;
-    margin-left: var(--space-2);
+  .progress-row {
+    margin: var(--space-1) 0;
   }
 
   .cores-grid {
@@ -148,7 +161,7 @@
   }
 
   .core-bar.bar-warning { background: var(--color-warning); }
-  .core-bar.bar-danger  { background: var(--color-danger); }
+  .core-bar.bar-danger { background: var(--color-danger); }
 
   .core-pct {
     font-size: 10px;

@@ -1,15 +1,18 @@
 <script lang="ts">
-  import type { MemoryMetrics } from '@phavo/types';
-  import { ProgressBar } from '@phavo/ui';
+  import type { MemoryMetrics, WidgetSize } from '@phavo/types';
+  import { Icon, ProgressBar } from '@phavo/ui';
   import { formatBytes, formatPercentage } from '$lib/utils/format';
 
   interface Props {
     data: MemoryMetrics;
+    size?: WidgetSize;
   }
 
-  let { data }: Props = $props();
+  let { data, size = 'M' }: Props = $props();
 
   const usedPct = $derived(data.total > 0 ? (data.used / data.total) * 100 : 0);
+  const freePct = $derived(data.total > 0 ? (data.free / data.total) * 100 : 0);
+  const cachedPct = $derived(Math.max(0, 100 - usedPct - freePct));
   const swapPct = $derived(
     data.swap.total > 0 ? (data.swap.used / data.swap.total) * 100 : 0,
   );
@@ -19,45 +22,41 @@
 </script>
 
 <div class="memory-widget">
-  <div class="primary-metric">
-    <span class="metric-value mono">{formatBytes(data.used, 1)}</span>
-    <span class="metric-label">of {formatBytes(data.total, 1)}</span>
-  </div>
-
-  <div class="progress-labeled">
-    <div class="progress-header">
-      <span class="progress-title">RAM</span>
-      <span class="progress-pct mono">{formatPercentage(usedPct)}</span>
+  {#if size === 'S'}
+    <div class="s-row">
+      <Icon name="server" size={16} class="text-accent" />
+      <span class="metric-value mono">{formatBytes(data.used, 0)}</span>
     </div>
-    <ProgressBar value={usedPct} color={ramColor} />
-  </div>
+  {:else}
+    <div class="primary-metric">
+      <span class="metric-value mono">{formatBytes(data.used, 1)}</span>
+      <span class="metric-label">of {formatBytes(data.total, 1)} total</span>
+    </div>
 
-  {#if data.swap.total > 0}
-    <div class="progress-labeled">
-      <div class="progress-header">
-        <span class="progress-title">Swap</span>
-        <span class="progress-pct mono">
-          {formatBytes(data.swap.used)} / {formatBytes(data.swap.total)}
-        </span>
+    <div class="segmented-bar">
+      <div class="seg seg-used" style:width="{usedPct}%"></div>
+      <div class="seg seg-cached" style:width="{cachedPct}%"></div>
+      <div class="seg seg-free" style:width="{freePct}%"></div>
+    </div>
+
+    <div class="legend">
+      <span class="legend-item"><span class="legend-dot dot-used"></span> Used</span>
+      <span class="legend-item"><span class="legend-dot dot-cached"></span> Cached</span>
+      <span class="legend-item"><span class="legend-dot dot-free"></span> Free</span>
+    </div>
+
+    {#if (size === 'L' || size === 'XL') && data.swap.total > 0}
+      <div class="progress-labeled">
+        <div class="progress-header">
+          <span class="progress-title">Swap</span>
+          <span class="progress-pct mono">
+            {formatBytes(data.swap.used)} / {formatBytes(data.swap.total)}
+          </span>
+        </div>
+        <ProgressBar value={swapPct} color="warning" />
       </div>
-      <ProgressBar value={swapPct} color="warning" />
-    </div>
+    {/if}
   {/if}
-
-  <div class="stat-row">
-    <div class="stat">
-      <span class="stat-label">Used</span>
-      <span class="stat-value mono">{formatBytes(data.used)}</span>
-    </div>
-    <div class="stat">
-      <span class="stat-label">Free</span>
-      <span class="stat-value mono">{formatBytes(data.free)}</span>
-    </div>
-    <div class="stat">
-      <span class="stat-label">Total</span>
-      <span class="stat-value mono">{formatBytes(data.total)}</span>
-    </div>
-  </div>
 </div>
 
 <style>
@@ -65,6 +64,12 @@
     display: flex;
     flex-direction: column;
     gap: var(--space-3);
+  }
+
+  .s-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
   }
 
   .primary-metric {
@@ -80,15 +85,61 @@
     line-height: 1;
   }
 
+  .s-row .metric-value {
+    font-size: 20px;
+  }
+
   .metric-label {
     font-size: 12px;
     color: var(--color-text-muted);
   }
 
+  .segmented-bar {
+    display: flex;
+    height: 6px;
+    border-radius: 3px;
+    overflow: hidden;
+    background: var(--color-bg-hover);
+  }
+
+  .seg {
+    height: 100%;
+    transition: width 0.3s ease;
+  }
+
+  .seg-used { background: var(--color-accent); }
+  .seg-cached { background: var(--color-accent-subtle); }
+  .seg-free { background: var(--color-bg-hover); }
+
+  .legend {
+    display: flex;
+    gap: var(--space-3);
+    font-size: 11px;
+    color: var(--color-text-secondary);
+  }
+
+  .legend-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .legend-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+  }
+
+  .dot-used { background: var(--color-accent); }
+  .dot-cached { background: var(--color-accent-subtle); }
+  .dot-free { background: var(--color-bg-hover); border: 1px solid var(--color-border); }
+
   .progress-labeled {
     display: flex;
     flex-direction: column;
     gap: var(--space-1);
+    padding-top: var(--space-2);
+    border-top: 1px solid var(--color-border-subtle);
   }
 
   .progress-header {
@@ -106,31 +157,6 @@
 
   .progress-pct {
     font-size: 11px;
-    color: var(--color-text-secondary);
-  }
-
-  .stat-row {
-    display: flex;
-    justify-content: space-between;
-    padding-top: var(--space-2);
-    border-top: 1px solid var(--color-border-subtle);
-  }
-
-  .stat {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-  }
-
-  .stat-label {
-    font-size: 10px;
-    color: var(--color-text-muted);
-    text-transform: uppercase;
-    letter-spacing: 0.4px;
-  }
-
-  .stat-value {
-    font-size: 13px;
     color: var(--color-text-secondary);
   }
 </style>

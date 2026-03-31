@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Phavo | Standard Edition v1.0</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@200;300;400;500;600;700;800&amp;family=Inter:wght@300;400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary-fixed-dim": "#ffb954",
+                        "on-surface": "#e2e2e2",
+                        "error-container": "#93000a",
+                        "outline": "#9e8e7c",
+                        "on-primary": "#452b00",
+                        "inverse-on-surface": "#303030",
+                        "secondary-fixed": "#ffddb4",
+                        "primary-container": "#d4922a",
+                        "on-secondary-fixed-variant": "#5d421b",
+                        "primary-fixed": "#ffddb4",
+                        "tertiary-fixed": "#cae6ff",
+                        "on-primary-container": "#4d3000",
+                        "inverse-primary": "#835500",
+                        "surface-container-highest": "#353535",
+                        "tertiary-container": "#4ea7e2",
+                        "surface-bright": "#393939",
+                        "inverse-surface": "#e2e2e2",
+                        "on-tertiary-fixed": "#001e30",
+                        "tertiary-fixed-dim": "#8dcdff",
+                        "secondary": "#e7c08e",
+                        "secondary-container": "#5d421b",
+                        "on-background": "#e2e2e2",
+                        "tertiary": "#8dcdff",
+                        "primary": "#ffb954",
+                        "on-tertiary": "#00344f",
+                        "on-secondary": "#432c06",
+                        "on-error": "#690005",
+                        "on-tertiary-fixed-variant": "#004b70",
+                        "on-secondary-container": "#d5af7e",
+                        "on-primary-fixed": "#291800",
+                        "surface-container-high": "#2a2a2a",
+                        "surface-container": "#1f1f1f",
+                        "on-surface-variant": "#d6c4b0",
+                        "surface-tint": "#ffb954",
+                        "on-secondary-fixed": "#291800",
+                        "error": "#ffb4ab",
+                        "secondary-fixed-dim": "#e7c08e",
+                        "outline-variant": "#514536",
+                        "on-tertiary-container": "#003a58",
+                        "surface-variant": "#353535",
+                        "surface-container-lowest": "#0e0e0e",
+                        "surface-container-low": "#1b1b1b",
+                        "surface-dim": "#131313",
+                        "on-error-container": "#ffdad6",
+                        "on-primary-fixed-variant": "#633f00",
+                        "background": "#000000",
+                        "surface": "#131313"
+                    },
+                    fontFamily: {
+                        "headline": ["Manrope", "sans-serif"],
+                        "body": ["Manrope", "sans-serif"],
+                        "label": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "1.5rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        body { background-color: #000000; color: #e2e2e2; }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
+        }
+        .bento-grid {
+            display: grid;
+            grid-template-columns: repeat(12, 1fr);
+            gap: 1.5rem;
+        }
+        .sidebar-collapsed { width: 80px; }
+        .sidebar-collapsed span:not(.material-symbols-outlined) { display: none; }
+        .sidebar-collapsed .nav-text { display: none; }
+        .sidebar-collapsed .upgrade-card { display: none; }
+        .sidebar-collapsed .logo-subtext { display: none; }
+        .sidebar-collapsed .device-pill { display: none; }
+        .widget-controls { opacity: 0; transition: opacity 0.2s ease; }
+        .widget-card:hover .widget-controls { opacity: 1; }
+    
+        .edit-trigger:hover .edit-icon { opacity: 1; }
+        .edit-icon { opacity: 0; transition: opacity 0.2s ease; }
+    </style>
+</head>
+<body class="font-body selection:bg-primary-container selection:text-on-primary-container overflow-x-hidden">
+<aside class="h-screen w-64 fixed left-0 top-0 bg-[#131313] flex flex-col p-6 justify-between z-50 transition-all duration-300 border-r border-outline-variant/10" id="sidebar">
+<div class="space-y-10">
+<div class="flex flex-col gap-1 relative">
+<div class="flex items-center justify-between">
+<span class="text-2xl font-black tracking-tighter text-amber-500 uppercase">PHAVO</span>
+<button class="text-zinc-500 hover:text-amber-500 transition-colors" onclick="toggleSidebar()">
+<span class="material-symbols-outlined" id="collapse-icon">menu_open</span>
+</button>
+</div>
+<span class="logo-subtext font-manrope uppercase tracking-[0.25em] text-[10px] font-bold text-zinc-500">STANDARD</span>
+<div class="device-pill mt-4 inline-flex items-center px-2 py-0.5 rounded bg-zinc-800 text-zinc-400 text-[10px] font-bold tracking-widest uppercase w-fit">Raspberry Pi 5</div>
+</div>
+<nav class="flex flex-col gap-2">
+<div class="flex flex-col gap-1">
+<button class="flex items-center justify-between w-full p-3 text-amber-500 bg-[#2a2a2a] rounded-lg font-manrope uppercase tracking-widest text-xs font-bold transition-colors duration-300 group">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">dashboard</span>
+<span class="nav-text">Dashboard</span>
+</div>
+<span class="material-symbols-outlined text-sm nav-text">expand_more</span>
+</button>
+<div class="pl-11 py-2 flex flex-col gap-3 nav-text">
+<a class="flex items-center gap-2 text-[10px] text-amber-400 font-bold uppercase tracking-widest transition-colors" href="#">
+<span class="w-1 h-1 rounded-full bg-amber-400"></span>
+                        Home
+                    </a>
+<a class="flex items-center gap-2 text-[10px] text-zinc-500 hover:text-amber-400 font-bold uppercase tracking-widest transition-colors" href="#">
+<span class="material-symbols-outlined text-[14px]">add</span>
+                        NEW PAGE
+                    </a>
+</div>
+</div>
+<a class="flex items-center gap-3 p-3 text-zinc-500 hover:text-zinc-200 font-manrope uppercase tracking-widest text-xs font-bold transition-colors duration-300" href="#">
+<span class="material-symbols-outlined">extension</span>
+<span class="nav-text">Plugins</span>
+</a>
+<a class="flex items-center gap-3 p-3 text-zinc-500 hover:text-zinc-200 font-manrope uppercase tracking-widest text-xs font-bold transition-colors duration-300" href="#">
+<span class="material-symbols-outlined">verified_user</span>
+<span class="nav-text">Licence</span>
+</a>
+<a class="flex items-center gap-3 p-3 text-zinc-500 hover:text-zinc-200 font-manrope uppercase tracking-widest text-xs font-bold transition-colors duration-300" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="nav-text">Settings</span>
+</a>
+</nav>
+</div>
+<div class="upgrade-card bg-[#1b1b1b] p-4 rounded-xl space-y-3">
+<p class="text-[11px] text-zinc-400 leading-relaxed font-label">Unlock detailed metrics and remote access features.</p>
+<button class="w-full bg-gradient-to-br from-primary to-primary-container text-on-primary font-bold py-2 rounded-lg text-xs tracking-tight hover:opacity-90 transition-opacity">
+            Upgrade to Pro
+        </button>
+</div>
+</aside>
+<header class="fixed top-0 right-0 w-[calc(100%-16rem)] bg-transparent backdrop-blur-md z-40 transition-all duration-300" id="main-header">
+<div class="flex justify-end items-center px-10 py-6 space-x-6">
+<div class="flex-1 max-w-md mr-auto">
+<div class="relative group">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500 text-xl group-focus-within:text-amber-500 transition-colors">search</span>
+<input class="w-full bg-[#131313] border border-outline-variant/20 rounded-full py-2 pl-10 pr-4 text-xs font-manrope tracking-wide text-on-surface focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/50 transition-all placeholder:text-zinc-600" placeholder="Search or command... (⌘K)" type="text"/>
+</div>
+</div>
+<div class="flex items-center space-x-6">
+<div class="flex flex-col items-end">
+<span class="text-sm font-bold text-on-surface">12:00 PM</span>
+<span class="text-[10px] text-zinc-500 font-label uppercase tracking-tighter">18°C, Partly Cloudy</span>
+</div>
+<button class="text-zinc-400 hover:text-amber-400 transition-opacity relative">
+<span class="material-symbols-outlined">notifications</span>
+<span class="absolute top-0 right-0 w-1.5 h-1.5 bg-primary rounded-full"></span>
+</button>
+<div class="w-8 h-8 rounded-full overflow-hidden border border-outline-variant/20">
+<img alt="User Profile" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBYW78kRz7fny5ZvBTaqWGQniCe-l1j4pNpueL-T56KzXxV-VQ57E87zfoeGzOtSXJqBO3h1ZaWe1knkO06aMLlpCxdXRL70re-MgT4KVGajtFR-i_AtTD0xjrQr0P29bA7oe7DW2DHr1SBVgnBGvId5fMkW4qis2BQByNXYXWapHKm69u7gSAC-Gfz15wRLFI40CGpAdGr7nCSSu-mOOrvipN5BpZDnOOKZ1y43Vy0w6YFydAK68b0wTWSHzkFhaiboghEfMwHbQqN"/>
+</div>
+</div>
+</div>
+</header>
+<main class="ml-64 pt-24 min-h-screen px-10 pb-10 transition-all duration-300" id="main-content">
+<section class="mb-10">
+<div class="group edit-trigger flex items-center gap-3 w-fit cursor-pointer">
+<h1 class="text-4xl font-extrabold tracking-tighter text-on-surface font-headline">Home</h1>
+<span class="material-symbols-outlined edit-icon text-primary-container text-2xl">edit</span>
+</div>
+<div class="group edit-trigger flex items-center gap-2 mt-2 w-fit cursor-pointer">
+<p class="text-on-surface-variant font-label text-sm uppercase tracking-widest">System Overview &amp; Performance</p>
+<span class="material-symbols-outlined edit-icon text-primary-container text-sm">edit</span>
+</div>
+</section>
+<div class="bento-grid">
+<!-- CPU Widget -->
+<div class="widget-card col-span-12 md:col-span-8 bg-surface-container-low rounded-xl p-11 flex flex-col justify-between group relative overflow-hidden">
+<div class="widget-controls absolute top-4 right-4 flex items-center gap-2 bg-black/40 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/5">
+<button class="text-[10px] font-bold text-zinc-500 hover:text-amber-500 transition-colors px-1">S</button>
+<button class="text-[10px] font-bold text-amber-500 px-1">M</button>
+<button class="text-[10px] font-bold text-zinc-500 hover:text-amber-500 transition-colors px-1">L</button>
+<div class="w-px h-3 bg-zinc-700 mx-1"></div>
+<button class="material-symbols-outlined text-sm text-zinc-500 hover:text-red-400 transition-colors">close</button>
+</div>
+<div class="flex justify-between items-start">
+<div>
+<span class="text-on-surface-variant font-label text-xs uppercase tracking-widest">Processor Unit</span>
+<h2 class="text-2xl font-bold text-on-surface font-headline mt-1">CPU Utilization</h2>
+</div>
+<span class="material-symbols-outlined text-primary-fixed-dim text-3xl">memory</span>
+</div>
+<div class="mt-12 flex items-baseline gap-4">
+<span class="text-8xl font-black tracking-tighter text-on-surface">24<span class="text-3xl text-primary-container ml-1">%</span></span>
+<div class="flex flex-col">
+<span class="text-primary font-bold">Stable</span>
+<span class="text-on-surface-variant text-xs font-label">8 Cores active</span>
+</div>
+</div>
+<div class="mt-8 h-12 w-full flex items-end gap-1">
+<div class="w-full bg-surface-container-high h-2 rounded-full overflow-hidden">
+<div class="bg-primary h-full rounded-full transition-all duration-500" style="width: 24%"></div>
+</div>
+</div>
+</div>
+<!-- Weather Widget -->
+<div class="widget-card col-span-12 md:col-span-4 bg-surface-container-low rounded-xl p-11 flex flex-col justify-between relative overflow-hidden">
+<div class="widget-controls absolute top-4 right-4 flex items-center gap-2 bg-black/40 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/5 z-20">
+<button class="text-[10px] font-bold text-zinc-500 hover:text-amber-500 transition-colors px-1">S</button>
+<button class="text-[10px] font-bold text-amber-500 px-1">M</button>
+<button class="text-[10px] font-bold text-zinc-500 hover:text-amber-500 transition-colors px-1">L</button>
+<div class="w-px h-3 bg-zinc-700 mx-1"></div>
+<button class="material-symbols-outlined text-sm text-zinc-500 hover:text-red-400 transition-colors">close</button>
+</div>
+<img alt="Weather Background" class="absolute inset-0 w-full h-full object-cover opacity-20" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBeTvSrEAOWT8KUkHxGRCVkeSCtwpI6aVLQRx-UK2t6h3PH2awxqIpS6888DLRJqlkoJ2Kh0MAVVT4Ebs6hU4RPPer-tHIxwTPwLofe4_mgWkNKWEpr-2DxOu1D9vMk8Hhdn_2SX-D6uoXBHC8MDIW-zddeKHTm4j9malnB6zxJTgQX7ATz-qE7tGAyZ9iBbcANKY0Qj8xF6izNcCjy9s6abx-wj_8pjr_J5za7kXKJUxTn73ZxwU7-mOOp_AKXnQ4yEeXvLxs0lF0s"/>
+<div class="relative z-10 flex justify-between items-start">
+<div>
+<span class="text-on-surface-variant font-label text-xs uppercase tracking-widest">Current Weather</span>
+<h2 class="text-2xl font-bold text-on-surface font-headline mt-1">Munich, DE</h2>
+</div>
+<span class="material-symbols-outlined text-primary-fixed-dim text-3xl">cloud</span>
+</div>
+<div class="relative z-10 mt-12">
+<span class="text-6xl font-bold tracking-tighter text-on-surface">18°</span>
+<p class="text-on-surface-variant font-label text-sm mt-1">Partly Cloudy</p>
+</div>
+</div>
+<!-- RAM Widget -->
+<div class="widget-card col-span-12 md:col-span-4 bg-surface-container-high rounded-xl p-8 flex flex-col justify-between relative">
+<div class="widget-controls absolute top-4 right-4 flex items-center gap-2 bg-black/40 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/5">
+<button class="text-[10px] font-bold text-zinc-500 hover:text-amber-500 transition-colors px-1">S</button>
+<button class="text-[10px] font-bold text-amber-500 px-1">M</button>
+<button class="text-[10px] font-bold text-zinc-500 hover:text-amber-500 transition-colors px-1">L</button>
+<div class="w-px h-3 bg-zinc-700 mx-1"></div>
+<button class="material-symbols-outlined text-sm text-zinc-500 hover:text-red-400 transition-colors">close</button>
+</div>
+<div class="flex justify-between items-center mb-6">
+<span class="material-symbols-outlined text-zinc-500">memory_alt</span>
+<span class="text-[10px] font-bold tracking-widest text-zinc-500 uppercase">Memory</span>
+</div>
+<div>
+<span class="text-4xl font-bold text-on-surface tracking-tight">12.4<span class="text-lg text-zinc-500 ml-1">GB</span></span>
+<p class="text-xs text-on-surface-variant font-label mt-1">of 32GB total</p>
+</div>
+<div class="mt-6 flex gap-1">
+<div class="h-1 flex-1 bg-primary rounded-full"></div>
+<div class="h-1 flex-1 bg-primary rounded-full"></div>
+<div class="h-1 flex-1 bg-primary rounded-full"></div>
+<div class="h-1 flex-1 bg-zinc-700 rounded-full"></div>
+<div class="h-1 flex-1 bg-zinc-700 rounded-full"></div>
+</div>
+</div>
+<!-- Disk Widget -->
+<div class="widget-card col-span-12 md:col-span-4 bg-surface-container-high rounded-xl p-8 flex flex-col justify-between relative">
+<div class="widget-controls absolute top-4 right-4 flex items-center gap-2 bg-black/40 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/5">
+<button class="text-[10px] font-bold text-zinc-500 hover:text-amber-500 transition-colors px-1">S</button>
+<button class="text-[10px] font-bold text-amber-500 px-1">M</button>
+<button class="text-[10px] font-bold text-zinc-500 hover:text-amber-500 transition-colors px-1">L</button>
+<div class="w-px h-3 bg-zinc-700 mx-1"></div>
+<button class="material-symbols-outlined text-sm text-zinc-500 hover:text-red-400 transition-colors">close</button>
+</div>
+<div class="flex justify-between items-center mb-6">
+<span class="material-symbols-outlined text-zinc-500">database</span>
+<span class="text-[10px] font-bold tracking-widest text-zinc-500 uppercase">Storage</span>
+</div>
+<div>
+<span class="text-4xl font-bold text-on-surface tracking-tight">2.1<span class="text-lg text-zinc-500 ml-1">TB</span></span>
+<p class="text-xs text-on-surface-variant font-label mt-1">RAID 5 • Healthy</p>
+</div>
+<div class="mt-6">
+<div class="w-full bg-zinc-800 h-1.5 rounded-full overflow-hidden">
+<div class="bg-primary-container h-full w-[64%]"></div>
+</div>
+</div>
+</div>
+<!-- Network Widget -->
+<div class="widget-card col-span-12 md:col-span-4 bg-surface-container-high rounded-xl p-8 flex flex-col justify-between relative">
+<div class="widget-controls absolute top-4 right-4 flex items-center gap-2 bg-black/40 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/5">
+<button class="text-[10px] font-bold text-zinc-500 hover:text-amber-500 transition-colors px-1">S</button>
+<button class="text-[10px] font-bold text-amber-500 px-1">M</button>
+<button class="text-[10px] font-bold text-zinc-500 hover:text-amber-500 transition-colors px-1">L</button>
+<div class="w-px h-3 bg-zinc-700 mx-1"></div>
+<button class="material-symbols-outlined text-sm text-zinc-500 hover:text-red-400 transition-colors">close</button>
+</div>
+<div class="flex justify-between items-center mb-6">
+<span class="material-symbols-outlined text-zinc-500">language</span>
+<span class="text-[10px] font-bold tracking-widest text-zinc-500 uppercase">Network</span>
+</div>
+<div class="flex items-center gap-6">
+<div>
+<span class="text-2xl font-bold text-on-surface tracking-tight">850</span>
+<p class="text-[10px] text-on-surface-variant font-label uppercase">Mbps Down</p>
+</div>
+<div class="w-px h-10 bg-outline-variant/20"></div>
+<div>
+<span class="text-2xl font-bold text-on-surface tracking-tight">120</span>
+<p class="text-[10px] text-on-surface-variant font-label uppercase">Mbps Up</p>
+</div>
+</div>
+<div class="mt-6 flex justify-between items-center">
+<span class="text-[10px] text-zinc-500 font-label">Ext IP: 82.14.99.1</span>
+<span class="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]"></span>
+</div>
+</div>
+</div>
+<!-- Footer -->
+<footer class="mt-20 py-12 flex flex-col items-center justify-center border-t border-outline-variant/10">
+<div class="flex items-center gap-2 opacity-40 hover:opacity-100 transition-opacity cursor-default">
+<span class="text-[10px] font-bold tracking-widest uppercase font-label">Powered by</span>
+<span class="font-headline font-black text-sm tracking-tighter text-primary-container">PHAVO</span>
+</div>
+<div class="flex flex-col items-center mt-4">
+<p class="text-[10px] text-zinc-600 font-label tracking-widest uppercase">Standard Edition</p>
+<p class="text-[10px] text-zinc-400 mt-1 font-bold font-label uppercase tracking-widest">Version 1.0</p>
+</div>
+</footer>
+</main>
+<script>
+    function toggleSidebar() {
+        const sidebar = document.getElementById('sidebar');
+        const header = document.getElementById('main-header');
+        const main = document.getElementById('main-content');
+        const icon = document.getElementById('collapse-icon');
+        
+        sidebar.classList.toggle('sidebar-collapsed');
+        
+        if (sidebar.classList.contains('sidebar-collapsed')) {
+            header.style.width = 'calc(100% - 80px)';
+            main.style.marginLeft = '80px';
+            icon.innerText = 'menu';
+        } else {
+            header.style.width = 'calc(100% - 16rem)';
+            main.style.marginLeft = '16rem';
+            icon.innerText = 'menu_open';
+        }
+    }
+</script>
+</body></html>
