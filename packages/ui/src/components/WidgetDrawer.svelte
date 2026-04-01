@@ -10,7 +10,7 @@
   } from '@phavo/types';
   import { onMount } from 'svelte';
   import type { Snippet } from 'svelte';
-  import * as icons from '../icons/icons';
+  import Icon from './Icon.svelte';
 
   type Category = 'all' | WidgetCategory;
 
@@ -280,7 +280,7 @@
 {#if open}
   <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
   <div
-    class="drawer-backdrop"
+    class="fixed inset-0 bg-black/40 z-[199] animate-[fade-in_0.2s_ease]"
     onclick={handleBackdropClick}
     aria-hidden="true"
     style="pointer-events: {isDraggingFromDrawer ? 'none' : 'auto'}"
@@ -288,25 +288,18 @@
 {/if}
 
 <aside
-  class="bottom-sheet"
-  class:sheet-open={open}
-  class:sheet-resizing={isResizing}
-  style="height: {isDesktop ? `${desktopDrawerHeight}px` : `${mobileDrawerHeight}vh`}"
+  class="fixed z-[200] flex flex-col bg-surface overflow-hidden transition-transform duration-300 ease-out
+    bottom-0 left-0 w-full rounded-t-xl border-t border-border
+    sm:top-0 sm:right-0 sm:bottom-0 sm:left-auto sm:w-[380px] sm:rounded-t-none sm:rounded-l-xl sm:border-t-0 sm:border-l
+    {open ? 'translate-y-0 sm:translate-y-0 sm:translate-x-0' : 'translate-y-full sm:translate-y-0 sm:translate-x-full'}
+    {isResizing ? 'select-none !transition-none' : ''}"
+  style="height: {isDesktop ? '100%' : `${mobileDrawerHeight}vh`}"
   aria-label={labels.title ?? 'Add Widgets'}
   aria-hidden={!open}
 >
-  <button
-    class="drawer-resize-handle"
-    onmousedown={startResize}
-    type="button"
-    aria-label="Resize drawer"
-  >
-    <div class="drawer-resize-bar"></div>
-  </button>
-
-  <!-- Resize handle -->
+  <!-- Mobile resize handle -->
   <div
-    class="sheet-handle-area"
+    class="flex sm:hidden justify-center py-2 shrink-0 cursor-ns-resize touch-none"
     onpointerdown={handleMobileResizeStart}
     onpointermove={handleMobileResizeMove}
     onpointerup={handleMobileResizeEnd}
@@ -314,26 +307,28 @@
     aria-label="Resize drawer"
     aria-orientation="horizontal"
   >
-    <div class="sheet-handle"></div>
+    <div class="w-10 h-1 rounded-full bg-border"></div>
   </div>
 
   <!-- Header -->
-  <div class="sheet-header">
-    <div class="sheet-header-text">
-      <span class="sheet-title">{labels.title ?? 'Add Widgets'}</span>
-      <span class="sheet-subtitle">{labels.subtitle ?? 'Drag to place or click to add'}</span>
+  <div class="flex items-center justify-between px-5 pt-5 pb-3 shrink-0">
+    <div class="flex flex-col gap-0.5">
+      <span class="text-base font-semibold text-text">{labels.title ?? 'Add Widgets'}</span>
+      <span class="text-xs text-text-muted">{labels.subtitle ?? 'Drag to place or click to add'}</span>
     </div>
-    <button class="sheet-close" onclick={onClose} aria-label="Close">
-      {@html icons.close()}
+    <button class="flex items-center justify-center w-8 h-8 text-text-muted bg-transparent border-none rounded cursor-pointer transition-colors hover:text-text hover:bg-hover" onclick={onClose} aria-label="Close">
+      <Icon name="x" size={16} />
     </button>
   </div>
 
   <!-- Category filter pills -->
-  <div class="sheet-filters">
+  <div class="flex gap-2 px-5 pb-3 shrink-0 overflow-x-auto">
     {#each filters as f (f.key)}
       <button
-        class="filter-pill"
-        class:filter-active={activeFilter === f.key}
+        class="px-3 py-1 text-xs font-medium rounded-full border whitespace-nowrap transition-all cursor-pointer
+          {activeFilter === f.key
+            ? 'bg-accent text-black border-accent'
+            : 'bg-transparent text-text-muted border-border hover:text-text hover:border-text-muted'}"
         onclick={() => (activeFilter = f.key)}
       >
         {f.label()}
@@ -343,14 +338,14 @@
 
 {#snippet drawerCardInner(w: WidgetManifestEntry, inst: WidgetInstance | undefined, locked: boolean)}
   <!-- Preview area -->
-  <div class="drawer-card-preview" class:drawer-card-preview-locked={locked}>
+  <div class="relative h-[140px] overflow-hidden border-b border-border-subtle bg-surface {locked ? 'flex flex-1 items-center justify-center min-h-[140px] p-4 bg-base/20' : ''}">
     {#if locked}
-      <div class="locked-preview-content">
-        <span class="lock-icon">{@html icons.lock()}</span>
-        <span class="lock-text">{labels.locked ?? 'LOCKED'}</span>
+      <div class="flex flex-col items-center justify-center gap-1.5">
+        <span class="text-yellow-500 flex"><Icon name="lock" size={20} /></span>
+        <span class="text-[11px] font-semibold text-yellow-500 tracking-wider uppercase">{labels.locked ?? 'LOCKED'}</span>
       </div>
     {:else if preview && isWidgetDefinition(w)}
-      <div class="drawer-preview-scale">
+      <div class="w-[145%] h-[145%] scale-[0.69] origin-top-left pointer-events-none">
         {@render preview(
           w.id,
           previewData[w.id],
@@ -359,27 +354,30 @@
         )}
       </div>
     {:else}
-      <div class="preview-placeholder">
-        <span class="preview-name">{w.name}</span>
+      <div class="flex items-center justify-center h-full text-text-muted text-sm font-medium">
+        <span class="opacity-60">{w.name}</span>
       </div>
     {/if}
   </div>
 
   <!-- Card footer -->
-  <div class="drawer-card-footer">
-    <div class="drawer-card-info">
-      <span class="drawer-card-name">{w.name}</span>
-      <span class="drawer-card-desc">{w.description}</span>
+  <div class="p-3 flex flex-col gap-2">
+    <div class="flex flex-col gap-0.5 min-w-0">
+      <span class="text-[13px] font-semibold text-text truncate">{w.name}</span>
+      <span class="text-[11px] text-text-muted line-clamp-2">{w.description}</span>
     </div>
 
-    <!-- Size selector -->
-    <div class="drawer-card-controls">
+    <!-- Size selector + action -->
+    <div class="flex items-center justify-between gap-2">
       {#if isWidgetDefinition(w)}
-        <div class="size-selector">
+        <div class="flex gap-0.5">
           {#each w.sizes as s (s)}
             <button
-              class="size-pill"
-              class:size-active={getSelectedSize(w) === s}
+              class="text-[10px] font-semibold px-1.5 py-0.5 rounded border transition-all cursor-pointer
+                {getSelectedSize(w) === s
+                  ? 'bg-accent text-black border-accent'
+                  : 'bg-transparent text-text-muted border-border hover:text-text hover:border-text-muted'}
+                disabled:opacity-40 disabled:cursor-not-allowed"
               onclick={() => handleSizeSelect(w.id, s)}
               disabled={locked}
             >
@@ -392,11 +390,11 @@
       <!-- Action button -->
       {#if locked}
         {#if activeLockedId === w.id}
-          <div class="locked-prompt">
-            <span class="locked-prompt-icon">{@html icons.lock()}</span>
+          <div class="inline-flex items-center flex-wrap gap-1 px-2 py-1 rounded bg-accent-subtle text-black text-[11px] font-semibold leading-snug">
+            <span class="flex shrink-0"><Icon name="lock" size={12} /></span>
             <span>{labels.upgradePrompt ?? 'Upgrade to Standard to unlock this widget — €8.99 one-time'}</span>
             <a
-              class="locked-prompt-link"
+              class="text-black font-bold underline hover:text-text"
               href="https://phavo.net/upgrade"
               target="_blank"
               rel="noreferrer"
@@ -408,19 +406,19 @@
         {/if}
       {:else if inst}
         {#if confirmRemoveId === inst.id}
-          <button class="action-btn action-remove-confirm" onclick={() => handleRemoveConfirm(inst.id)}>
+          <button class="flex items-center gap-1 px-2.5 py-0.5 text-[11px] font-semibold rounded border cursor-pointer transition-all whitespace-nowrap text-white bg-red-500 border-red-500" onclick={() => handleRemoveConfirm(inst.id)}>
             {labels.removeConfirm ?? 'Remove?'}
           </button>
         {:else}
-          <button class="action-btn action-added" onclick={() => handleRemoveClick(inst.id)}>
-            {@html icons.check()}
+          <button class="flex items-center gap-1 px-2.5 py-0.5 text-[11px] font-semibold rounded border cursor-pointer transition-all whitespace-nowrap text-green-400 border-green-400 bg-transparent hover:text-red-400 hover:border-red-400" onclick={() => handleRemoveClick(inst.id)}>
+            <Icon name="check" size={12} />
             <span>{labels.alreadyAdded ?? 'Added'}</span>
           </button>
         {/if}
       {:else}
         {#if isWidgetDefinition(w)}
-          <button class="action-btn action-add" onclick={() => handleAdd(w)}>
-            {@html icons.plus()}
+          <button class="flex items-center gap-1 px-2.5 py-0.5 text-[11px] font-semibold rounded border cursor-pointer transition-all whitespace-nowrap text-accent border-accent bg-transparent hover:bg-accent hover:text-black" onclick={() => handleAdd(w)}>
+            <Icon name="plus" size={12} />
             <span>{labels.addToBoard ?? 'Add'}</span>
           </button>
         {/if}
@@ -430,14 +428,14 @@
 {/snippet}
 
   <!-- Widget grid -->
-  <div class="sheet-body drawer-content">
-    <div class="widget-grid-drawer" role="list">
+  <div class="flex-1 min-h-0 px-5 pb-5 overflow-y-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4" role="list">
       {#each filteredWidgets as w (w.id)}
         {@const inst = getInstanceForWidget(w.id)}
         {@const locked = isLocked(w)}
         {#if locked}
           <div
-            class="drawer-card drawer-card-locked"
+            class="flex flex-col border border-border rounded-lg bg-base overflow-hidden transition-[border-color,box-shadow] duration-150 cursor-pointer hover:border-accent hover:shadow-md"
             role="button"
             tabindex="0"
             aria-label="{w.name} locked"
@@ -455,8 +453,8 @@
           </div>
         {:else}
           <div
-            class="drawer-card"
-            class:drawer-card-added={!!inst}
+            class="flex flex-col border rounded-lg bg-base overflow-hidden transition-[border-color,box-shadow] duration-150
+              {inst ? 'border-green-400 cursor-default' : 'border-border cursor-grab hover:border-accent hover:shadow-md'}"
             role="listitem"
             draggable={!inst ? 'true' : 'false'}
             ondragstart={(e) => handleDragStart(e, w)}
@@ -469,450 +467,3 @@
     </div>
   </div>
 </aside>
-
-<style>
-  .drawer-backdrop {
-    position: fixed;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.4);
-    z-index: var(--z-overlay, 199);
-    animation: fade-in 0.2s ease;
-  }
-
-  @keyframes fade-in {
-    from { opacity: 0; }
-    to { opacity: 1; }
-  }
-
-  .bottom-sheet {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    width: 100%;
-    height: 60vh; /* fallback; overridden by inline style */
-    display: flex;
-    flex-direction: column;
-    background: var(--color-bg-surface);
-    border-top: 1px solid var(--color-border);
-    border-radius: var(--radius-lg, 12px) var(--radius-lg, 12px) 0 0;
-    z-index: var(--z-panel, 200);
-    transform: translateY(100%);
-    transition: transform 0.3s ease-out;
-  }
-
-  .sheet-resizing {
-    user-select: none;
-    transition: none;
-  }
-
-  .sheet-open {
-    transform: translateY(0);
-  }
-
-  .drawer-resize-handle {
-    width: 100%;
-    height: 16px;
-    display: none;
-    align-items: center;
-    justify-content: center;
-    cursor: ns-resize;
-    flex-shrink: 0;
-    padding: 0;
-    background: none;
-    border: none;
-  }
-
-  .drawer-resize-bar {
-    width: 40px;
-    height: 4px;
-    background: var(--color-border);
-    border-radius: 2px;
-  }
-
-  .drawer-resize-handle:hover .drawer-resize-bar {
-    background: var(--color-text-muted);
-  }
-
-  .sheet-handle-area {
-    display: flex;
-    justify-content: center;
-    padding: var(--space-2) 0;
-    flex-shrink: 0;
-    cursor: ns-resize;
-    touch-action: none; /* prevent scroll interference on touch */
-  }
-
-  .sheet-handle {
-    width: 40px;
-    height: 4px;
-    border-radius: 2px;
-    background: var(--color-border);
-  }
-
-  .sheet-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 20px var(--space-6) var(--space-3);
-    flex-shrink: 0;
-  }
-
-  .sheet-header-text {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-  }
-
-  .sheet-title {
-    font-size: 1rem;
-    font-weight: 600;
-    color: var(--color-text);
-  }
-
-  .sheet-subtitle {
-    font-size: 0.8rem;
-    color: var(--color-text-muted);
-  }
-
-  .sheet-close {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 32px;
-    height: 32px;
-    color: var(--color-text-muted);
-    background: none;
-    border: none;
-    border-radius: var(--radius-sm, 4px);
-    cursor: pointer;
-    transition: color 0.15s, background 0.15s;
-  }
-
-  .sheet-close:hover {
-    color: var(--color-text);
-    background: var(--color-bg-hover);
-  }
-
-  .sheet-filters {
-    display: flex;
-    gap: var(--space-2);
-    padding: 0 var(--space-6) var(--space-3);
-    flex-shrink: 0;
-    overflow-x: auto;
-  }
-
-  .filter-pill {
-    padding: var(--space-1) var(--space-3);
-    font-size: 0.8rem;
-    font-weight: 500;
-    border-radius: 999px;
-    border: 1px solid var(--color-border);
-    background: none;
-    color: var(--color-text-muted);
-    cursor: pointer;
-    white-space: nowrap;
-    transition: all 0.15s;
-  }
-
-  .filter-pill:hover {
-    color: var(--color-text);
-    border-color: var(--color-text-muted);
-  }
-
-  .filter-active {
-    background: var(--color-accent);
-    color: var(--color-bg);
-    border-color: var(--color-accent);
-  }
-
-  .filter-active:hover {
-    background: var(--color-accent);
-    color: var(--color-bg);
-    border-color: var(--color-accent);
-  }
-
-  .sheet-body {
-    flex: 1;
-    min-height: 0;
-    padding: 0 var(--space-6) var(--space-6);
-  }
-
-  .drawer-content {
-    overflow-y: auto;
-    scrollbar-width: none;
-    -ms-overflow-style: none;
-  }
-
-  .drawer-content::-webkit-scrollbar {
-    display: none;
-  }
-
-  .widget-grid-drawer {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: var(--space-4);
-  }
-
-  .drawer-card {
-    display: flex;
-    flex-direction: column;
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-md, 8px);
-    background: var(--color-bg);
-    overflow: hidden;
-    transition: border-color 0.15s, box-shadow 0.15s;
-    cursor: grab;
-  }
-
-  .drawer-card:hover {
-    border-color: var(--color-accent);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-  }
-
-  .drawer-card-locked {
-    cursor: pointer;
-  }
-
-  .drawer-card-locked:hover {
-    border-color: var(--color-accent);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
-  }
-
-  .drawer-card-added {
-    border-color: var(--color-success, var(--color-accent));
-    cursor: default;
-  }
-
-  .drawer-card-preview {
-    position: relative;
-    height: 140px;
-    overflow: hidden;
-    border-bottom: 1px solid var(--color-border-subtle);
-    background: var(--color-bg-surface);
-  }
-
-  .drawer-preview-scale {
-    width: 145%;
-    height: 145%;
-    transform: scale(0.69);
-    transform-origin: top left;
-    pointer-events: none;
-  }
-
-  .drawer-card-preview-locked {
-    display: flex;
-    flex: 1 1 auto;
-    align-items: center;
-    justify-content: center;
-    min-height: 140px;
-    padding: var(--space-4);
-    background: color-mix(in srgb, var(--color-bg) 20%, transparent);
-  }
-
-  .locked-preview-content {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-  }
-
-  .lock-icon {
-    color: var(--color-warning);
-    display: flex;
-  }
-
-  .lock-text {
-    font-size: 11px;
-    font-weight: 600;
-    color: var(--color-warning);
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-  }
-
-  .preview-placeholder {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    height: 100%;
-    color: var(--color-text-muted);
-    font-size: 0.9rem;
-    font-weight: 500;
-  }
-
-  .preview-name {
-    opacity: 0.6;
-  }
-
-  .locked-prompt {
-    display: inline-flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: var(--space-1);
-    padding: 4px 8px;
-    border-radius: var(--radius-sm, 4px);
-    background: var(--color-accent-subtle);
-    color: var(--color-bg);
-    font-size: 11px;
-    font-weight: 600;
-    line-height: 1.4;
-  }
-
-  .locked-prompt-icon {
-    display: flex;
-    flex-shrink: 0;
-  }
-
-  .locked-prompt-link {
-    color: var(--color-bg);
-    font-weight: 700;
-    text-decoration: underline;
-  }
-
-  .locked-prompt-link:hover {
-    color: var(--color-text-primary);
-  }
-
-  .drawer-card-footer {
-    padding: var(--space-3);
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-2);
-  }
-
-  .drawer-card-info {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    min-width: 0;
-  }
-
-  .drawer-card-name {
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--color-text);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  .drawer-card-desc {
-    font-size: 11px;
-    color: var(--color-text-muted);
-    line-clamp: 2;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-  }
-
-  .drawer-card-controls {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: var(--space-2);
-  }
-
-  .size-selector {
-    display: flex;
-    gap: 2px;
-  }
-
-  .size-pill {
-    font-size: 10px;
-    font-weight: 600;
-    padding: 2px 6px;
-    border-radius: var(--radius-sm, 4px);
-    border: 1px solid var(--color-border);
-    background: none;
-    color: var(--color-text-muted);
-    cursor: pointer;
-    transition: all 0.15s;
-  }
-
-  .size-pill:hover:not(:disabled) {
-    color: var(--color-text);
-    border-color: var(--color-text-muted);
-  }
-
-  .size-pill:disabled {
-    opacity: 0.4;
-    cursor: not-allowed;
-  }
-
-  .size-active {
-    background: var(--color-accent);
-    color: var(--color-bg);
-    border-color: var(--color-accent);
-  }
-
-  .action-btn {
-    display: flex;
-    align-items: center;
-    gap: var(--space-1);
-    padding: 3px 10px;
-    font-size: 11px;
-    font-weight: 600;
-    border-radius: var(--radius-sm, 4px);
-    border: 1px solid var(--color-border);
-    background: none;
-    cursor: pointer;
-    transition: all 0.15s;
-    white-space: nowrap;
-  }
-
-  .action-add {
-    color: var(--color-accent);
-    border-color: var(--color-accent);
-  }
-
-  .action-add:hover {
-    background: var(--color-accent);
-    color: var(--color-bg);
-  }
-
-  .action-added {
-    color: var(--color-success, var(--color-accent));
-    border-color: var(--color-success, var(--color-accent));
-  }
-
-  .action-added:hover {
-    color: var(--color-danger);
-    border-color: var(--color-danger);
-  }
-
-  .action-remove-confirm {
-    color: var(--color-bg, #fff);
-    background: var(--color-danger);
-    border-color: var(--color-danger);
-  }
-
-  @media (max-width: 1024px) {
-    .widget-grid-drawer {
-      grid-template-columns: repeat(2, 1fr);
-    }
-  }
-
-  @media (max-width: 639px) {
-    .widget-grid-drawer {
-      grid-template-columns: 1fr;
-    }
-
-    .sheet-header,
-    .sheet-filters,
-    .sheet-body {
-      padding-left: var(--space-4);
-      padding-right: var(--space-4);
-    }
-  }
-
-  @media (min-width: 640px) {
-    .drawer-resize-handle {
-      display: flex;
-    }
-
-    .sheet-handle-area {
-      display: none;
-    }
-  }
-</style>

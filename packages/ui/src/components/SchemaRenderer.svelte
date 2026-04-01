@@ -427,15 +427,15 @@
   }
 </script>
 
-<form class="schema-renderer" onsubmit={handleSubmit}>
+<form class="flex flex-col gap-4" onsubmit={handleSubmit}>
   {#snippet renderFields(descriptors: FieldDescriptor[], parentPath = '')}
     {#each descriptors as descriptor (descriptor.path)}
       {@const path = parentPath ? `${parentPath}.${descriptor.key}` : descriptor.key}
       {@const value = getValueAtPath(path)}
       {@const hasError = validationErrors[path] ?? ''}
-      <div class="field-block field-{descriptor.kind}">
+      <div class="flex flex-col gap-2">
         {#if descriptor.kind === 'text' || descriptor.kind === 'url' || descriptor.kind === 'password'}
-          <div class="field-row">
+          <div class="grid gap-3 items-end" style="grid-template-columns: minmax(0, 1fr) auto auto;">
             <Input
               label={descriptor.label}
               type={descriptor.kind === 'password' ? 'password' : descriptor.kind === 'url' ? 'url' : 'text'}
@@ -454,7 +454,7 @@
                 onclick={() => handleTest(path, descriptor.meta.testEndpoint!)}
                 disabled={!!activeTests[path]}
               >
-                {activeTests[path] ? 'Testing...' : 'Test'}
+                {activeTests[path] ? 'Testing...' : 'Test connection'}
               </Button>
             {/if}
             {#if descriptor.kind === 'password' && value === PRESERVE_CREDENTIAL_VALUE}
@@ -462,16 +462,12 @@
             {/if}
           </div>
           {#if descriptor.kind === 'url' && value}
-            <span class:field-valid={!hasError} class:field-invalid={!!hasError} class="field-hint">
+            <span class="text-xs {hasError ? 'text-red-400' : 'text-primary'}">
               {hasError ? '✗ Invalid URL' : '✓ Valid URL'}
             </span>
           {/if}
           {#if testStatuses[path]}
-            <span
-              class:field-valid={testStatuses[path].ok}
-              class:field-invalid={!testStatuses[path].ok}
-              class="field-hint"
-            >
+            <span class="text-xs {testStatuses[path].ok ? 'text-primary' : 'text-red-400'}">
               {testStatuses[path].ok ? '✓' : '✗'} {testStatuses[path].message}
             </span>
           {/if}
@@ -483,29 +479,29 @@
             onchange={(nextValue) => setValueAtPath(path, nextValue)}
           />
         {:else if descriptor.kind === 'boolean'}
-          <div class="toggle-row">
-            <span class="toggle-label">{descriptor.label}</span>
+          <div class="flex items-center justify-between gap-4 p-3 border border-border-subtle rounded-lg bg-base">
+            <span class="text-sm text-text">{descriptor.label}</span>
             <Switch
               checked={Boolean(value)}
               onchange={(nextValue) => setValueAtPath(path, nextValue)}
             />
           </div>
         {:else if descriptor.kind === 'array-object'}
-          <div class="array-section">
-            <div class="array-header">
+          <div class="flex flex-col gap-3">
+            <div class="flex items-center justify-between gap-4">
               <div>
-                <span class="array-title">{descriptor.label}</span>
-                <span class="array-subtitle">Add or remove rows as needed.</span>
+                <span class="block text-sm font-semibold text-text">{descriptor.label}</span>
+                <span class="block text-xs text-text-muted">Add or remove rows as needed.</span>
               </div>
-              <Button variant="secondary" onclick={() => addArrayRow(path, descriptor.children ?? [])}>
-                Add row
+              <Button variant="ghost" onclick={() => addArrayRow(path, descriptor.children ?? [])}>
+                + Add row
               </Button>
             </div>
-            <div class="array-rows">
+            <div class="flex flex-col gap-3">
               {#each getArrayRows(path) as row, rowIndex (String((row as { id?: string }).id ?? rowIndex))}
-                <div class="array-row-card">
-                  <div class="array-row-actions">
-                    <span class="array-row-title">Row {rowIndex + 1}</span>
+                <div class="flex flex-col gap-3 p-4 border border-border-subtle rounded-lg bg-surface">
+                  <div class="flex items-center justify-between gap-3">
+                    <span class="text-xs font-semibold text-text-muted uppercase tracking-wider">Row {rowIndex + 1}</span>
                     <Button variant="ghost" onclick={() => removeArrayRow(path, rowIndex)}>Remove</Button>
                   </div>
                   {@render renderFields(descriptor.children ?? [], `${path}.${rowIndex}`)}
@@ -521,152 +517,15 @@
   {@render renderFields(fieldDescriptors)}
 
   {#if saveError}
-    <p class="save-message save-error">{saveError}</p>
+    <p class="text-xs text-red-400">{saveError}</p>
   {/if}
   {#if saveSuccess}
-    <p class="save-message save-success">Saved.</p>
+    <p class="text-xs text-primary">Saved.</p>
   {/if}
 
-  <div class="save-actions">
-    <Button type="submit" disabled={saving}>{saving ? 'Saving...' : 'Save widget settings'}</Button>
+  <div class="pt-2">
+    <Button type="submit" disabled={saving}>
+      {saving ? 'Saving...' : 'Save'}
+    </Button>
   </div>
 </form>
-
-<style>
-  .schema-renderer {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-4);
-  }
-
-  .field-block {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-2);
-  }
-
-  .field-row {
-    display: grid;
-    gap: var(--space-3);
-    grid-template-columns: minmax(0, 1fr) auto auto;
-    align-items: end;
-  }
-
-  .field-hint {
-    font-size: 12px;
-  }
-
-  .field-valid {
-    color: var(--color-success, #68b984);
-  }
-
-  .field-invalid {
-    color: var(--color-danger);
-  }
-
-  .toggle-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: var(--space-4);
-    padding: var(--space-3);
-    border: 1px solid var(--color-border-subtle);
-    border-radius: var(--radius-md);
-    background: var(--color-bg-base);
-  }
-
-  .toggle-label {
-    font-size: 14px;
-    color: var(--color-text-primary);
-  }
-
-  .array-section {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-3);
-  }
-
-  .array-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: var(--space-4);
-  }
-
-  .array-title {
-    display: block;
-    font-size: 14px;
-    font-weight: 600;
-    color: var(--color-text-primary);
-  }
-
-  .array-subtitle {
-    display: block;
-    font-size: 12px;
-    color: var(--color-text-muted);
-  }
-
-  .array-rows {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-3);
-  }
-
-  .array-row-card {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-3);
-    padding: var(--space-4);
-    border: 1px solid var(--color-border-subtle);
-    border-radius: var(--radius-md);
-    background: var(--color-bg-surface);
-  }
-
-  .array-row-actions {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: var(--space-3);
-  }
-
-  .array-row-title {
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--color-text-secondary);
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-  }
-
-  .save-actions {
-    display: flex;
-    justify-content: flex-start;
-  }
-
-  .save-message {
-    font-size: 13px;
-  }
-
-  .save-error {
-    color: var(--color-danger);
-  }
-
-  .save-success {
-    color: var(--color-success, #68b984);
-  }
-
-  @media (max-width: 640px) {
-    .field-row,
-    .array-header,
-    .array-row-actions {
-      grid-template-columns: 1fr;
-      display: flex;
-      flex-direction: column;
-      align-items: stretch;
-    }
-
-    .toggle-row {
-      align-items: flex-start;
-      flex-direction: column;
-    }
-  }
-</style>

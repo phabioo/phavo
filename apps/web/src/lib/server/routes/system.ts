@@ -1,6 +1,7 @@
 import { execFile } from 'node:child_process';
 import { schema } from '@phavo/db';
 import { err, ok } from '@phavo/types';
+import { env } from '@phavo/types/env';
 import { sql } from 'drizzle-orm';
 import type { Hono } from 'hono';
 import { db } from '$lib/server/db.js';
@@ -84,6 +85,20 @@ export function registerSystemRoutes(app: Hono<{ Variables: AppVariables }>): vo
   let _notifiedUpdateVersion = '';
 
   app.get('/update/check', requireSession(), async (c) => {
+    // In development, return a mock result to avoid GitHub API 404s in dev logs.
+    if (env.nodeEnv === 'development') {
+      return c.json(
+        ok({
+          currentVersion: PHAVO_VERSION,
+          latestVersion: PHAVO_VERSION,
+          updateAvailable: false,
+          changelog: '',
+          publishedAt: '',
+          updateCommand: 'docker compose pull && docker compose up -d',
+        }),
+      );
+    }
+
     const UPDATE_COMMAND = 'docker compose pull && docker compose up -d';
     const fallback: UpdateInfo = {
       currentVersion: PHAVO_VERSION,

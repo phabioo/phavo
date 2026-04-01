@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { Notification } from '@phavo/types';
-  import * as icons from '../icons/icons';
+  import Icon from './Icon.svelte';
 
   interface Props {
     open: boolean;
@@ -20,19 +20,33 @@
     onNotificationClick,
   }: Props = $props();
 
-  /** Pick an SVG icon string by notification type. */
-  function typeIcon(type: Notification['type']): string {
+  function typeIconName(type: Notification['type']): string {
     switch (type) {
       case 'update':
-        return icons.download();
+        return 'download';
       case 'system-alert':
       case 'widget-error':
-        return icons.alert();
+        return 'alert-triangle';
       case 'widget-warning':
-        return icons.alert();
+        return 'alert-triangle';
       case 'info':
       default:
-        return icons.info();
+        return 'info';
+    }
+  }
+
+  function typeIconClasses(type: Notification['type']): string {
+    switch (type) {
+      case 'update':
+      case 'info':
+        return 'text-accent bg-accent/15';
+      case 'widget-warning':
+        return 'text-yellow-500 bg-yellow-500/15';
+      case 'system-alert':
+      case 'widget-error':
+        return 'text-red-500 bg-red-500/15';
+      default:
+        return 'text-accent bg-accent/15';
     }
   }
 
@@ -51,7 +65,7 @@
   }
 
   function handleBackdropClick(e: MouseEvent) {
-    if ((e.target as HTMLElement).classList.contains('notif-backdrop')) {
+    if (e.target === e.currentTarget) {
       onClose();
     }
   }
@@ -59,340 +73,60 @@
 
 {#if open}
   <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
-  <div class="notif-backdrop" onclick={handleBackdropClick} aria-hidden="true"></div>
+  <div class="fixed inset-0 bg-transparent z-[199]" onclick={handleBackdropClick} aria-hidden="true"></div>
 {/if}
 
 <aside
-  class="notif-panel"
-  class:notif-panel-open={open}
+  class="fixed z-[200] flex flex-col bg-surface border-border transition-transform duration-200 ease-out
+    bottom-[calc(56px+env(safe-area-inset-bottom))] left-0 right-0 w-full max-h-[85dvh] border-t rounded-t-xl
+    sm:top-0 sm:right-0 sm:bottom-0 sm:left-auto sm:w-[380px] sm:h-dvh sm:max-h-none sm:border-t-0 sm:border-l sm:rounded-t-none
+    {open
+      ? 'translate-y-0 sm:translate-y-0 sm:translate-x-0'
+      : 'translate-y-[calc(100%+56px+env(safe-area-inset-bottom))] sm:translate-y-0 sm:translate-x-full'}"
   aria-label="Notifications"
   aria-hidden={!open}
 >
-  <div class="notif-header">
-    <span class="notif-title">Notifications</span>
-    <div class="notif-actions">
+  <!-- Header -->
+  <div class="flex items-center justify-between px-4 pt-4 pb-3 border-b border-border-subtle shrink-0">
+    <span class="text-sm font-semibold text-text">Notifications</span>
+    <div class="flex items-center gap-1">
       {#if notifications.length > 0}
-        <button class="notif-action-btn" onclick={onMarkAllRead}>Mark all read</button>
-        <button class="notif-action-btn" onclick={onClear}>Clear</button>
+        <button class="px-2 py-0.5 text-[11px] text-text-muted bg-transparent border border-border rounded cursor-pointer transition-colors hover:text-text hover:border-text-muted sm:min-h-0 min-h-[44px] sm:py-0.5" onclick={onMarkAllRead}>Mark all read</button>
+        <button class="px-2 py-0.5 text-[11px] text-text-muted bg-transparent border border-border rounded cursor-pointer transition-colors hover:text-text hover:border-text-muted sm:min-h-0 min-h-[44px] sm:py-0.5" onclick={onClear}>Clear</button>
       {/if}
-      <button class="notif-close-btn" onclick={onClose} aria-label="Close notifications">
-        {@html icons.close()}
+      <button class="flex items-center justify-center w-7 h-7 sm:w-7 sm:h-7 min-w-[44px] min-h-[44px] sm:min-w-0 sm:min-h-0 text-text-muted bg-transparent border-none rounded cursor-pointer transition-colors hover:text-text hover:bg-hover" onclick={onClose} aria-label="Close notifications">
+        <Icon name="x" size={16} />
       </button>
     </div>
   </div>
 
-  <div class="notif-list">
+  <!-- Notification list -->
+  <div class="flex-1 overflow-y-auto flex flex-col">
     {#if notifications.length === 0}
-      <div class="notif-empty">
-        <span class="notif-empty-icon" aria-hidden="true">{@html icons.bell()}</span>
-        <p class="notif-empty-text">No notifications yet</p>
+      <div class="flex flex-col items-center justify-center gap-3 px-4 py-8 flex-1 text-text-muted">
+        <span class="opacity-40"><Icon name="bell" size={24} /></span>
+        <p class="text-sm">No notifications yet</p>
       </div>
     {:else}
       {#each notifications as n (n.id)}
         <button
-          class="notif-row"
-          class:notif-unread={!n.read}
+          class="relative flex items-start gap-3 w-full px-4 py-3 bg-transparent border-none border-b border-border-subtle text-left cursor-pointer transition-colors hover:bg-hover last:border-b-0"
           onclick={() => handleRowClick(n)}
         >
+          {#if !n.read}
+            <div class="absolute left-0 top-0 bottom-0 w-[3px] bg-accent rounded-r-sm"></div>
+          {/if}
           <span
-            class="notif-icon notif-icon-{n.type}"
+            class="shrink-0 flex items-center justify-center w-7 h-7 rounded-full mt-0.5 {typeIconClasses(n.type)}"
             aria-hidden="true"
-          >{@html typeIcon(n.type)}</span>
-          <div class="notif-body">
-            <span class="notif-row-title">{n.title}</span>
-            <span class="notif-row-body">{n.body}</span>
-            <span class="notif-row-time">{timeAgo(n.timestamp)}</span>
+          ><Icon name={typeIconName(n.type)} size={14} /></span>
+          <div class="flex flex-col gap-0.5 min-w-0">
+            <span class="text-sm font-semibold text-text leading-snug">{n.title}</span>
+            <span class="text-xs text-text-muted leading-relaxed">{n.body}</span>
+            <span class="text-[11px] text-text-muted mt-0.5">{timeAgo(n.timestamp)}</span>
           </div>
         </button>
       {/each}
     {/if}
   </div>
 </aside>
-
-<style>
-  /* ------------------------------------------------------------------ */
-  /* Backdrop                                                             */
-  /* ------------------------------------------------------------------ */
-  .notif-backdrop {
-    position: fixed;
-    inset: 0;
-    background: transparent;
-    z-index: var(--z-overlay, 199);
-  }
-
-  /* ------------------------------------------------------------------ */
-  /* Panel                                                               */
-  /* ------------------------------------------------------------------ */
-  .notif-panel {
-    position: fixed;
-    top: 0;
-    right: 0;
-    height: 100dvh;
-    width: 320px;
-    display: flex;
-    flex-direction: column;
-    background: var(--color-bg-surface);
-    border-left: 1px solid var(--color-border);
-    z-index: var(--z-panel, 200);
-
-    /* Collapsed by default */
-    transform: translateX(100%);
-    transition: transform 0.2s ease;
-  }
-
-  .notif-panel-open {
-    transform: translateX(0);
-  }
-
-  /* ------------------------------------------------------------------ */
-  /* Header                                                              */
-  /* ------------------------------------------------------------------ */
-  .notif-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: var(--space-4) var(--space-4) var(--space-3);
-    border-bottom: 1px solid var(--color-border-subtle);
-    flex-shrink: 0;
-  }
-
-  .notif-title {
-    font-size: 0.9rem;
-    font-weight: 600;
-    color: var(--color-text);
-  }
-
-  .notif-actions {
-    display: flex;
-    align-items: center;
-    gap: var(--space-1);
-  }
-
-  .notif-action-btn {
-    padding: 2px 8px;
-    font-size: 0.72rem;
-    color: var(--color-text-muted);
-    background: none;
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-sm, 4px);
-    cursor: pointer;
-    transition: color 0.15s, border-color 0.15s;
-  }
-
-  .notif-action-btn:hover {
-    color: var(--color-text);
-    border-color: var(--color-border-hover, var(--color-border));
-  }
-
-  .notif-close-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 28px;
-    height: 28px;
-    color: var(--color-text-muted);
-    background: none;
-    border: none;
-    border-radius: var(--radius-sm, 4px);
-    cursor: pointer;
-    transition: color 0.15s, background 0.15s;
-  }
-
-  .notif-close-btn:hover {
-    color: var(--color-text);
-    background: var(--color-bg-hover);
-  }
-
-  /* ------------------------------------------------------------------ */
-  /* List                                                                */
-  /* ------------------------------------------------------------------ */
-  .notif-list {
-    flex: 1;
-    overflow-y: auto;
-    display: flex;
-    flex-direction: column;
-  }
-
-  /* ------------------------------------------------------------------ */
-  /* Empty state                                                         */
-  /* ------------------------------------------------------------------ */
-  .notif-empty {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: var(--space-3);
-    padding: var(--space-8, 2rem) var(--space-4);
-    flex: 1;
-    color: var(--color-text-muted);
-  }
-
-  .notif-empty-icon {
-    opacity: 0.4;
-  }
-
-  .notif-empty-text {
-    font-size: 0.875rem;
-  }
-
-  /* ------------------------------------------------------------------ */
-  /* Notification row                                                    */
-  /* ------------------------------------------------------------------ */
-  .notif-row {
-    display: flex;
-    align-items: flex-start;
-    gap: var(--space-3);
-    width: 100%;
-    padding: var(--space-3) var(--space-4);
-    background: none;
-    border: none;
-    border-bottom: 1px solid var(--color-border-subtle);
-    text-align: left;
-    cursor: pointer;
-    transition: background 0.15s;
-    position: relative;
-  }
-
-  .notif-row:last-child {
-    border-bottom: none;
-  }
-
-  .notif-row:hover {
-    background: var(--color-bg-hover);
-  }
-
-  /* Unread indicator — left accent border */
-  .notif-unread::before {
-    content: '';
-    position: absolute;
-    left: 0;
-    top: 0;
-    bottom: 0;
-    width: 3px;
-    background: var(--color-accent);
-    border-radius: 0 2px 2px 0;
-  }
-
-  /* ------------------------------------------------------------------ */
-  /* Row icon                                                            */
-  /* ------------------------------------------------------------------ */
-  .notif-icon {
-    flex-shrink: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 28px;
-    height: 28px;
-    border-radius: 50%;
-    margin-top: 1px;
-  }
-
-  .notif-icon-update {
-    color: var(--color-accent);
-    background: color-mix(in srgb, var(--color-accent) 15%, transparent);
-  }
-
-  .notif-icon-info {
-    color: var(--color-accent);
-    background: color-mix(in srgb, var(--color-accent) 15%, transparent);
-  }
-
-  .notif-icon-widget-warning {
-    color: var(--color-warning);
-    background: color-mix(in srgb, var(--color-warning) 15%, transparent);
-  }
-
-  .notif-icon-widget-error {
-    color: var(--color-danger);
-    background: color-mix(in srgb, var(--color-danger) 15%, transparent);
-  }
-
-  .notif-icon-system-alert {
-    color: var(--color-danger);
-    background: color-mix(in srgb, var(--color-danger) 15%, transparent);
-  }
-
-  /* ------------------------------------------------------------------ */
-  /* Row text                                                            */
-  /* ------------------------------------------------------------------ */
-  .notif-body {
-    display: flex;
-    flex-direction: column;
-    gap: 3px;
-    min-width: 0;
-  }
-
-  .notif-row-title {
-    font-size: 0.875rem;
-    font-weight: 600;
-    color: var(--color-text);
-    line-height: 1.3;
-  }
-
-  .notif-row-body {
-    font-size: 0.8rem;
-    color: var(--color-text-muted);
-    line-height: 1.4;
-  }
-
-  .notif-row-time {
-    font-size: 0.72rem;
-    color: var(--color-text-muted);
-    margin-top: 2px;
-  }
-
-  /* ── MOBILE (<640px): right drawer → bottom sheet ────────────────────── */
-  @media (max-width: 639px) {
-    .notif-panel {
-      top: auto;
-      bottom: calc(56px + env(safe-area-inset-bottom)); /* above bottom nav */
-      right: 0;
-      left: 0;
-      width: 100%;
-      height: auto;
-      max-height: 85dvh;
-      border-left: none;
-      border-top: 1px solid var(--color-border);
-      border-radius: var(--radius-lg) var(--radius-lg) 0 0;
-      transform: translateY(calc(100% + 56px + env(safe-area-inset-bottom)));
-    }
-
-    .notif-panel-open {
-      transform: translateY(0);
-    }
-
-    /* Touch targets for mobile */
-    .notif-close-btn {
-      min-height: 44px;
-      min-width: 44px;
-      width: 44px;
-      height: 44px;
-    }
-
-    .notif-action-btn {
-      min-height: 44px;
-      padding: 0 var(--space-3);
-    }
-  }
-
-  /* ── DESKTOP / PC: force right drawer on hover+pointer devices ───────── */
-  @media (min-width: 640px), (hover: hover) and (pointer: fine) {
-    .notif-panel {
-      top: 0;
-      right: 0;
-      bottom: auto;
-      left: auto;
-      width: 380px;
-      height: 100dvh;
-      max-height: none;
-      border-top: none;
-      border-left: 1px solid var(--color-border);
-      border-radius: 0;
-      transform: translateX(100%);
-    }
-
-    .notif-panel-open {
-      transform: translateX(0);
-    }
-  }
-</style>

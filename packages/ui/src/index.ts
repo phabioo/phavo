@@ -4,6 +4,13 @@ export { default as Badge } from './components/Badge.svelte';
 export { default as BentoGrid } from './components/BentoGrid.svelte';
 export { default as Button } from './components/Button.svelte';
 export { default as Card } from './components/Card.svelte';
+// Form primitives (Tailwind v4 / Stitch design)
+export { default as FormButton } from './components/forms/Button.svelte';
+export { default as FormInput } from './components/forms/Input.svelte';
+export { default as FormNumberInput } from './components/forms/NumberInput.svelte';
+export { default as FormSelect } from './components/forms/Select.svelte';
+export { default as FormSwitch } from './components/forms/Switch.svelte';
+export { default as FormTextarea } from './components/forms/Textarea.svelte';
 export { default as Header } from './components/Header.svelte';
 export type { AiProviders, SearchEntry } from './components/HeaderSearch.svelte';
 export { default as HeaderSearch } from './components/HeaderSearch.svelte';

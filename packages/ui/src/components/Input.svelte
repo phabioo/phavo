@@ -6,6 +6,7 @@ interface Props {
   error?: string | undefined;
   type?: 'text' | 'password' | 'email' | 'url' | 'number';
   value?: string;
+  disabled?: boolean;
   oninput?: (e: Event) => void;
 }
 
@@ -16,70 +17,32 @@ let {
   error,
   type = 'text',
   value = $bindable(''),
+  disabled = false,
   oninput,
 }: Props = $props();
 
 const inputId = `input-${Math.random().toString(36).slice(2, 9)}`;
 </script>
 
-<div class="input-wrapper">
+<div class="flex flex-col gap-1">
   {#if label}
-    <label class="input-label" for={inputId}>{label}</label>
+    <label class="text-xs text-text-muted uppercase tracking-widest mb-1" for={inputId}>{label}</label>
   {/if}
   <input
     id={inputId}
-    class="input"
-    class:has-error={!!error}
+    class="bg-elevated border rounded-md px-3 py-2 text-sm font-mono outline-none transition-colors text-text placeholder:text-text-dim
+      {error ? 'border-red-500 ring-1 ring-red-500/20' : 'border-border focus:border-accent focus:ring-1 focus:ring-accent/30'}
+      {disabled ? 'opacity-50 cursor-not-allowed' : ''}"
     aria-label={ariaLabel ?? (label ? undefined : (placeholder || undefined))}
+    aria-invalid={error ? 'true' : undefined}
+    aria-describedby={error ? `${inputId}-error` : undefined}
     {type}
     {placeholder}
+    {disabled}
     bind:value
     {oninput}
   />
   {#if error}
-    <span class="input-error">{error}</span>
+    <span id="{inputId}-error" class="text-xs text-red-400 mt-1">{error}</span>
   {/if}
 </div>
-
-<style>
-  .input-wrapper {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-1);
-  }
-
-  .input-label {
-    font-size: 13px;
-    font-weight: 500;
-    color: var(--color-text-secondary);
-  }
-
-  .input {
-    padding: var(--space-2) var(--space-3);
-    background: var(--color-bg-base);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-sm);
-    color: var(--color-text-primary);
-    font-family: var(--font-ui);
-    font-size: 14px;
-    outline: none;
-    transition: border-color 0.15s;
-  }
-
-  .input:focus {
-    border-color: var(--color-accent);
-  }
-
-  .input.has-error {
-    border-color: var(--color-danger);
-  }
-
-  .input::placeholder {
-    color: var(--color-text-muted);
-  }
-
-  .input-error {
-    font-size: 12px;
-    color: var(--color-danger);
-  }
-</style>

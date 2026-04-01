@@ -1,18 +1,23 @@
 <script lang="ts">
-interface Props {
-  checked?: boolean;
-  label?: string;
-  disabled?: boolean;
-  onchange?: (checked: boolean) => void;
-}
+  interface Props {
+    checked?: boolean;
+    onchange?: (value: boolean) => void;
+    label?: string;
+    disabled?: boolean;
+  }
 
-let { checked = $bindable(false), label, disabled = false, onchange }: Props = $props();
+  let {
+    checked = $bindable(false),
+    onchange,
+    label,
+    disabled = false,
+  }: Props = $props();
 
-function toggle() {
-  if (disabled) return;
-  checked = !checked;
-  onchange?.(checked);
-}
+  function toggle() {
+    if (disabled) return;
+    checked = !checked;
+    onchange?.(checked);
+  }
 </script>
 
 <label class="inline-flex items-center gap-3 {disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}">

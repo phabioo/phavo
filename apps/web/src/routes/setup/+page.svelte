@@ -8,7 +8,7 @@ import {
   type WidgetManifestEntry,
   type WidgetSize,
 } from '@phavo/types';
-import { Button, Input, Select } from '@phavo/ui';
+import { Button, Icon, Input, ProgressBar, Select } from '@phavo/ui';
 import { onMount } from 'svelte';
 import { goto } from '$app/navigation';
 import en from '$lib/i18n/en.json';
@@ -758,70 +758,73 @@ onMount(() => {
 });
 </script>
 
-<div class="setup-root">
+<div class="min-h-screen flex items-center justify-center p-6">
 
-<div class="setup-container">
+<div class="w-full">
   {#if mode === 'welcome'}
     <!-- ── WELCOME ────────────────────────────────────────────────────────── -->
-    <div class="setup-welcome">
-      <h1 class="setup-title">{en.setup.welcome.title}</h1>
-      <p class="setup-subtitle">{en.setup.welcome.subtitle}</p>
+    <div class="max-w-[680px] w-full mx-auto text-center">
+      <h1 class="text-3xl font-bold text-text mb-2">{en.setup.welcome.title}</h1>
+      <p class="text-text-muted mb-8">{en.setup.welcome.subtitle}</p>
 
-      <div class="setup-options">
-        <button type="button" class="option-card" onclick={() => setMode('quick')}>
-          <h2>{en.setup.quickSetup}</h2>
-          <p>{en.setup.quickSetupDescription}</p>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <button type="button" class="flex flex-col gap-2 p-6 border border-border-subtle rounded-lg bg-surface text-left cursor-pointer text-text transition-colors hover:border-border focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2" onclick={() => setMode('quick')}>
+          <h2 class="text-lg font-semibold">{en.setup.quickSetup}</h2>
+          <p class="text-sm text-text-muted">{en.setup.quickSetupDescription}</p>
         </button>
 
-        <button type="button" class="option-card" onclick={() => setMode('full')}>
-          <h2>{en.setup.fullSetup}</h2>
-          <p>{en.setup.fullSetupDescription}</p>
+        <button type="button" class="flex flex-col gap-2 p-6 border border-border-subtle rounded-lg bg-surface text-left cursor-pointer text-text transition-colors hover:border-border focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2" onclick={() => setMode('full')}>
+          <h2 class="text-lg font-semibold">{en.setup.fullSetup}</h2>
+          <p class="text-sm text-text-muted">{en.setup.fullSetupDescription}</p>
         </button>
       </div>
     </div>
 
   {:else if mode === 'quick'}
     <!-- ── QUICK WIZARD ───────────────────────────────────────────────────── -->
-    <div class="setup-wizard">
-      <div class="step-counter">Step {quickStepIndex + 1} of {QUICK_STEPS.length}</div>
+    <div class="max-w-[560px] w-full mx-auto flex flex-col gap-4">
+      <div class="flex items-center gap-3">
+        <span class="text-xs text-text-dim tabular-nums shrink-0">Step {quickStepIndex + 1} / {QUICK_STEPS.length}</span>
+        <ProgressBar value={(quickStepIndex + 1) / QUICK_STEPS.length * 100} />
+      </div>
 
       {#if quickStep === 'auth'}
-        <h2 class="step-title">{en.setup.steps.auth}</h2>
+        <h2 class="text-xl font-semibold text-text">{en.setup.steps.auth}</h2>
 
         {#if quickAuthMethod === 'choice'}
-          <div class="step-content">
-            <button type="button" class="option-card" onclick={() => (quickAuthMethod = 'phavo-net')}>
-              <h3>{en.setup.auth.phavoIo}</h3>
-              <p>Continue with phavo.net to create or validate your account.</p>
+          <div class="flex flex-col gap-3">
+            <button type="button" class="flex flex-col gap-2 p-6 border border-border-subtle rounded-lg bg-surface text-left cursor-pointer text-text transition-colors hover:border-border" onclick={() => (quickAuthMethod = 'phavo-net')}>
+              <h3 class="text-lg font-semibold">{en.setup.auth.phavoIo}</h3>
+              <p class="text-sm text-text-muted">Continue with phavo.net to create or validate your account.</p>
             </button>
-            <button type="button" class="option-card" onclick={() => (quickAuthMethod = 'local')}>
-              <h3>{en.setup.auth.localAccount}</h3>
-              <p>Sign in with a local account stored only on this device.</p>
+            <button type="button" class="flex flex-col gap-2 p-6 border border-border-subtle rounded-lg bg-surface text-left cursor-pointer text-text transition-colors hover:border-border" onclick={() => (quickAuthMethod = 'local')}>
+              <h3 class="text-lg font-semibold">{en.setup.auth.localAccount}</h3>
+              <p class="text-sm text-text-muted">Sign in with a local account stored only on this device.</p>
             </button>
           </div>
-          <div class="step-actions">
+          <div class="flex justify-end gap-3 flex-wrap mt-2">
             <Button variant="ghost" onclick={backToWelcome}>{en.common.back}</Button>
           </div>
 
         {:else if quickAuthMethod === 'phavo-net'}
-          <div class="step-content">
-            <p class="step-description">
+          <div class="flex flex-col gap-3">
+            <p class="text-text-muted">
               You'll be redirected to phavo.net to authenticate, then returned here automatically.
             </p>
-            {#if authError}<p class="form-error">{authError}</p>{/if}
-            <div class="step-actions">
+            {#if authError}<p class="text-red-400 text-sm">{authError}</p>{/if}
+            <div class="flex justify-end gap-3 flex-wrap mt-2">
               <Button variant="ghost" onclick={() => { quickAuthMethod = 'choice'; authError = ''; }}>{en.common.back}</Button>
               <Button onclick={() => startPhavoOauth('quick')}>{en.setup.auth.phavoIo}</Button>
             </div>
           </div>
 
         {:else}
-          <div class="step-content">
+          <div class="flex flex-col gap-3">
             <Input label={en.setup.auth.username} placeholder={en.setup.auth.username} bind:value={authUsername} />
             <Input label={en.setup.auth.password} type="password" placeholder={en.auth.passwordPlaceholder} bind:value={authPassword} />
             <Input label={en.setup.auth.enterLicenseKey} placeholder={en.setup.auth.enterLicenseKey} bind:value={authLicenseKey} />
-            {#if authError}<p class="form-error">{authError}</p>{/if}
-            <div class="step-actions">
+            {#if authError}<p class="text-red-400 text-sm">{authError}</p>{/if}
+            <div class="flex justify-end gap-3 flex-wrap mt-2">
               <Button variant="ghost" onclick={() => { quickAuthMethod = 'choice'; authError = ''; }}>{en.common.back}</Button>
               <Button onclick={() => submitLocalAuth('quick')} disabled={authLoading}>
                 {authLoading ? en.common.loading : en.auth.login}
@@ -831,10 +834,10 @@ onMount(() => {
         {/if}
 
       {:else if quickStep === 'location'}
-        <h2 class="step-title">{en.setup.steps.location}</h2>
-        <p class="step-description">{en.setup.location.subtitle}</p>
+        <h2 class="text-xl font-semibold text-text">{en.setup.steps.location}</h2>
+        <p class="text-text-muted">{en.setup.location.subtitle}</p>
 
-        <div class="location-field">
+        <div class="relative">
           <Input
             label={en.setup.location.title}
             placeholder={en.setup.location.placeholder}
@@ -842,10 +845,10 @@ onMount(() => {
             oninput={onLocationInput}
           />
           {#if showSuggestions}
-            <ul class="suggestions" role="listbox">
+            <ul class="absolute top-full left-0 right-0 mt-1 py-1 list-none border border-border rounded-md bg-elevated z-10" role="listbox">
               {#each suggestions as result (result.id)}
                 <li role="option" aria-selected="false">
-                  <button type="button" onclick={() => selectSuggestion(result)}>
+                  <button type="button" class="w-full py-2 px-3 border-none bg-transparent text-left text-text cursor-pointer hover:bg-hover" onclick={() => selectSuggestion(result)}>
                     {result.name}, {result.country}
                   </button>
                 </li>
@@ -854,18 +857,18 @@ onMount(() => {
           {/if}
         </div>
 
-        {#if locationLoading}<p class="loading-hint">{en.common.loading}</p>{/if}
+        {#if locationLoading}<p class="text-text-muted text-sm">{en.common.loading}</p>{/if}
 
         {#if weatherPreview && selectedLocation}
-          <div class="preview-card">
-            <strong>{selectedLocation.name}</strong>
-            <p>{Math.round(weatherPreview.currentTemp)}°C · {weatherPreview.humidity}% humidity · {Math.round(weatherPreview.windSpeed)} km/h</p>
+          <div class="p-4 border border-border rounded-lg bg-elevated">
+            <strong class="text-text">{selectedLocation.name}</strong>
+            <p class="text-sm text-text-muted mt-1">{Math.round(weatherPreview.currentTemp)}°C · {weatherPreview.humidity}% humidity · {Math.round(weatherPreview.windSpeed)} km/h</p>
           </div>
         {/if}
 
-        {#if locationError}<p class="form-error">{locationError}</p>{/if}
+        {#if locationError}<p class="text-red-400 text-sm">{locationError}</p>{/if}
 
-        <div class="step-actions">
+        <div class="flex justify-end gap-3 flex-wrap mt-2">
           <Button variant="ghost" onclick={prevQuickStep}>{en.common.back}</Button>
           <Button variant="ghost" onclick={nextQuickStep}>{en.setup.location.skip}</Button>
           <Button onclick={nextQuickStep} disabled={!selectedLocation}>{en.common.next}</Button>
@@ -873,10 +876,10 @@ onMount(() => {
 
       {:else}
         <!-- done -->
-        <h2 class="step-title">{en.setup.done.title}</h2>
-        <p class="step-description">{en.setup.done.subtitle}</p>
-        {#if setupError}<p class="form-error">{setupError}</p>{/if}
-        <div class="step-actions">
+        <h2 class="text-xl font-semibold text-text">{en.setup.done.title}</h2>
+        <p class="text-text-muted">{en.setup.done.subtitle}</p>
+        {#if setupError}<p class="text-red-400 text-sm">{setupError}</p>{/if}
+        <div class="flex justify-end gap-3 flex-wrap mt-2">
           <Button variant="ghost" onclick={prevQuickStep}>{en.common.back}</Button>
           <Button onclick={finishSetup} disabled={setupSaving}>
             {setupSaving ? en.common.loading : en.setup.done.launch}
@@ -887,44 +890,47 @@ onMount(() => {
 
   {:else}
     <!-- ── FULL WIZARD ─────────────────────────────────────────────────────── -->
-    <div class="setup-wizard wide">
-      <div class="step-counter">Step {fullStepIndex + 1} of {FULL_STEPS.length}</div>
+    <div class="max-w-[760px] w-full mx-auto flex flex-col gap-4">
+      <div class="flex items-center gap-3">
+        <span class="text-xs text-text-dim tabular-nums shrink-0">Step {fullStepIndex + 1} / {FULL_STEPS.length}</span>
+        <ProgressBar value={(fullStepIndex + 1) / FULL_STEPS.length * 100} />
+      </div>
 
       {#if fullStep === 'tier'}
-        <h2 class="step-title">{en.setup.steps.tierSelect}</h2>
-        <div class="step-content tier-grid">
+        <h2 class="text-xl font-semibold text-text">{en.setup.steps.tierSelect}</h2>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <button
             type="button"
-            class="option-card"
-            class:card-selected={selectedTier === 'free' || selectedTier === 'standard'}
+            class="flex flex-col gap-2 p-6 border rounded-lg bg-surface text-left cursor-pointer text-text transition-colors hover:border-border focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2
+              {selectedTier === 'free' || selectedTier === 'standard' ? 'border-accent shadow-[0_0_0_1px_var(--color-accent)]' : 'border-border-subtle'}"
             onclick={() => { selectedTier = 'free'; nextFullStep(); }}
           >
-            <h3>{en.setup.auth.phavoIo}</h3>
-            <p>Sign in with phavo.net. Free to start — Standard unlocks all widgets.</p>
+            <h3 class="text-lg font-semibold">{en.setup.auth.phavoIo}</h3>
+            <p class="text-sm text-text-muted">Sign in with phavo.net. Free to start — Standard unlocks all widgets.</p>
           </button>
           <button
             type="button"
-            class="option-card"
-            class:card-selected={selectedTier === 'local'}
+            class="flex flex-col gap-2 p-6 border rounded-lg bg-surface text-left cursor-pointer text-text transition-colors hover:border-border focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2
+              {selectedTier === 'local' ? 'border-accent shadow-[0_0_0_1px_var(--color-accent)]' : 'border-border-subtle'}"
             onclick={() => { selectedTier = 'local'; nextFullStep(); }}
           >
-            <h3>{en.setup.auth.localAccount}</h3>
-            <p>Offline-capable — requires a Local licence key.</p>
+            <h3 class="text-lg font-semibold">{en.setup.auth.localAccount}</h3>
+            <p class="text-sm text-text-muted">Offline-capable — requires a Local licence key.</p>
           </button>
         </div>
-        <div class="step-actions">
+        <div class="flex justify-end gap-3 flex-wrap mt-2">
           <Button variant="ghost" onclick={backToWelcome}>{en.common.back}</Button>
         </div>
 
       {:else if fullStep === 'auth'}
-        <h2 class="step-title">{en.setup.steps.auth}</h2>
-        <div class="step-content">
+        <h2 class="text-xl font-semibold text-text">{en.setup.steps.auth}</h2>
+        <div class="flex flex-col gap-3">
           {#if selectedTier === 'free' || selectedTier === 'standard'}
-            <p class="step-description">
+            <p class="text-text-muted">
               You'll be redirected to phavo.net to authenticate, then returned here automatically.
             </p>
-            {#if authError}<p class="form-error">{authError}</p>{/if}
-            <div class="step-actions">
+            {#if authError}<p class="text-red-400 text-sm">{authError}</p>{/if}
+            <div class="flex justify-end gap-3 flex-wrap mt-2">
               <Button variant="ghost" onclick={prevFullStep}>{en.common.back}</Button>
               <Button onclick={() => startPhavoOauth('full')}>{en.setup.auth.phavoIo}</Button>
             </div>
@@ -932,8 +938,8 @@ onMount(() => {
             <Input label={en.setup.auth.username} placeholder={en.setup.auth.username} bind:value={authUsername} />
             <Input label={en.setup.auth.password} type="password" placeholder={en.auth.passwordPlaceholder} bind:value={authPassword} />
             <Input label={en.setup.auth.enterLicenseKey} placeholder={en.setup.auth.enterLicenseKey} bind:value={authLicenseKey} />
-            {#if authError}<p class="form-error">{authError}</p>{/if}
-            <div class="step-actions">
+            {#if authError}<p class="text-red-400 text-sm">{authError}</p>{/if}
+            <div class="flex justify-end gap-3 flex-wrap mt-2">
               <Button variant="ghost" onclick={prevFullStep}>{en.common.back}</Button>
               <Button onclick={() => submitLocalAuth('full')} disabled={authLoading}>
                 {authLoading ? en.common.loading : en.auth.login}
@@ -943,20 +949,20 @@ onMount(() => {
         </div>
 
       {:else if fullStep === 'name'}
-        <h2 class="step-title">{en.setup.steps.dashboardName}</h2>
-        <div class="step-content">
+        <h2 class="text-xl font-semibold text-text">{en.setup.steps.dashboardName}</h2>
+        <div class="flex flex-col gap-3">
           <Input label={en.settings.dashboardName} placeholder={en.setup.name.placeholder} bind:value={dashboardName} />
-          <div class="step-actions">
+          <div class="flex justify-end gap-3 flex-wrap mt-2">
             <Button variant="ghost" onclick={prevFullStep}>{en.common.back}</Button>
             <Button onclick={nextFullStep}>{en.common.next}</Button>
           </div>
         </div>
 
       {:else if fullStep === 'location'}
-        <h2 class="step-title">{en.setup.steps.location}</h2>
-        <p class="step-description">{en.setup.location.subtitle}</p>
+        <h2 class="text-xl font-semibold text-text">{en.setup.steps.location}</h2>
+        <p class="text-text-muted">{en.setup.location.subtitle}</p>
 
-        <div class="location-field">
+        <div class="relative">
           <Input
             label={en.settings.weatherLocation}
             placeholder={en.setup.location.placeholder}
@@ -964,10 +970,10 @@ onMount(() => {
             oninput={onLocationInput}
           />
           {#if showSuggestions}
-            <ul class="suggestions" role="listbox">
+            <ul class="absolute top-full left-0 right-0 mt-1 py-1 list-none border border-border rounded-md bg-elevated z-10" role="listbox">
               {#each suggestions as result (result.id)}
                 <li role="option" aria-selected="false">
-                  <button type="button" onclick={() => selectSuggestion(result)}>
+                  <button type="button" class="w-full py-2 px-3 border-none bg-transparent text-left text-text cursor-pointer hover:bg-hover" onclick={() => selectSuggestion(result)}>
                     {result.name}, {result.country}
                   </button>
                 </li>
@@ -976,30 +982,30 @@ onMount(() => {
           {/if}
         </div>
 
-        {#if locationLoading}<p class="loading-hint">{en.common.loading}</p>{/if}
+        {#if locationLoading}<p class="text-text-muted text-sm">{en.common.loading}</p>{/if}
 
         {#if weatherPreview && selectedLocation}
-          <div class="preview-card">
-            <strong>{selectedLocation.name}</strong>
-            <p>{Math.round(weatherPreview.currentTemp)}°C · {weatherPreview.humidity}% humidity · {Math.round(weatherPreview.windSpeed)} km/h</p>
+          <div class="p-4 border border-border rounded-lg bg-elevated">
+            <strong class="text-text">{selectedLocation.name}</strong>
+            <p class="text-sm text-text-muted mt-1">{Math.round(weatherPreview.currentTemp)}°C · {weatherPreview.humidity}% humidity · {Math.round(weatherPreview.windSpeed)} km/h</p>
           </div>
         {/if}
 
-        {#if locationError}<p class="form-error">{locationError}</p>{/if}
+        {#if locationError}<p class="text-red-400 text-sm">{locationError}</p>{/if}
 
-        <div class="step-actions">
+        <div class="flex justify-end gap-3 flex-wrap mt-2">
           <Button variant="ghost" onclick={prevFullStep}>{en.common.back}</Button>
           <Button variant="ghost" onclick={nextFullStep}>{en.setup.location.skip}</Button>
           <Button onclick={nextFullStep} disabled={!selectedLocation}>{en.common.next}</Button>
         </div>
 
       {:else if fullStep === 'tabs'}
-        <h2 class="step-title">{en.setup.steps.tabBuilder}</h2>
-        <div class="step-content">
+        <h2 class="text-xl font-semibold text-text">{en.setup.steps.tabBuilder}</h2>
+        <div class="flex flex-col gap-3">
           {#each tabs as tab, index}
-            <div class="row-field">
+            <div class="grid grid-cols-[minmax(0,1fr)_auto] gap-3 items-end">
               <input
-                class="text-input"
+                class="w-full py-2 px-3 border border-border rounded-md bg-elevated text-text text-sm focus:border-accent focus:ring-1 focus:ring-accent/30 outline-none"
                 type="text"
                 value={tab}
                 oninput={(e) => updateTabName(index, (e.currentTarget as HTMLInputElement).value)}
@@ -1010,9 +1016,9 @@ onMount(() => {
             </div>
           {/each}
 
-          <div class="row-field">
+          <div class="grid grid-cols-[minmax(0,1fr)_auto] gap-3 items-end">
             <input
-              class="text-input"
+              class="w-full py-2 px-3 border border-border rounded-md bg-elevated text-text text-sm focus:border-accent focus:ring-1 focus:ring-accent/30 outline-none"
               type="text"
               placeholder={en.setup.tabs.defaultTabName}
               bind:value={newTabName}
@@ -1020,66 +1026,66 @@ onMount(() => {
             <Button onclick={addTab} disabled={freeTabLimitReached}>{en.setup.tabs.addTab}</Button>
           </div>
 
-          {#if tabError}<p class="form-error">{tabError}</p>{/if}
+          {#if tabError}<p class="text-red-400 text-sm">{tabError}</p>{/if}
           {#if freeTabLimitReached}
-            <p class="upgrade-hint">{en.upgrade.tabLimit}</p>
+            <p class="text-text-muted text-sm">{en.upgrade.tabLimit}</p>
           {/if}
         </div>
 
-        <div class="step-actions">
+        <div class="flex justify-end gap-3 flex-wrap mt-2">
           <Button variant="ghost" onclick={prevFullStep}>{en.common.back}</Button>
           <Button onclick={handleFullTabsNext}>{en.common.next}</Button>
         </div>
 
       {:else if fullStep === 'widgets'}
-        <h2 class="step-title">{en.setup.steps.widgetSelect}</h2>
-        <p class="step-description">{en.setup.widgets.subtitle}</p>
+        <h2 class="text-xl font-semibold text-text">{en.setup.steps.widgetSelect}</h2>
+        <p class="text-text-muted">{en.setup.widgets.subtitle}</p>
 
         {#if widgetManifestLoading}
-          <p class="loading-hint">{en.common.loading}</p>
+          <p class="text-text-muted text-sm">{en.common.loading}</p>
         {:else if widgetManifestError}
-          <p class="form-error">{widgetManifestError}</p>
+          <p class="text-red-400 text-sm">{widgetManifestError}</p>
           <Button onclick={() => void loadWidgetManifest()}>{en.settings.checkForUpdates}</Button>
         {:else}
-          <div class="widget-grid">
+          <div class="grid grid-cols-[repeat(auto-fill,minmax(180px,1fr))] gap-3">
             {#each widgetManifest as entry (entry.id)}
               {#if isWidgetDefinition(entry)}
                 <button
                   type="button"
-                  class="widget-card"
-                  class:card-selected={selectedWidgets.includes(entry.id)}
+                  class="flex flex-col gap-2 p-4 border rounded-lg bg-elevated text-left text-text cursor-pointer transition-colors
+                    {selectedWidgets.includes(entry.id) ? 'border-accent shadow-[0_0_0_1px_var(--color-accent)]' : 'border-border hover:border-border-strong'}"
                   onclick={() => toggleWidgetSelection(entry)}
                 >
-                  <span class="widget-tier-badge">{entry.tier === 'free' ? 'Free' : 'Standard'}</span>
+                  <span class="text-[11px] px-2 py-0.5 rounded-full bg-base text-text-muted w-fit">{entry.tier === 'free' ? 'Free' : 'Standard'}</span>
                   <strong>{entry.name}</strong>
-                  <p>{entry.description}</p>
+                  <p class="text-sm text-text-muted">{entry.description}</p>
                 </button>
               {:else}
-                <div class="widget-card widget-locked">
-                  <span class="widget-tier-badge">LOCKED</span>
-                  <strong>{entry.name}</strong>
-                  <p>{entry.description}</p>
-                  <span class="lock-icon" aria-hidden="true">🔒</span>
+                <div class="flex flex-col gap-2 p-4 border border-border rounded-lg bg-elevated text-left opacity-75">
+                  <span class="text-[11px] px-2 py-0.5 rounded-full bg-base text-text-muted w-fit">LOCKED</span>
+                  <strong class="text-text">{entry.name}</strong>
+                  <p class="text-sm text-text-muted">{entry.description}</p>
+                  <span class="text-sm" aria-hidden="true">🔒</span>
                 </div>
               {/if}
             {/each}
           </div>
         {/if}
 
-        <div class="step-actions">
+        <div class="flex justify-end gap-3 flex-wrap mt-2">
           <Button variant="ghost" onclick={prevFullStep}>{en.common.back}</Button>
           <Button onclick={() => goToFullStep('assign')}>{en.common.next}</Button>
         </div>
 
       {:else if fullStep === 'assign'}
-        <h2 class="step-title">{en.setup.steps.widgetAssign}</h2>
-        <div class="step-content">
+        <h2 class="text-xl font-semibold text-text">{en.setup.steps.widgetAssign}</h2>
+        <div class="flex flex-col gap-3">
           {#if selectedWidgets.length === 0}
-            <p class="step-description">No widgets selected. You can add them later from the dashboard.</p>
+            <p class="text-text-muted">No widgets selected. You can add them later from the dashboard.</p>
           {:else}
             {#each selectedWidgets as widgetId (widgetId)}
-              <div class="assign-row">
-                <strong>{getWidgetName(widgetId)}</strong>
+              <div class="grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_220px] gap-4 items-center p-3 px-4 border border-border rounded-lg bg-elevated">
+                <strong class="text-text">{getWidgetName(widgetId)}</strong>
                 <Select
                   options={tabs.map((t) => ({ value: t, label: t }))}
                   value={widgetAssignments[widgetId] ?? tabs[0] ?? 'Home'}
@@ -1089,19 +1095,19 @@ onMount(() => {
             {/each}
           {/if}
         </div>
-        <div class="step-actions">
+        <div class="flex justify-end gap-3 flex-wrap mt-2">
           <Button variant="ghost" onclick={prevFullStep}>{en.common.back}</Button>
           <Button onclick={handleFullAssignNext}>{en.common.next}</Button>
         </div>
 
       {:else if fullStep === 'config'}
-        <h2 class="step-title">{en.setup.steps.widgetConfig}</h2>
-        <p class="step-description">{en.setup.config.subtitle}</p>
+        <h2 class="text-xl font-semibold text-text">{en.setup.steps.widgetConfig}</h2>
+        <p class="text-text-muted">{en.setup.config.subtitle}</p>
 
-        <div class="step-content">
+        <div class="flex flex-col gap-3">
           {#each configurableSelections as widgetId (widgetId)}
-            <div class="config-panel">
-              <h3 class="config-panel-title">{getWidgetName(widgetId)}</h3>
+            <div class="flex flex-col gap-3 p-4 border border-border rounded-lg bg-elevated">
+              <h3 class="text-base font-semibold text-text">{getWidgetName(widgetId)}</h3>
 
               {#if widgetId === 'pihole'}
                 <Input
@@ -1117,12 +1123,12 @@ onMount(() => {
                   value={(widgetConfigs.pihole as { token?: string } | undefined)?.token ?? ''}
                   oninput={(e) => updatePiholeField('token', (e.currentTarget as HTMLInputElement).value)}
                 />
-                <div class="row-field align-center">
+                <div class="flex items-center gap-3">
                   <Button onclick={() => void testPiholeConnection()} disabled={piholeTestState === 'loading'}>
                     {piholeTestState === 'loading' ? en.common.loading : 'Test connection'}
                   </Button>
                   {#if piholeTestMessage}
-                    <span class:text-success={piholeTestState === 'success'} class:form-error={piholeTestState === 'error'}>
+                    <span class="{piholeTestState === 'success' ? 'text-green-400' : 'text-red-400'} text-sm">
                       {piholeTestMessage}
                     </span>
                   {/if}
@@ -1130,7 +1136,7 @@ onMount(() => {
 
               {:else if widgetId === 'rss'}
                 {#each getSelectedRssConfig().feeds as feed, index (feed.id)}
-                  <div class="config-subpanel">
+                  <div class="flex flex-col gap-3 p-3 border border-border-subtle rounded-md">
                     <Input label="Feed URL" type="url" placeholder="https://example.com/feed.xml"
                       value={feed.url}
                       oninput={(e) => updateRssFeed(index, { url: (e.currentTarget as HTMLInputElement).value })}
@@ -1173,7 +1179,7 @@ onMount(() => {
                   oninput={(e) => updateLinksGroupLabel((e.currentTarget as HTMLInputElement).value)}
                 />
                 {#each getSelectedLinksConfig().groups[0]?.links ?? [] as link, index}
-                  <div class="row-field">
+                  <div class="grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-3">
                     <Input label="Label" value={link.title}
                       oninput={(e) => updateLink(index, 'title', (e.currentTarget as HTMLInputElement).value)}
                     />
@@ -1185,29 +1191,29 @@ onMount(() => {
 
               {:else if widgetId === 'weather'}
                 {#if selectedLocation}
-                  <p class="step-description">Weather will use <strong>{selectedLocation.name}</strong> from the location step.</p>
+                  <p class="text-text-muted text-sm">Weather will use <strong>{selectedLocation.name}</strong> from the location step.</p>
                 {:else}
-                  <p class="step-description">No location selected — configure in Settings after launch.</p>
+                  <p class="text-text-muted text-sm">No location selected — configure in Settings after launch.</p>
                 {/if}
 
               {:else}
-                <p class="config-later">Configure in Settings after launch.</p>
+                <p class="text-text-muted text-sm">Configure in Settings after launch.</p>
               {/if}
             </div>
           {/each}
         </div>
 
-        <div class="step-actions">
+        <div class="flex justify-end gap-3 flex-wrap mt-2">
           <Button variant="ghost" onclick={prevFullStep}>{en.common.back}</Button>
           <Button onclick={nextFullStep}>{en.common.next}</Button>
         </div>
 
       {:else}
         <!-- done -->
-        <h2 class="step-title">{en.setup.done.title}</h2>
-        <p class="step-description">{en.setup.done.subtitle}</p>
-        {#if setupError}<p class="form-error">{setupError}</p>{/if}
-        <div class="step-actions">
+        <h2 class="text-xl font-semibold text-text">{en.setup.done.title}</h2>
+        <p class="text-text-muted">{en.setup.done.subtitle}</p>
+        {#if setupError}<p class="text-red-400 text-sm">{setupError}</p>{/if}
+        <div class="flex justify-end gap-3 flex-wrap mt-2">
           <Button variant="ghost" onclick={() => goToFullStep(shouldSkipConfigStep() ? 'assign' : 'config')}>{en.common.back}</Button>
           <Button onclick={finishSetup} disabled={setupSaving}>
             {setupSaving ? en.common.loading : en.setup.done.launch}
@@ -1219,358 +1225,3 @@ onMount(() => {
 </div>
 
 </div>
-
-<style>
-  .setup-container {
-    min-height: 100vh;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: var(--space-6);
-  }
-
-  .setup-welcome {
-    max-width: 680px;
-    width: 100%;
-    text-align: center;
-  }
-
-  .setup-title {
-    font-size: 32px;
-    font-weight: 700;
-    color: var(--color-text-primary);
-    margin-bottom: var(--space-2);
-  }
-
-  .setup-subtitle {
-    color: var(--color-text-secondary);
-    margin-bottom: var(--space-8);
-  }
-
-  .setup-options {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: var(--space-4);
-  }
-
-  .option-card {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-2);
-    padding: var(--space-6);
-    border: 1px solid var(--color-border-subtle);
-    border-radius: var(--radius-md);
-    background: var(--color-bg-surface);
-    text-align: left;
-    cursor: pointer;
-    font-family: var(--font-ui);
-    color: var(--color-text-primary);
-    transition: border-color 0.15s, box-shadow 0.15s;
-  }
-
-  .option-card:hover {
-    border-color: var(--color-border-strong);
-  }
-
-  .option-card:focus-visible {
-    outline: 2px solid var(--color-accent);
-    outline-offset: 2px;
-  }
-
-  .option-card h2,
-  .option-card h3 {
-    font-size: 18px;
-    font-weight: 600;
-    margin: 0;
-  }
-
-  .option-card p {
-    color: var(--color-text-secondary);
-    font-size: 14px;
-    margin: 0;
-  }
-
-  .card-selected {
-    border-color: var(--color-accent);
-    box-shadow: 0 0 0 1px var(--color-accent);
-  }
-
-  /* ── WIZARD ─────────────────────────────────────────────────────────────── */
-  .setup-wizard {
-    width: min(100%, 560px);
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-4);
-  }
-
-  .setup-wizard.wide {
-    width: min(100%, 760px);
-  }
-
-  .step-counter {
-    font-size: 13px;
-    color: var(--color-text-tertiary);
-    font-variant-numeric: tabular-nums;
-  }
-
-  .step-title {
-    font-size: 22px;
-    font-weight: 600;
-    color: var(--color-text-primary);
-    margin: 0;
-  }
-
-  .step-description {
-    color: var(--color-text-secondary);
-    margin: 0;
-  }
-
-  .step-content {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-3);
-  }
-
-  .tier-grid {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: var(--space-3);
-  }
-
-  .step-actions {
-    display: flex;
-    justify-content: flex-end;
-    gap: var(--space-3);
-    flex-wrap: wrap;
-    margin-top: var(--space-2);
-  }
-
-  /* ── LOCATION ─────────────────────────────────────────────────────────── */
-  .location-field {
-    position: relative;
-  }
-
-  .suggestions {
-    position: absolute;
-    top: calc(100% + 4px);
-    right: 0;
-    left: 0;
-    margin: 0;
-    padding: var(--space-1) 0;
-    list-style: none;
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-sm);
-    background: var(--color-bg-elevated);
-    z-index: 10;
-  }
-
-  .suggestions button {
-    width: 100%;
-    padding: var(--space-2) var(--space-3);
-    border: none;
-    background: transparent;
-    text-align: left;
-    font-family: var(--font-ui);
-    color: var(--color-text-primary);
-    cursor: pointer;
-  }
-
-  .suggestions button:hover {
-    background: var(--color-bg-hover);
-  }
-
-  .preview-card {
-    padding: var(--space-4);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-md);
-    background: var(--color-bg-elevated);
-  }
-
-  .loading-hint {
-    color: var(--color-text-secondary);
-    font-size: 13px;
-    margin: 0;
-  }
-
-  /* ── WIDGETS ──────────────────────────────────────────────────────────── */
-  .widget-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-    gap: var(--space-3);
-  }
-
-  .widget-card {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-2);
-    padding: var(--space-4);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-md);
-    background: var(--color-bg-elevated);
-    text-align: left;
-    font-family: var(--font-ui);
-    color: var(--color-text-primary);
-    cursor: pointer;
-    transition: border-color 0.15s;
-  }
-
-  .widget-card:not(.widget-locked):hover {
-    border-color: var(--color-border-strong);
-  }
-
-  .widget-locked {
-    opacity: 0.75;
-    cursor: default;
-  }
-
-  .widget-tier-badge {
-    font-size: 11px;
-    padding: 2px 8px;
-    border-radius: 999px;
-    background: var(--color-bg-base);
-    color: var(--color-text-secondary);
-    width: fit-content;
-  }
-
-  .lock-icon {
-    font-size: 14px;
-  }
-
-  /* ── TABS & ASSIGN ────────────────────────────────────────────────────── */
-  .row-field {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    gap: var(--space-3);
-    align-items: end;
-  }
-
-  .row-field.align-center {
-    align-items: center;
-  }
-
-  .assign-row {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) 220px;
-    gap: var(--space-4);
-    align-items: center;
-    padding: var(--space-3) var(--space-4);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-md);
-    background: var(--color-bg-elevated);
-  }
-
-  .text-input {
-    width: 100%;
-    padding: var(--space-2) var(--space-3);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-sm);
-    background: var(--color-bg-base);
-    color: var(--color-text-primary);
-    font-family: var(--font-ui);
-    font-size: 14px;
-  }
-
-  /* ── CONFIG ───────────────────────────────────────────────────────────── */
-  .config-panel {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-3);
-    padding: var(--space-4);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-md);
-    background: var(--color-bg-elevated);
-  }
-
-  .config-panel-title {
-    margin: 0;
-    font-size: 16px;
-    font-weight: 600;
-  }
-
-  .config-subpanel {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-3);
-    padding: var(--space-3);
-    border: 1px solid var(--color-border-subtle);
-    border-radius: var(--radius-sm);
-  }
-
-  .config-later,
-  .upgrade-hint {
-    color: var(--color-text-secondary);
-    font-size: 13px;
-    margin: 0;
-  }
-
-  /* ── HELPERS ──────────────────────────────────────────────────────────── */
-  .form-error {
-    color: var(--color-danger);
-    font-size: 13px;
-    margin: 0;
-  }
-
-  .text-success {
-    color: var(--color-success);
-    font-size: 13px;
-  }
-
-  /* ── RESPONSIVE ───────────────────────────────────────────────────────── */
-  @media (max-width: 639px) {
-    /* Full-screen: no centering, fill viewport */
-    .setup-container {
-      min-height: 100dvh;
-      align-items: stretch;
-      justify-content: flex-start;
-      padding: var(--space-4) var(--space-4) 0;
-    }
-
-    .setup-welcome {
-      padding-bottom: var(--space-6);
-    }
-
-    .setup-wizard,
-    .setup-wizard.wide {
-      width: 100%;
-      padding-bottom: calc(80px + env(safe-area-inset-bottom));
-    }
-
-    /* Welcome option cards and tier grid: single column */
-    .setup-options,
-    .tier-grid,
-    .widget-grid {
-      grid-template-columns: 1fr;
-    }
-
-    /* Sticky footer for step navigation buttons */
-    .step-actions {
-      position: fixed;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      margin: 0;
-      padding: var(--space-3) var(--space-4);
-      padding-bottom: calc(var(--space-3) + env(safe-area-inset-bottom));
-      background: var(--color-bg-base);
-      border-top: 1px solid var(--color-border-subtle);
-      justify-content: flex-end;
-      gap: var(--space-2);
-      z-index: 50;
-    }
-
-    /* Touch-friendly assign and config rows */
-    .assign-row,
-    .row-field {
-      grid-template-columns: 1fr;
-    }
-
-    /* Touch targets */
-    .option-card {
-      min-height: 44px;
-    }
-  }
-
-  .setup-root {
-    display: contents;
-  }
-</style>

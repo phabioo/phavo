@@ -71,6 +71,7 @@ const TIER_RANK = { standard: 0, pro: 1, local: 2 }
 **Fonts:** Geist (UI) + Geist Mono (data values). Self-hosted via `@fontsource`. Never hardcoded.
 
 **Icons:** Lucide via `<Icon name="..." />` abstraction. No Material Symbols, no Google CDN.
+**Dependency:** `lucide-svelte` is a required direct dependency of `@phavo/ui` and must be installed for typecheck/build.
 
 **Token system** — `packages/ui/src/theme.css`:
 ```css
@@ -118,6 +119,16 @@ const TIER_RANK = { standard: 0, pro: 1, local: 2 }
 <div class="bg-[#0a0a0a]">
 <div class="bg-zinc-900">   <!-- hardcoded tailwind color not in theme -->
 ```
+
+---
+## UI status — post M4
+
+- Tailwind v4 foundation is in place
+- Theme tokens in `packages/ui/src/theme.css` are the single source of truth
+- Shared shell components are the baseline for all new UI work
+- All launch widgets are expected to use the new `WidgetCard` shell and support size-specific layouts (`S`/`M`/`L`/`XL`)
+- Settings, SchemaRenderer, Setup Wizard, and dashboard screens are visually unified
+- Settings IA uses `Account` for account + security concerns (including TOTP/2FA); there is no standalone Security tab in current code
 
 ---
 
@@ -221,6 +232,7 @@ registry.register({ id: 'io.phavo.cpu', _source: 'builtin', tier: 'standard', ..
 - ✅ Import/Export (.phavo format, PBKDF2 credential encryption)
 - ✅ Setup Wizard (Full 10-step + Quick 3-step)
 - ✅ Settings page (General, Tabs, Widgets, Backup & Export, Licence, Account, Plugins, About)
+- ✅ Milestone 4 complete — Tailwind v4 foundation, token-system rollout, WidgetCard shell migration, unified UI across dashboard/widgets/settings/setup
 - ✅ Production audit — all CRITICAL/HIGH/MEDIUM/LOW/a11y findings resolved
 - ✅ Version management (root package.json SSOT, Vite build injection)
 - ✅ Docker CI (multi-arch amd64 + arm64, fires on version tags only)
@@ -229,7 +241,7 @@ registry.register({ id: 'io.phavo.cpu', _source: 'builtin', tier: 'standard', ..
 - ⬜ Milestone 1: Notification Redesign
 - ⬜ Milestone 2: Additional Widgets (Docker, Service Health, Speedtest, Calendar)
 - ⬜ Milestone 3: Security Testing (pen-test, encryption audit)
-- ⬜ Milestone 4: Graphic Polish (Tailwind v4 migration, Bits UI, Bento-Grid, Stitch design)
+- ✅ Milestone 4: Graphic Polish (Tailwind v4 migration, token-system rollout, WidgetCard shell migration, Settings/Setup/UI unification)
 - ⬜ Milestone 5: Web Presence (phavo.net, docs.phavo.net, github.phavo.net)
 - ⬜ Milestone 6: Local Variant (Ed25519 licence, offline activation)
 
@@ -240,7 +252,10 @@ registry.register({ id: 'io.phavo.cpu', _source: 'builtin', tier: 'standard', ..
 - `isDockerCompose()` detection heuristic incomplete
 - Tauri free port reservation — atomic reservation needed
 - Light theme — token system ready, not designed
-- `@fontsource/geist` — verify self-hosting works before Milestone 4
+- `@fontsource/geist` — verify self-hosting works in production bundle
+- `lucide-svelte` must remain installed in `packages/ui` — missing dependency breaks `@phavo/ui/Icon.svelte` typecheck/build
+- Settings "Security" tab was intentionally merged into `Account` during M4-C — do not reintroduce a separate Security tab unless product/docs are deliberately revised
+- `update/check` supports a dev/mock path for local development — preserve production guardrails
 - **svelte.config.js must NOT have `compilerOptions: { runes: true }`** — breaks lucide-svelte. Runes mode is auto-detected per component via $props()/$state() usage.
 
 ---

@@ -199,6 +199,27 @@ const res = await fetch('/api/v1/cpu')  // inside widget component
 <span class="material-symbols-outlined">memory</span>
 ```
 
+`lucide-svelte` is a required direct dependency of `packages/ui`. Do not remove it, replace it, or work around a missing install with unsafe casts.
+
+### UI CONSISTENCY — POST M4
+```svelte
+<!-- ✅ VALID — all new/updated widget UIs use shared shell -->
+<WidgetCard state={widgetState}>...</WidgetCard>
+
+<!-- ❌ INVALID — legacy standalone widget shell / one-off chrome -->
+<section class="custom-widget-shell">...</section>
+```
+
+- All new UI work must use the M4 token system + Tailwind v4 utilities
+- Do not reintroduce pre-M4 styling patterns, duplicated shells, or legacy spacing/color rules
+- Launch widgets are expected to support explicit `S` / `M` / `L` / `XL` layouts
+- Settings, Setup Wizard, and dashboard flows should preserve the unified M4 visual language
+
+### SETTINGS INFORMATION ARCHITECTURE — CURRENT CODE
+- `Security` is merged into `Account`
+- TOTP / 2FA flows live under `Account`
+- Do not add back a standalone `Security` tab unless the product/docs are intentionally changed together
+
 ### PLUGIN IMPORTS
 ```typescript
 // ✅ VALID — allowlist only
@@ -269,6 +290,8 @@ export const DEV_MOCK_AUTH_ENABLED =
 // ❌ INVALID — missing production guard
 if (process.env.PHAVO_DEV_MOCK_AUTH) {
 ```
+
+Dev-only mock behaviour (including `update/check` mock paths) must always stay behind the same production guard.
 
 ---
 
@@ -371,6 +394,9 @@ First-party widgets must be defined in `packages/plugin-sdk/src/widgets/<id>/man
 ### ❌ FAIL: WRONG ICON SYSTEM
 Material Symbols, Font Awesome, or any icon system other than Lucide via `<Icon name="..." />`.
 
+### ❌ FAIL: MISSING LUCIDE DEPENDENCY
+`packages/ui` does not declare `lucide-svelte`, or code works around the missing dependency with `unknown`/unsafe casts instead of fixing the install.
+
 ### ❌ FAIL: WRONG FONT
 Manrope, Inter, or any font other than Geist/Geist Mono referenced in component code.
 
@@ -392,9 +418,9 @@ and any Svelte 4 legacy distributed components. Svelte 5 detects runes per compo
 | ~~`configSchemaVersion` missing~~ | ✅ Fixed | — |
 | `+page.svelte` 1066 lines | Post-v1.0 cleanup | Low |
 | Pre-existing a11y warnings (5 components) | Known, tracked | None |
-| Theme token extension (shadows, spacing) | Before Milestone 4 | Low |
-| Tailwind v4 full migration | Milestone 4 | Medium |
-| Bits UI integration | Milestone 4 | Medium |
+| Theme token extension (shadows, spacing) | ✅ Completed in Milestone 4 | — |
+| Tailwind v4 full migration | ✅ Completed in Milestone 4 | — |
+| Bits UI integration | ✅ Completed in Milestone 4 | — |
 
 ---
 

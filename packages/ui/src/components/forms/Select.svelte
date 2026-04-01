@@ -1,54 +1,54 @@
 <script lang="ts">
-import Icon from './Icon.svelte';
+  import Icon from '../Icon.svelte';
 
-interface SelectOption {
-  value: string;
-  label: string;
-}
+  interface SelectOption {
+    value: string;
+    label: string;
+  }
 
-interface Props {
-  label?: string;
-  options: SelectOption[];
-  value?: string;
-  onchange?: (value: string) => void;
-}
+  interface Props {
+    label?: string;
+    value?: string;
+    options: SelectOption[];
+    onchange?: (value: string) => void;
+  }
 
-let { label, options, value = $bindable(''), onchange }: Props = $props();
+  let { label, value = $bindable(''), options, onchange }: Props = $props();
 
-let open = $state(false);
-let triggerEl: HTMLButtonElement | undefined = $state();
+  let open = $state(false);
+  let triggerEl: HTMLButtonElement | undefined = $state();
 
-const selectId = `select-${Math.random().toString(36).slice(2, 9)}`;
+  const selectId = `select-${Math.random().toString(36).slice(2, 9)}`;
 
-const selectedLabel = $derived(
-  options.find((o) => o.value === value)?.label ?? value,
-);
+  const selectedLabel = $derived(
+    options.find((o) => o.value === value)?.label ?? value,
+  );
 
-function toggle() {
-  open = !open;
-}
+  function toggle() {
+    open = !open;
+  }
 
-function select(opt: SelectOption) {
-  value = opt.value;
-  open = false;
-  onchange?.(opt.value);
-  triggerEl?.focus();
-}
-
-function handleKeydown(e: KeyboardEvent) {
-  if (e.key === 'Escape') {
+  function select(opt: SelectOption) {
+    value = opt.value;
     open = false;
+    onchange?.(opt.value);
     triggerEl?.focus();
   }
-  if (!open && (e.key === 'ArrowDown' || e.key === 'Enter' || e.key === ' ')) {
-    e.preventDefault();
-    open = true;
-  }
-}
 
-function handleBackdropClick() {
-  open = false;
-}
+  function handleKeydown(e: KeyboardEvent) {
+    if (e.key === 'Escape') {
+      open = false;
+      triggerEl?.focus();
+    }
+    if (!open && (e.key === 'ArrowDown' || e.key === 'Enter' || e.key === ' ')) {
+      e.preventDefault();
+      open = true;
+    }
+  }
+
+  function handleBackdropClick() {
+    open = false;
+  }
 </script>
 
 <div class="relative flex flex-col gap-1">

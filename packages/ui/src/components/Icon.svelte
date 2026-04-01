@@ -6,8 +6,7 @@
    * Usage: <Icon name="cpu" /> or <Icon name="panel-left" size={24} />
    * Names use kebab-case (Lucide convention), auto-mapped to PascalCase.
    */
-  import * as lucideIcons from 'lucide-svelte';
-  import type { Component } from 'svelte';
+  import { CircleQuestionMark, icons } from 'lucide-svelte';
 
   interface Props {
     name: string;
@@ -31,10 +30,13 @@
       .join('');
   }
 
-  const iconComponent: Component | undefined = $derived.by(() => {
-    const pascal = toPascalCase(name);
-    const all = lucideIcons as unknown as Record<string, Component>;
-    return all[pascal] ?? all['CircleHelp'];
+  function hasLucideIcon(iconName: string): iconName is keyof typeof icons {
+    return Object.prototype.hasOwnProperty.call(icons, iconName);
+  }
+
+  const iconComponent = $derived.by(() => {
+    const iconName = toPascalCase(name);
+    return hasLucideIcon(iconName) ? icons[iconName] : CircleQuestionMark;
   });
 </script>
 
