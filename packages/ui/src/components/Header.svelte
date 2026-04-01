@@ -6,8 +6,8 @@ import HeaderSearch from './HeaderSearch.svelte';
 import type { SearchEntry, AiProviders } from './HeaderSearch.svelte';
 
 interface Props {
-  pageTitle?: string;
-  pageSubtitle?: string;
+  pageTitle?: string | undefined;
+  pageSubtitle?: string | undefined;
   dashboardName?: string;
   brandingLabel?: string | undefined;
   weather?: { temp: number; condition: string } | undefined;
@@ -17,12 +17,12 @@ interface Props {
   userMenu?: Snippet;
   unreadCount?: number;
   onBellClick?: () => void;
-  onAddWidgetClick?: () => void;
+  onAddWidgetClick?: (() => void) | undefined;
   addWidgetLabel?: string;
   searchIndex?: SearchEntry[];
   searchEngineUrl?: string;
   aiProviders?: AiProviders;
-  tier?: 'free' | 'standard' | 'local';
+  tier?: 'free' | 'standard' | 'pro' | 'local';
   onSearchAction?: (entry: SearchEntry) => void;
   onAiChat?: (provider: 'ollama' | 'openai' | 'anthropic', query: string) => Promise<string>;
 }
@@ -64,221 +64,354 @@ onMount(() => {
 
 const displayTitle = $derived(pageTitle ?? dashboardName);
 const effectiveUnread = $derived(notificationCount ?? unreadCount);
-
 const formattedTime = $derived(
   time.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }),
 );
 </script>
 
 <header class="header">
-  <!-- Search / Command palette -->
-  <div class="header-search-area">
-    <HeaderSearch
-      {searchIndex}
-      {searchEngineUrl}
-      {aiProviders}
-      {tier}
-      onAction={onSearchAction}
-      {onAiChat}
-    />
-  </div>
-
-  <!-- Right side: clock, weather, notifications, user -->
-  <div class="header-right">
-    <div class="header-time-weather">
-      <span class="header-clock mono">{formattedTime}</span>
-      {#if weather}
-        <span class="header-weather">{weather.temp}°C, {weather.condition}</span>
-      {/if}
+  <div class="header-shell">
+    <div class="header-search-area">
+      <HeaderSearch
+        {searchIndex}
+        {searchEngineUrl}
+        {aiProviders}
+        {tier}
+        onAction={onSearchAction}
+        {onAiChat}
+      />
     </div>
 
-    {#if updateBadge}
-      {@render updateBadge()}
+    {#if updateAvailable && updateBadge}
+      <div class="header-update-slot">
+        {@render updateBadge()}
+      </div>
     {/if}
 
-    {#if onAddWidgetClick}
-      <button class="add-widget-btn" onclick={onAddWidgetClick} aria-label={addWidgetLabel}>
-        <Icon name="plus" size={16} />
-        <span class="add-widget-text">{addWidgetLabel}</span>
-      </button>
-    {/if}
+    <div class="header-control-rail">
+      <div class="status-chip status-chip-time">
+        <span class="status-label">Time</span>
+        <span class="header-clock mono">{formattedTime}</span>
+      </div>
 
-    <!-- Notification bell -->
-    <button
-      class="bell-btn"
-      onclick={onBellClick}
-      aria-label="Notifications{effectiveUnread > 0 ? ` (${effectiveUnread} unread)` : ''}"
-    >
-      <Icon name="bell" size={18} />
-      {#if effectiveUnread > 0}
-        <span class="bell-badge" aria-hidden="true">
-          {effectiveUnread > 99 ? '99+' : effectiveUnread}
-        </span>
+      {#if weather}
+        <div class="status-chip status-chip-weather">
+          <span class="status-label">Weather</span>
+          <span class="header-weather">{weather.temp}&deg;C, {weather.condition}</span>
+        </div>
       {/if}
-    </button>
+
+      {#if onAddWidgetClick}
+        <button class="control-btn add-widget-btn" onclick={onAddWidgetClick} aria-label={addWidgetLabel}>
+          <Icon name="plus" size={15} />
+          <span class="add-widget-text">{addWidgetLabel}</span>
+        </button>
+      {/if}
+
+      <button
+        class="control-btn bell-btn"
+        onclick={onBellClick}
+        aria-label="Notifications{effectiveUnread > 0 ? ` (${effectiveUnread} unread)` : ''}"
+      >
+        <Icon name="bell" size={17} />
+        <span class="bell-label">Alerts</span>
+        {#if effectiveUnread > 0}
+          <span class="bell-badge" aria-hidden="true">
+            {effectiveUnread > 99 ? '99+' : effectiveUnread}
+          </span>
+        {/if}
+      </button>
+    </div>
 
     {#if userMenu}
-      {@render userMenu()}
+      <div class="header-user-slot">
+        {@render userMenu()}
+      </div>
     {/if}
   </div>
 </header>
 
-<!-- Page title section (below header bar) -->
 {#if displayTitle}
   <section class="page-title-section">
-    <h1 class="page-title">{displayTitle}</h1>
-    {#if pageSubtitle}
-      <p class="page-subtitle">{pageSubtitle}</p>
-    {/if}
+    <div class="page-title-copy">
+      {#if brandingLabel}
+        <span class="page-branding">{brandingLabel}</span>
+      {/if}
+      <h1 class="page-title">{displayTitle}</h1>
+      {#if pageSubtitle}
+        <p class="page-subtitle">{pageSubtitle}</p>
+      {/if}
+    </div>
   </section>
 {/if}
 
 <style>
   .header {
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    padding: var(--space-6) var(--space-8);
-    gap: var(--space-6);
+    position: sticky;
+    top: 0;
+    z-index: 40;
+    isolation: isolate;
+    padding: var(--space-5) var(--space-8) var(--space-5);
   }
 
-  /* ── Search area ─────────────────────────────────────────────────────── */
+  .header::before {
+    content: '';
+    position: absolute;
+    inset: -28px 0 -44px;
+    z-index: -2;
+    background:
+      linear-gradient(
+        180deg,
+        color-mix(in srgb, var(--color-bg-base) 82%, transparent) 0%,
+        color-mix(in srgb, var(--color-bg-base) 52%, transparent) 42%,
+        transparent 100%
+      );
+    backdrop-filter: blur(22px) saturate(122%);
+    -webkit-backdrop-filter: blur(22px) saturate(122%);
+    mask-image: linear-gradient(180deg, black 0%, black 58%, transparent 100%);
+  }
+
+  .header::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background:
+      radial-gradient(
+        ellipse 56% 92% at 14% 0%,
+        color-mix(in srgb, var(--color-accent-t) 22%, transparent),
+        transparent 74%
+      ),
+      linear-gradient(
+        180deg,
+        color-mix(in srgb, var(--color-bg-elevated) 12%, transparent),
+        transparent 100%
+      );
+  }
+
+  .header-shell {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    align-items: center;
+    gap: var(--space-3);
+    width: 100%;
+  }
+
   .header-search-area {
-    flex: 1;
-    max-width: 480px;
-    margin-right: auto;
+    min-width: 0;
+    max-width: 520px;
   }
 
-  /* ── Right section ───────────────────────────────────────────────────── */
-  .header-right {
-    display: flex;
+  .header-update-slot,
+  .header-user-slot {
+    display: inline-flex;
     align-items: center;
-    gap: var(--space-4);
-    flex-shrink: 0;
+    justify-self: end;
   }
 
-  .header-time-weather {
+  .header-control-rail {
     display: flex;
-    flex-direction: column;
-    align-items: flex-end;
+    align-items: stretch;
+    justify-content: flex-end;
+    gap: var(--space-2);
+    min-width: 0;
+  }
+
+  .status-chip,
+  .control-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 40px;
+    padding: 0 var(--space-4);
+    border-radius: 999px;
+    border: 1px solid color-mix(in srgb, var(--color-accent) 18%, var(--color-border-subtle));
+    background: color-mix(in srgb, var(--color-bg-elevated) 94%, transparent);
+    box-shadow: 0 8px 22px rgba(0, 0, 0, 0.16);
+  }
+
+  .status-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-3);
+    color: var(--color-text-primary);
+  }
+
+  .status-label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--color-text-muted);
   }
 
   .header-clock {
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 700;
+    letter-spacing: 0.03em;
     color: var(--color-text-primary);
   }
 
   .header-weather {
-    font-size: var(--font-size-xs);
-    color: var(--color-text-muted);
-    text-transform: uppercase;
-    letter-spacing: -0.02em;
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+    color: var(--color-text-secondary);
   }
 
-  /* ── Add widget button ───────────────────────────────────────────────── */
-  .add-widget-btn {
-    display: flex;
-    align-items: center;
-    gap: var(--space-1);
-    padding: var(--space-1) var(--space-3);
-    font-size: var(--font-size-md);
-    font-weight: 500;
-    font-family: var(--font-ui);
-    color: var(--color-text-inverse);
-    background: var(--color-accent);
-    border: none;
-    border-radius: var(--radius-sm);
+  .control-btn {
+    gap: var(--space-2);
     cursor: pointer;
-    transition: opacity 0.15s;
+    color: var(--color-text-primary);
+    font-family: var(--font-ui);
+    font-size: var(--font-size-sm);
+    font-weight: 600;
+    transition:
+      color 0.15s ease,
+      border-color 0.15s ease,
+      background 0.15s ease,
+      transform 0.15s ease;
   }
 
-  .add-widget-btn:hover {
-    opacity: 0.9;
+  .control-btn:hover {
+    color: var(--color-accent-text);
+    border-color: color-mix(in srgb, var(--color-accent) 28%, var(--color-border-subtle));
+    background: color-mix(in srgb, var(--color-bg-hover) 88%, transparent);
+    transform: translateY(-1px);
+  }
+
+  .add-widget-btn {
+    min-width: 0;
   }
 
   .add-widget-text {
     white-space: nowrap;
   }
 
-  /* ── Bell button ─────────────────────────────────────────────────────── */
   .bell-btn {
     position: relative;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 36px;
-    height: 36px;
-    background: none;
-    border: none;
-    border-radius: var(--radius-sm);
-    color: var(--color-text-secondary);
-    cursor: pointer;
-    transition: color 0.15s, background 0.15s;
-    flex-shrink: 0;
+    padding-right: calc(var(--space-4) + 2px);
   }
 
-  .bell-btn:hover {
-    color: var(--color-accent);
-    background: var(--color-bg-hover);
+  .bell-label {
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
   }
 
   .bell-badge {
     position: absolute;
-    top: 2px;
-    right: 2px;
+    top: 4px;
+    right: 4px;
     min-width: 16px;
     height: 16px;
     padding: 0 4px;
+    border-radius: 999px;
     background: var(--color-accent);
     color: var(--color-text-inverse);
     font-size: 9px;
     font-weight: 700;
     line-height: 16px;
-    border-radius: 9999px;
     text-align: center;
     pointer-events: none;
   }
 
-  /* ── Page title section ──────────────────────────────────────────────── */
   .page-title-section {
-    padding: 0 var(--space-8) var(--space-6);
+    width: 100%;
+    padding: 0 var(--space-8) var(--space-7);
+  }
+
+  .page-title-copy {
+    width: min(100%, 1080px);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+
+  .page-branding {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--color-accent-text);
   }
 
   .page-title {
-    font-size: 36px;
+    margin: 0;
+    font-size: clamp(2.35rem, 5vw, 3.15rem);
     font-weight: 800;
-    letter-spacing: -0.03em;
+    letter-spacing: -0.04em;
+    line-height: 1.02;
     color: var(--color-text-primary);
-    font-family: var(--font-ui);
-    line-height: 1.1;
   }
 
   .page-subtitle {
+    margin: 0;
     font-size: var(--font-size-sm);
     color: var(--color-text-muted);
     text-transform: uppercase;
-    letter-spacing: 0.15em;
-    margin-top: var(--space-2);
+    letter-spacing: 0.22em;
   }
 
-  /* ── Responsive ──────────────────────────────────────────────────────── */
-  @media (max-width: 639px) {
-    .header {
-      padding: var(--space-4);
-      gap: var(--space-3);
+  @media (max-width: 1180px) {
+    .header-shell {
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: start;
     }
 
     .header-search-area {
+      grid-column: 1 / -1;
       max-width: none;
     }
 
-    .add-widget-text {
+    .header-control-rail {
+      grid-column: 1 / 2;
+      flex-wrap: wrap;
+    }
+
+    .header-update-slot,
+    .header-user-slot {
+      align-self: center;
+    }
+  }
+
+  @media (max-width: 900px) {
+    .header-shell {
+      grid-template-columns: 1fr;
+    }
+
+    .header-control-rail,
+    .header-update-slot,
+    .header-user-slot {
+      grid-column: 1 / -1;
+      justify-self: start;
+    }
+
+    .header-control-rail {
+      justify-content: flex-start;
+    }
+  }
+
+  @media (max-width: 639px) {
+    .header {
+      padding: var(--space-4);
+    }
+
+    .header-control-rail {
+      gap: var(--space-2);
+    }
+
+    .status-chip-weather,
+    .add-widget-text,
+    .bell-label {
       display: none;
     }
 
-    .header-time-weather {
-      display: none;
+    .status-chip,
+    .control-btn {
+      min-height: 38px;
+      padding: 0 var(--space-3);
     }
 
     .page-title-section {

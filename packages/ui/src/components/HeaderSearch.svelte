@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
+  import Icon from './Icon.svelte';
 
   export interface SearchEntry {
     id: string;
@@ -20,9 +21,14 @@
     searchIndex?: SearchEntry[];
     searchEngineUrl?: string | undefined;
     aiProviders?: AiProviders | undefined;
-    tier?: 'free' | 'standard' | 'local';
+    tier?: 'free' | 'standard' | 'pro' | 'local';
     onAction?: ((entry: SearchEntry) => void) | undefined;
-    onAiChat?: ((provider: 'ollama' | 'openai' | 'anthropic', query: string) => Promise<string>) | undefined;
+    onAiChat?:
+      | ((
+          provider: 'ollama' | 'openai' | 'anthropic',
+          query: string,
+        ) => Promise<string>)
+      | undefined;
   }
 
   let {
@@ -34,6 +40,20 @@
     onAiChat,
   }: Props = $props();
 
+  const MAX_RESULTS = 8;
+  const PROVIDER_LABELS: Record<'ollama' | 'openai' | 'anthropic', string> = {
+    ollama: 'Ollama',
+    openai: 'OpenAI',
+    anthropic: 'Anthropic',
+  };
+  const CATEGORY_ICONS: Record<SearchEntry['category'], string> = {
+    widget: 'layout-grid',
+    settings: 'settings-2',
+    tab: 'folder-open',
+    action: 'sparkles',
+    notification: 'bell',
+  };
+
   let query = $state('');
   let open = $state(false);
   let selectedIndex = $state(0);
@@ -42,66 +62,86 @@
   let aiLoading = $state(false);
   let isMac = $state(false);
 
-  const MAX_RESULTS = 8;
+  const results = $derived.by(() => {
+    const trimmed = query.trim().toLowerCase();
+    if (!trimmed) return [];
 
-  const PROVIDER_LABELS: Record<string, string> = {
-    ollama: 'Ollama',
-    openai: 'OpenAI',
-    anthropic: 'Anthropic',
-  };
-
-  let results = $derived.by(() => {
-    if (!query.trim()) return [];
-    const q = query.toLowerCase();
     return searchIndex
-      .filter(e => e.label.toLowerCase().includes(q) || e.subtitle?.toLowerCase().includes(q))
+      .filter(
+        (entry) =>
+          entry.label.toLowerCase().includes(trimmed) ||
+          entry.subtitle?.toLowerCase().includes(trimmed),
+      )
       .slice(0, MAX_RESULTS);
   });
 
-  let engineName = $derived.by(() => {
+  const engineName = $derived.by(() => {
     try {
       const host = new URL(searchEngineUrl.replace('{query}', 'test')).hostname;
-      const name = host.replace(/^www\./, '').split('.')[0] ?? 'Web';
+      const name = host.replace(/^www\./, '').split('.')[0] ?? 'web';
       return name.charAt(0).toUpperCase() + name.slice(1);
     } catch {
       return 'Web';
     }
   });
 
-  let webSearchEntry = $derived.by(() => {
-    if (!query.trim()) return null;
-    const q = query.trim();
-    const url = searchEngineUrl;
+  const webSearchEntry = $derived.by(() => {
+    const trimmed = query.trim();
+    if (!trimmed) return null;
+
     return {
       id: '__web_search__',
-      label: `Search "${q}" on ${engineName}`,
+      label: `Search "${trimmed}" on ${engineName}`,
       action: () => {
-        window.open(url.replace('{query}', encodeURIComponent(q)), '_blank', 'noopener,noreferrer');
+        window.open(
+          searchEngineUrl.replace('{query}', encodeURIComponent(trimmed)),
+          '_blank',
+          'noopener,noreferrer',
+        );
       },
     };
   });
 
-  let aiEntries = $derived.by(() => {
-    if (!query.trim()) return [];
-    const items: Array<{ id: string; provider: 'ollama' | 'openai' | 'anthropic'; label: string }> = [];
-    for (const p of ['ollama', 'openai', 'anthropic'] as const) {
-      if (aiProviders[p]) {
-        items.push({ id: `__ai_${p}__`, provider: p, label: `Ask ${PROVIDER_LABELS[p]}: "${query}"` });
+  const aiEntries = $derived.by(() => {
+    const trimmed = query.trim();
+    if (!trimmed) return [];
+
+    const items: Array<{
+      id: string;
+      provider: 'ollama' | 'openai' | 'anthropic';
+      label: string;
+    }> = [];
+
+    for (const provider of ['ollama', 'openai', 'anthropic'] as const) {
+      if (aiProviders[provider]) {
+        items.push({
+          id: `__ai_${provider}__`,
+          provider,
+          label: `Ask ${PROVIDER_LABELS[provider]} about "${trimmed}"`,
+        });
       }
     }
+
     return items;
   });
 
-  let totalResults = $derived(
+  const webSearchIndex = $derived(results.length);
+  const aiStartIndex = $derived(results.length + (webSearchEntry ? 1 : 0));
+  const totalResults = $derived(
     results.length + (webSearchEntry ? 1 : 0) + (tier !== 'free' ? aiEntries.length : 0),
   );
 
   function clickOutside(node: HTMLElement, callback: () => void) {
-    function handle(e: MouseEvent) {
-      if (!node.contains(e.target as Node)) callback();
+    function handle(event: MouseEvent) {
+      if (!node.contains(event.target as Node)) callback();
     }
+
     document.addEventListener('mousedown', handle);
-    return { destroy() { document.removeEventListener('mousedown', handle); } };
+    return {
+      destroy() {
+        document.removeEventListener('mousedown', handle);
+      },
+    };
   }
 
   function dismiss() {
@@ -111,17 +151,28 @@
     inputEl?.blur();
   }
 
+  function clearQuery(event?: MouseEvent) {
+    event?.stopPropagation();
+    query = '';
+    aiResponse = null;
+    selectedIndex = 0;
+    inputEl?.focus();
+  }
+
   function handleInput() {
     selectedIndex = 0;
     aiResponse = null;
   }
 
+  function getEntryIcon(entry: SearchEntry): string {
+    return entry.icon ?? CATEGORY_ICONS[entry.category];
+  }
+
   function executeSelected() {
     if (totalResults === 0) return;
-    const idx = selectedIndex;
 
-    if (idx < results.length) {
-      const entry = results[idx];
+    if (selectedIndex < results.length) {
+      const entry = results[selectedIndex];
       if (entry) {
         entry.action();
         onAction?.(entry);
@@ -130,18 +181,13 @@
       return;
     }
 
-    let offset = results.length;
-    if (webSearchEntry) {
-      if (idx === offset) {
-        webSearchEntry.action();
-        dismiss();
-        return;
-      }
-      offset++;
+    if (webSearchEntry && selectedIndex === webSearchIndex) {
+      webSearchEntry.action();
+      dismiss();
+      return;
     }
 
-    const aiIdx = idx - offset;
-    const aiEntry = aiEntries[aiIdx];
+    const aiEntry = aiEntries[selectedIndex - aiStartIndex];
     if (aiEntry) {
       void askAi(aiEntry.provider);
     }
@@ -149,11 +195,13 @@
 
   async function askAi(provider: 'ollama' | 'openai' | 'anthropic') {
     if (!onAiChat || !query.trim()) return;
+
     aiLoading = true;
-    const providerLabel = PROVIDER_LABELS[provider] ?? provider;
+    const providerLabel = PROVIDER_LABELS[provider];
     aiResponse = { provider: providerLabel, text: '' };
+
     try {
-      const text = await onAiChat(provider, query);
+      const text = await onAiChat(provider, query.trim());
       aiResponse = { provider: providerLabel, text };
     } catch {
       aiResponse = { provider: providerLabel, text: 'Failed to get a response.' };
@@ -162,24 +210,38 @@
     }
   }
 
-  function handleKeydown(e: KeyboardEvent) {
-    if (e.key === 'ArrowDown') {
-      e.preventDefault();
-      if (totalResults > 0) selectedIndex = Math.min(selectedIndex + 1, totalResults - 1);
-    } else if (e.key === 'ArrowUp') {
-      e.preventDefault();
-      if (totalResults > 0) selectedIndex = Math.max(selectedIndex - 1, 0);
-    } else if (e.key === 'Enter') {
-      e.preventDefault();
+  function handleKeydown(event: KeyboardEvent) {
+    if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      if (totalResults > 0) {
+        selectedIndex = Math.min(selectedIndex + 1, totalResults - 1);
+      }
+      return;
+    }
+
+    if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      if (totalResults > 0) {
+        selectedIndex = Math.max(selectedIndex - 1, 0);
+      }
+      return;
+    }
+
+    if (event.key === 'Enter') {
+      event.preventDefault();
       executeSelected();
-    } else if (e.key === 'Escape') {
+      return;
+    }
+
+    if (event.key === 'Escape') {
       dismiss();
     }
   }
 
-  function handleGlobalKey(e: KeyboardEvent) {
-    if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
-      e.preventDefault();
+  function handleGlobalKey(event: KeyboardEvent) {
+    if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
+      event.preventDefault();
+
       if (open) {
         dismiss();
       } else {
@@ -197,119 +259,148 @@
 <svelte:window onkeydown={handleGlobalKey} />
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
-<div class="hs-wrap" use:clickOutside={() => { open = false; }}>
-
+<div class="hs-wrap" use:clickOutside={() => (open = false)}>
   <!-- svelte-ignore a11y_click_events_have_key_events -->
   <div
     class="hs-bar"
     class:open={open}
-    onclick={() => { open = true; requestAnimationFrame(() => inputEl?.focus()); }}
+    onclick={() => {
+      open = true;
+      requestAnimationFrame(() => inputEl?.focus());
+    }}
   >
-    <svg class="hs-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-      <circle cx="11" cy="11" r="8" />
-      <line x1="21" y1="21" x2="16.65" y2="16.65" />
-    </svg>
+    <span class="hs-leading" aria-hidden="true">
+      <Icon name="search" size={15} />
+    </span>
+
     <input
       bind:this={inputEl}
       bind:value={query}
       class="hs-input"
-      placeholder="Search or ask…"
-      onfocus={() => { open = true; }}
+      placeholder="Search widgets, pages, or ask AI"
+      onfocus={() => (open = true)}
       oninput={handleInput}
       onkeydown={handleKeydown}
       autocomplete="off"
       spellcheck="false"
       aria-label="Search or ask"
     />
+
     {#if query}
-      <button class="hs-clear" aria-label="Clear search" onclick={() => { query = ''; aiResponse = null; selectedIndex = 0; inputEl?.focus(); }}>
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true">
-          <line x1="18" y1="6" x2="6" y2="18" />
-          <line x1="6" y1="6" x2="18" y2="18" />
-        </svg>
+      <button class="hs-clear" aria-label="Clear search" onclick={clearQuery}>
+        <Icon name="x" size={12} />
       </button>
     {:else}
-      <kbd class="hs-kbd">{isMac ? '⌘K' : 'Ctrl+K'}</kbd>
+      <kbd class="hs-kbd">{isMac ? 'Cmd+K' : 'Ctrl+K'}</kbd>
     {/if}
   </div>
 
   {#if open}
     <!-- svelte-ignore a11y_no_static_element_interactions -->
-    <div class="hs-dropdown" onmousedown={(e) => e.preventDefault()}>
-
+    <div class="hs-dropdown" onmousedown={(event) => event.preventDefault()}>
       {#if !query.trim()}
-        <div class="hs-hint">Type to search…</div>
+        <div class="hs-hint">
+          <span class="hs-hint-title">Command search</span>
+          <p class="hs-hint-copy">Jump to pages, settings, widgets, or ask an enabled AI provider.</p>
+        </div>
       {:else}
-
         {#if results.length > 0}
-          <div class="hs-group-label">DASHBOARD</div>
-          {#each results as entry, i}
+          <div class="hs-group-label">Dashboard</div>
+          {#each results as entry, index}
             <!-- svelte-ignore a11y_click_events_have_key_events -->
             <div
               class="hs-item"
-              class:hs-item--active={selectedIndex === i}
-              onmouseenter={() => { selectedIndex = i; }}
-              onmousedown={() => { entry.action(); onAction?.(entry); dismiss(); }}
+              class:hs-item--active={selectedIndex === index}
+              onmouseenter={() => (selectedIndex = index)}
+              onmousedown={() => {
+                entry.action();
+                onAction?.(entry);
+                dismiss();
+              }}
             >
-              <span class="hs-item-icon">{@html entry.icon ?? '→'}</span>
-              <span class="hs-item-label">{entry.label}</span>
-              {#if entry.subtitle}
-                <span class="hs-item-sub">{entry.subtitle}</span>
-              {/if}
+              <span class="hs-item-icon">
+                <Icon name={getEntryIcon(entry)} size={14} />
+              </span>
+              <span class="hs-item-copy">
+                <span class="hs-item-label">{entry.label}</span>
+                {#if entry.subtitle}
+                  <span class="hs-item-sub">{entry.subtitle}</span>
+                {/if}
+              </span>
             </div>
           {/each}
         {/if}
 
         {#if webSearchEntry}
-          <div class="hs-group-label">WEB SEARCH</div>
+          <div class="hs-group-label">Web search</div>
           <!-- svelte-ignore a11y_click_events_have_key_events -->
           <div
             class="hs-item"
-            class:hs-item--active={selectedIndex === results.length}
-            onmouseenter={() => { selectedIndex = results.length; }}
-            onmousedown={() => { webSearchEntry?.action(); dismiss(); }}
+            class:hs-item--active={selectedIndex === webSearchIndex}
+            onmouseenter={() => (selectedIndex = webSearchIndex)}
+            onmousedown={() => {
+              webSearchEntry.action();
+              dismiss();
+            }}
           >
-            <span class="hs-item-icon">🌐</span>
-            <span class="hs-item-label">Search "{query}" on {engineName}</span>
+            <span class="hs-item-icon">
+              <Icon name="globe-2" size={14} />
+            </span>
+            <span class="hs-item-copy">
+              <span class="hs-item-label">{webSearchEntry.label}</span>
+            </span>
           </div>
         {/if}
 
         {#if tier !== 'free' && aiEntries.length > 0}
-          <div class="hs-group-label">ASK AI</div>
-          {#each aiEntries as aiEntry, i}
+          <div class="hs-group-label">Ask AI</div>
+          {#each aiEntries as aiEntry, index}
             <!-- svelte-ignore a11y_click_events_have_key_events -->
             <div
               class="hs-item"
-              class:hs-item--active={selectedIndex === results.length + 1 + i}
-              onmouseenter={() => { selectedIndex = results.length + 1 + i; }}
-              onmousedown={() => { void askAi(aiEntry.provider); }}
+              class:hs-item--active={selectedIndex === aiStartIndex + index}
+              onmouseenter={() => (selectedIndex = aiStartIndex + index)}
+              onmousedown={() => void askAi(aiEntry.provider)}
             >
-              <span class="hs-item-icon">🤖</span>
-              <span class="hs-item-label">{aiEntry.label}</span>
+              <span class="hs-item-icon">
+                <Icon name="sparkles" size={14} />
+              </span>
+              <span class="hs-item-copy">
+                <span class="hs-item-label">{aiEntry.label}</span>
+              </span>
             </div>
           {/each}
         {/if}
 
         {#if tier === 'free'}
-          <div class="hs-group-label">ASK AI</div>
+          <div class="hs-group-label">Ask AI</div>
           <div class="hs-item hs-item--locked">
-            <span class="hs-item-icon">🔒</span>
-            <span class="hs-item-label">AI assistant — Standard+</span>
+            <span class="hs-item-icon">
+              <Icon name="lock" size={14} />
+            </span>
+            <span class="hs-item-copy">
+              <span class="hs-item-label">AI assistant is available on Standard and above</span>
+            </span>
             <a
               href="https://phavo.net/upgrade"
               target="_blank"
               rel="noopener noreferrer"
               class="hs-upgrade"
-              onmousedown={(e) => e.stopPropagation()}
-            >Upgrade →</a>
+              onmousedown={(event) => event.stopPropagation()}
+            >
+              Upgrade
+            </a>
           </div>
         {/if}
-
       {/if}
 
       {#if aiResponse}
         <div class="hs-ai-response">
-          <div class="hs-ai-meta">{aiResponse.provider}</div>
+          <div class="hs-ai-meta">
+            <span class="hs-ai-provider">{aiResponse.provider}</span>
+            <button class="hs-back" onclick={() => (aiResponse = null)}>Back</button>
+          </div>
+
           {#if aiLoading}
             <div class="hs-ai-loading">
               <span class="hs-ai-dot"></span>
@@ -319,65 +410,67 @@
           {:else}
             <div class="hs-ai-text">{aiResponse.text}</div>
           {/if}
-          <button class="hs-back" onclick={() => { aiResponse = null; }}>← Back</button>
         </div>
       {/if}
-
     </div>
   {/if}
-
 </div>
 
 <style>
   .hs-wrap {
     position: relative;
-    flex: 0 0 420px;
+    width: 100%;
+    min-width: 0;
   }
 
   .hs-bar {
     display: flex;
     align-items: center;
-    height: 34px;
-    padding: 0 10px 0 34px;
-    background: var(--color-bg-elevated);
-    border: 1px solid var(--color-border);
-    border-radius: 8px;
-    position: relative;
+    gap: var(--space-3);
+    min-height: 40px;
+    padding: 0 var(--space-3) 0 calc(var(--space-4) + 14px);
+    background: color-mix(in srgb, var(--color-bg-elevated) 94%, transparent);
+    border: 1px solid color-mix(in srgb, var(--color-accent) 18%, var(--color-border-subtle));
+    border-radius: 999px;
     cursor: text;
-    transition: border-color 0.15s;
+    transition:
+      border-color 0.15s ease,
+      background 0.15s ease,
+      box-shadow 0.15s ease,
+      border-radius 0.15s ease;
+  }
+
+  .hs-bar:hover {
+    border-color: color-mix(in srgb, var(--color-accent) 28%, var(--color-border-subtle));
   }
 
   .hs-bar.open {
-    border-color: var(--color-accent);
-    border-top-left-radius: 8px;
-    border-top-right-radius: 8px;
-    border-bottom-left-radius: 0;
-    border-bottom-right-radius: 0;
-    border-bottom-color: var(--color-bg-elevated);
+    border-color: color-mix(in srgb, var(--color-accent) 34%, var(--color-border-subtle));
+    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.28);
   }
 
-  .hs-bar:not(.open):hover {
-    border-color: var(--color-text-muted);
-  }
-
-  .hs-icon {
+  .hs-leading {
     position: absolute;
-    left: 12px;
-    width: 14px;
-    height: 14px;
+    left: var(--space-4);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     color: var(--color-text-muted);
     pointer-events: none;
   }
 
   .hs-input {
     flex: 1;
+    min-width: 0;
+    padding: 0;
     background: transparent;
     border: none;
     outline: none;
+    color: var(--color-text-primary);
     font-family: var(--font-ui);
     font-size: 13px;
-    color: var(--color-text);
-    min-width: 0;
+    line-height: 1.2;
   }
 
   .hs-input::placeholder {
@@ -385,34 +478,40 @@
   }
 
   .hs-kbd {
-    flex-shrink: 0;
-    padding: 1px 5px;
-    background: var(--color-bg);
-    border: 1px solid var(--color-border);
-    border-radius: 4px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 24px;
+    padding: 0 var(--space-2);
+    border-radius: 999px;
+    border: 1px solid var(--color-border-subtle);
+    background: color-mix(in srgb, var(--color-bg-base) 76%, transparent);
+    color: var(--color-text-muted);
     font-family: var(--font-mono);
     font-size: 10px;
-    color: var(--color-text-muted);
+    letter-spacing: 0.04em;
     pointer-events: none;
+    flex-shrink: 0;
   }
 
   .hs-clear {
-    flex-shrink: 0;
-    width: 18px;
-    height: 18px;
-    background: transparent;
-    border: none;
-    border-radius: 50%;
-    color: var(--color-text-muted);
-    cursor: pointer;
-    display: flex;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
-    padding: 0;
+    width: 24px;
+    height: 24px;
+    flex-shrink: 0;
+    border: none;
+    border-radius: 999px;
+    background: transparent;
+    color: var(--color-text-muted);
+    cursor: pointer;
+    transition: color 0.15s ease, background 0.15s ease;
   }
 
   .hs-clear:hover {
-    color: var(--color-text);
+    color: var(--color-text-primary);
+    background: color-mix(in srgb, var(--color-bg-hover) 84%, transparent);
   }
 
   .hs-dropdown {
@@ -420,165 +519,225 @@
     top: calc(100% - 1px);
     left: 0;
     right: 0;
-    background: var(--color-bg-elevated);
-    border: 1px solid var(--color-accent);
-    border-top: none;
-    border-bottom-left-radius: 8px;
-    border-bottom-right-radius: 8px;
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
-    max-height: 420px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    max-height: min(460px, 72dvh);
     overflow-y: auto;
-    z-index: 9999;
+    padding: var(--space-3);
+    background:
+      linear-gradient(
+        180deg,
+        color-mix(in srgb, var(--color-bg-elevated) 96%, transparent),
+        color-mix(in srgb, var(--color-bg-surface) 98%, transparent)
+      );
+    border: 1px solid color-mix(in srgb, var(--color-accent) 34%, var(--color-border-subtle));
+    border-top: none;
+    border-radius: 0 0 var(--radius-xl) var(--radius-xl);
+    box-shadow: 0 18px 34px rgba(0, 0, 0, 0.38);
+    z-index: 999;
+    scrollbar-width: thin;
   }
 
   .hs-hint {
-    padding: 16px;
-    text-align: center;
-    font-size: 12px;
-    color: var(--color-text-muted);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    padding: var(--space-4);
+    border-radius: calc(var(--radius-xl) - 4px);
+    background: color-mix(in srgb, var(--color-bg-base) 28%, transparent);
+    border: 1px solid var(--color-border-subtle);
+  }
+
+  .hs-hint-title {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--color-accent-text);
+  }
+
+  .hs-hint-copy {
+    margin: 0;
+    font-size: var(--font-size-sm);
+    line-height: 1.6;
+    color: var(--color-text-secondary);
   }
 
   .hs-group-label {
-    padding: 8px 12px 3px;
+    padding: var(--space-3) var(--space-2) var(--space-1);
     font-size: 10px;
-    font-weight: 600;
-    letter-spacing: 0.07em;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
     color: var(--color-text-muted);
-    font-family: var(--font-mono);
   }
 
   .hs-item {
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 7px 12px;
-    font-size: 13px;
-    color: var(--color-text);
+    gap: var(--space-3);
+    padding: var(--space-3);
+    border-radius: calc(var(--radius-xl) - 6px);
     cursor: pointer;
-    transition: background 0.08s;
+    transition: background 0.12s ease, border-color 0.12s ease;
+    border: 1px solid transparent;
   }
 
   .hs-item:hover,
   .hs-item--active {
-    background: rgba(212, 146, 42, 0.10);
-  }
-
-  .hs-item--active {
-    border-left: 2px solid var(--color-accent);
-    padding-left: 10px;
+    background: color-mix(in srgb, var(--color-accent-t) 84%, transparent);
+    border-color: color-mix(in srgb, var(--color-accent) 16%, transparent);
   }
 
   .hs-item--locked {
     cursor: default;
-    color: var(--color-text-muted);
   }
 
   .hs-item--locked:hover {
-    background: transparent;
+    background: color-mix(in srgb, var(--color-bg-base) 28%, transparent);
+    border-color: transparent;
   }
 
   .hs-item-icon {
-    font-size: 12px;
-    color: var(--color-text-muted);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
     flex-shrink: 0;
-    width: 16px;
-    text-align: center;
+    border-radius: 10px;
+    background: color-mix(in srgb, var(--color-bg-base) 52%, transparent);
+    color: var(--color-accent-text);
+  }
+
+  .hs-item-copy {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
   }
 
   .hs-item-label {
-    flex: 1;
+    color: var(--color-text-primary);
+    font-size: 13px;
+    line-height: 1.35;
   }
 
   .hs-item-sub {
-    margin-left: auto;
-    font-size: 11px;
     color: var(--color-text-muted);
-    white-space: nowrap;
+    font-size: 11px;
+    line-height: 1.4;
   }
 
   .hs-upgrade {
-    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 30px;
+    padding: 0 var(--space-3);
+    border-radius: 999px;
+    border: 1px solid color-mix(in srgb, var(--color-accent) 24%, transparent);
+    background: color-mix(in srgb, var(--color-bg-base) 64%, transparent);
+    color: var(--color-accent-text);
     font-size: 11px;
-    color: var(--color-accent);
+    font-weight: 700;
     text-decoration: none;
-  }
-
-  .hs-upgrade:hover {
-    text-decoration: underline;
+    flex-shrink: 0;
   }
 
   .hs-ai-response {
-    padding: 14px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    margin-top: var(--space-2);
+    padding: var(--space-4);
     border-top: 1px solid var(--color-border-subtle);
   }
 
   .hs-ai-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+  }
+
+  .hs-ai-provider {
     font-size: 10px;
-    font-family: var(--font-mono);
-    color: var(--color-text-muted);
+    font-weight: 700;
+    letter-spacing: 0.2em;
     text-transform: uppercase;
-    letter-spacing: 0.06em;
-    margin-bottom: 8px;
+    color: var(--color-accent-text);
   }
 
   .hs-ai-text {
     font-size: 13px;
-    color: var(--color-text);
-    line-height: 1.6;
+    line-height: 1.65;
+    color: var(--color-text-primary);
     white-space: pre-wrap;
     word-break: break-word;
   }
 
   .hs-back {
-    margin-top: 10px;
-    font-size: 12px;
-    color: var(--color-text-muted);
-    background: none;
     border: none;
+    background: transparent;
+    color: var(--color-text-secondary);
     cursor: pointer;
-    padding: 0;
-    font-family: var(--font-ui);
-  }
-
-  .hs-back:hover {
-    color: var(--color-text);
+    font-size: 12px;
+    font-weight: 600;
   }
 
   .hs-ai-loading {
     display: flex;
-    gap: 6px;
-    padding: 8px 0;
+    gap: var(--space-2);
+    padding: var(--space-2) 0;
   }
 
   .hs-ai-dot {
     width: 6px;
     height: 6px;
-    border-radius: 50%;
+    border-radius: 999px;
     background: var(--color-accent);
     animation: hs-pulse 1.2s ease-in-out infinite;
   }
 
-  .hs-ai-dot:nth-child(2) { animation-delay: 0.2s; }
-  .hs-ai-dot:nth-child(3) { animation-delay: 0.4s; }
-
-  @keyframes hs-pulse {
-    0%, 80%, 100% { opacity: 0.3; transform: scale(0.8); }
-    40% { opacity: 1; transform: scale(1); }
+  .hs-ai-dot:nth-child(2) {
+    animation-delay: 0.2s;
   }
 
-  @media (max-width: 640px) {
-    .hs-wrap { flex: 0 0 40px; }
-    .hs-bar { padding: 0; justify-content: center; }
-    .hs-input, .hs-kbd { display: none; }
-    .hs-icon { position: static; }
-    .hs-bar.open { padding: 0 10px 0 34px; }
-    .hs-bar.open .hs-input { display: block; }
-    .hs-bar.open .hs-kbd { display: inline-flex; }
-    .hs-bar.open .hs-icon { position: absolute; left: 12px; }
+  .hs-ai-dot:nth-child(3) {
+    animation-delay: 0.4s;
+  }
+
+  @keyframes hs-pulse {
+    0%,
+    80%,
+    100% {
+      opacity: 0.32;
+      transform: scale(0.8);
+    }
+
+    40% {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  @media (max-width: 639px) {
+    .hs-bar {
+      min-height: 38px;
+      padding-right: var(--space-2);
+    }
+
+    .hs-kbd {
+      display: none;
+    }
+
     .hs-dropdown {
-      left: auto;
       right: 0;
-      width: 320px;
+      left: auto;
+      width: min(360px, calc(100vw - (var(--space-4) * 2)));
     }
   }
 </style>

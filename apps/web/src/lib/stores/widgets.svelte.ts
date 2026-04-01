@@ -362,20 +362,22 @@ export async function createTab(label: string): Promise<{ ok: boolean; error?: s
 export async function updateTab(
   id: string,
   patch: { label?: string; order?: number },
-): Promise<void> {
+): Promise<{ ok: boolean; error?: string }> {
   try {
     const res = await fetchWithCsrf(`/api/v1/tabs/${encodeURIComponent(id)}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(patch),
     });
-    const json = (await res.json()) as { ok: boolean; data?: Tab };
+    const json = (await res.json()) as { ok: boolean; data?: Tab; error?: string };
     if (json.ok && json.data) {
       const updatedTab = json.data;
       tabs = tabs.map((t) => (t.id === id ? updatedTab : t));
+      return { ok: true };
     }
+    return { ok: false, error: json.error ?? 'Request failed' };
   } catch {
-    // silently fail
+    return { ok: false, error: 'Network error' };
   }
 }
 

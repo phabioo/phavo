@@ -3,6 +3,7 @@ import type { DashboardConfig } from '@phavo/types';
 let config = $state<DashboardConfig>({
   setupComplete: false,
   dashboardName: 'My Dashboard',
+  dashboardSubtitle: 'System overview & performance',
   tabs: [],
   sessionTimeout: '7d',
   location: undefined,

@@ -3,16 +3,16 @@
     isWidgetDefinition,
     isWidgetTeaserDefinition,
     type WidgetCategory,
-    type WidgetDefinition,
     type WidgetInstance,
     type WidgetManifestEntry,
     type WidgetSize,
   } from '@phavo/types';
   import { onMount } from 'svelte';
-  import type { Snippet } from 'svelte';
+  import { fade, fly } from 'svelte/transition';
   import Icon from './Icon.svelte';
 
   type Category = 'all' | WidgetCategory;
+  type TileCategory = WidgetCategory | 'custom';
 
   interface Props {
     open: boolean;
@@ -21,13 +21,8 @@
     onClose: () => void;
     onAdd: (widgetId: string, size: WidgetSize) => void;
     onRemove: (instanceId: string) => void;
-    /** Render a live widget preview for a given widgetId */
-    preview?: Snippet<[string, unknown | undefined, boolean, boolean]>;
-    /** Called when a drag starts from inside the drawer */
     onDragStartFromDrawer?: () => void;
-    /** Called when a drag from the drawer ends (drop or cancel) */
     onDragEndFromDrawer?: () => void;
-    /** i18n labels */
     labels?: {
       title?: string;
       subtitle?: string;
@@ -52,62 +47,40 @@
     onClose,
     onAdd,
     onRemove,
-    preview,
     onDragStartFromDrawer,
     onDragEndFromDrawer,
     labels = {},
   }: Props = $props();
 
+  const DEFAULT_MOBILE_HEIGHT = 60;
+  const DESKTOP_BREAKPOINT = 640;
+  const CATEGORY_ICONS: Record<Category, string> = {
+    all: 'layout-grid',
+    system: 'cpu',
+    consumer: 'sparkles',
+    integration: 'plug',
+    utility: 'sliders-horizontal',
+  };
+
   let activeFilter = $state<Category>('all');
-  let selectedSizes = $state<Record<string, WidgetSize>>({});
   let confirmRemoveId = $state<string | null>(null);
   let activeLockedId = $state<string | null>(null);
   let isDraggingFromDrawer = $state(false);
-  let previewData = $state<Record<string, unknown>>({});
-  let previewLoading = $state<Record<string, boolean>>({});
-  let previewErrors = $state<Record<string, string | null>>({});
-
-  const previewRequests = new Map<string, Promise<void>>();
-  const DEFAULT_MOBILE_HEIGHT = 60;
-  const DEFAULT_DESKTOP_HEIGHT = 400;
-  const MIN_DESKTOP_HEIGHT = 200;
-  const DESKTOP_BREAKPOINT = 640;
-
   let isDesktop = $state(false);
-  let desktopDrawerHeight = $state(DEFAULT_DESKTOP_HEIGHT);
   let mobileDrawerHeight = $state(DEFAULT_MOBILE_HEIGHT);
   let isResizing = $state(false);
 
-  onMount(() => {
-    return $effect.root(() => {
-      $effect(() => {
-        if (!open) {
-          desktopDrawerHeight = DEFAULT_DESKTOP_HEIGHT;
-          mobileDrawerHeight = DEFAULT_MOBILE_HEIGHT;
-          previewData = {};
-          previewLoading = {};
-          previewErrors = {};
-          previewRequests.clear();
-          return;
-        }
-
-        const previewableWidgets = widgets.filter(
-          (widget): widget is WidgetDefinition => isWidgetDefinition(widget),
-        );
-
-        for (const widget of previewableWidgets) {
-          void loadPreview(widget);
-        }
-      });
-    });
-  });
+  const filters: { key: Category; label: () => string }[] = [
+    { key: 'all', label: () => labels.filterAll ?? 'All' },
+    { key: 'system', label: () => labels.filterSystem ?? 'System' },
+    { key: 'consumer', label: () => labels.filterConsumer ?? 'Consumer' },
+    { key: 'integration', label: () => labels.filterIntegration ?? 'Integration' },
+    { key: 'utility', label: () => labels.filterUtility ?? 'Utility' },
+  ];
 
   onMount(() => {
     const syncViewport = () => {
       isDesktop = window.innerWidth >= DESKTOP_BREAKPOINT;
-      if (isDesktop) {
-        desktopDrawerHeight = Math.min(getMaxDesktopHeight(), Math.max(MIN_DESKTOP_HEIGHT, desktopDrawerHeight));
-      }
     };
 
     syncViewport();
@@ -118,41 +91,39 @@
     };
   });
 
-  const filters: { key: Category; label: () => string }[] = [
-    { key: 'all', label: () => labels.filterAll ?? 'All' },
-    { key: 'system', label: () => labels.filterSystem ?? 'System' },
-    { key: 'consumer', label: () => labels.filterConsumer ?? 'Consumer' },
-    { key: 'integration', label: () => labels.filterIntegration ?? 'Integration' },
-    { key: 'utility', label: () => labels.filterUtility ?? 'Utility' },
-  ];
+  onMount(() => {
+    return $effect.root(() => {
+      $effect(() => {
+        if (open) return;
+        mobileDrawerHeight = DEFAULT_MOBILE_HEIGHT;
+        confirmRemoveId = null;
+        activeLockedId = null;
+      });
+    });
+  });
 
   const filteredWidgets = $derived(
     activeFilter === 'all'
       ? widgets
       : widgets.filter(
-          (w) => isWidgetTeaserDefinition(w) || (isWidgetDefinition(w) && w.category === activeFilter),
+          (widget) =>
+            isWidgetTeaserDefinition(widget) ||
+            (isWidgetDefinition(widget) && widget.category === activeFilter),
         ),
   );
 
+  const visibleTileCount = $derived(filteredWidgets.length);
+
   function getInstanceForWidget(widgetId: string): WidgetInstance | undefined {
-    return instances.find((i) => i.widgetId === widgetId);
+    return instances.find((instance) => instance.widgetId === widgetId);
   }
 
-  function isLocked(w: WidgetManifestEntry): boolean {
-    return isWidgetTeaserDefinition(w);
+  function isLocked(widget: WidgetManifestEntry): boolean {
+    return isWidgetTeaserDefinition(widget);
   }
 
-  function getSelectedSize(w: WidgetManifestEntry): WidgetSize {
-    if (!isWidgetDefinition(w)) return 'M';
-    return selectedSizes[w.id] ?? w.sizes[0] ?? 'M';
-  }
-
-  function handleSizeSelect(widgetId: string, size: WidgetSize) {
-    selectedSizes = { ...selectedSizes, [widgetId]: size };
-  }
-
-  function handleAdd(w: WidgetDefinition) {
-    onAdd(w.id, getSelectedSize(w));
+  function handleAdd(widgetId: string) {
+    onAdd(widgetId, 'S');
   }
 
   function handleLockedClick(widgetId: string) {
@@ -172,14 +143,17 @@
     onClose();
   }
 
-  function handleDragStart(e: DragEvent, w: WidgetManifestEntry) {
-    if (isLocked(w) || !isWidgetDefinition(w) || !e.dataTransfer) return;
+  function handleDragStart(event: DragEvent, widget: WidgetManifestEntry) {
+    if (isLocked(widget) || !isWidgetDefinition(widget) || !event.dataTransfer) return;
     isDraggingFromDrawer = true;
-    e.dataTransfer.effectAllowed = 'copy';
-    e.dataTransfer.setData('application/phavo-widget', JSON.stringify({
-      widgetId: w.id,
-      size: getSelectedSize(w),
-    }));
+    event.dataTransfer.effectAllowed = 'copy';
+    event.dataTransfer.setData(
+      'application/phavo-widget',
+      JSON.stringify({
+        widgetId: widget.id,
+        size: 'S',
+      }),
+    );
     onDragStartFromDrawer?.();
   }
 
@@ -188,282 +162,651 @@
     onDragEndFromDrawer?.();
   }
 
-  function getMaxDesktopHeight(): number {
-    return Math.max(MIN_DESKTOP_HEIGHT, Math.floor(window.innerHeight * 0.85));
-  }
-
-  function startResize(event: MouseEvent) {
-    if (!isDesktop) return;
-
+  function handleMobileResizeStart(event: PointerEvent) {
     isResizing = true;
-    const startY = event.clientY;
-    const startHeight = desktopDrawerHeight;
-
-    function onMouseMove(nextEvent: MouseEvent) {
-      const delta = startY - nextEvent.clientY;
-      desktopDrawerHeight = Math.min(getMaxDesktopHeight(), Math.max(MIN_DESKTOP_HEIGHT, startHeight + delta));
-    }
-
-    function onMouseUp() {
-      isResizing = false;
-      window.removeEventListener('mousemove', onMouseMove);
-      window.removeEventListener('mouseup', onMouseUp);
-    }
-
-    window.addEventListener('mousemove', onMouseMove);
-    window.addEventListener('mouseup', onMouseUp);
+    (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
+    (event.currentTarget as HTMLElement).dataset.startY = String(event.clientY);
+    (event.currentTarget as HTMLElement).dataset.startHeight = String(mobileDrawerHeight);
   }
 
-  function handleMobileResizeStart(e: PointerEvent) {
-    isResizing = true;
-    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
-    (e.currentTarget as HTMLElement).dataset.startY = String(e.clientY);
-    (e.currentTarget as HTMLElement).dataset.startHeight = String(mobileDrawerHeight);
-  }
-
-  function handleMobileResizeMove(e: PointerEvent) {
+  function handleMobileResizeMove(event: PointerEvent) {
     if (!isResizing) return;
-    const handle = e.currentTarget as HTMLElement;
-    const startY = Number(handle.dataset.startY ?? e.clientY);
+    const handle = event.currentTarget as HTMLElement;
+    const startY = Number(handle.dataset.startY ?? event.clientY);
     const startHeight = Number(handle.dataset.startHeight ?? mobileDrawerHeight);
-    const delta = startY - e.clientY;
-    const newHeightVh = startHeight + (delta / window.innerHeight) * 100;
-    mobileDrawerHeight = Math.min(85, Math.max(25, newHeightVh));
+    const delta = startY - event.clientY;
+    const nextHeight = startHeight + (delta / window.innerHeight) * 100;
+    mobileDrawerHeight = Math.min(86, Math.max(26, nextHeight));
   }
 
-  function handleMobileResizeEnd(e: PointerEvent) {
+  function handleMobileResizeEnd(event: PointerEvent) {
     isResizing = false;
-    (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
+    (event.currentTarget as HTMLElement).releasePointerCapture(event.pointerId);
   }
 
-  async function loadPreview(widget: WidgetDefinition): Promise<void> {
-    const inflightRequest = previewRequests.get(widget.id);
-    if (inflightRequest) {
-      await inflightRequest;
-      return;
+  function getWidgetCategory(widget: WidgetManifestEntry): TileCategory {
+    if (!isWidgetDefinition(widget)) return 'custom';
+    return widget.category;
+  }
+
+  function getWidgetCategoryLabel(widget: WidgetManifestEntry): string {
+    const category = getWidgetCategory(widget);
+    return category.charAt(0).toUpperCase() + category.slice(1);
+  }
+
+  function getWidgetIcon(widget: WidgetManifestEntry): string {
+    if (isWidgetTeaserDefinition(widget)) return 'lock';
+    return CATEGORY_ICONS[widget.category] ?? 'layout-grid';
+  }
+
+  function getTierLabel(widget: WidgetManifestEntry): string {
+    if (isWidgetTeaserDefinition(widget)) {
+      return labels.locked ?? 'Locked';
     }
 
-    previewLoading = { ...previewLoading, [widget.id]: true };
-
-    const request = (async () => {
-      try {
-        const response = await fetch(widget.dataEndpoint, { credentials: 'same-origin' });
-        const payload = (await response.json().catch(() => null)) as
-          | { ok: boolean; data?: unknown; error?: string }
-          | null;
-
-        if (!response.ok || !payload?.ok || payload.data == null) {
-          throw new Error(payload?.error ?? 'Preview unavailable');
-        }
-
-        previewData = { ...previewData, [widget.id]: payload.data };
-        previewErrors = { ...previewErrors, [widget.id]: null };
-      } catch (error) {
-        const nextPreviewData = { ...previewData };
-        delete nextPreviewData[widget.id];
-        previewData = nextPreviewData;
-        previewErrors = {
-          ...previewErrors,
-          [widget.id]: error instanceof Error ? error.message : 'Preview unavailable',
-        };
-      } finally {
-        previewLoading = { ...previewLoading, [widget.id]: false };
-        previewRequests.delete(widget.id);
-      }
-    })();
-
-    previewRequests.set(widget.id, request);
-    await request;
+    return widget.tier === 'standard' ? 'Standard' : 'Pro';
   }
 </script>
 
 {#if open}
   <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
   <div
-    class="fixed inset-0 bg-black/40 z-[199] animate-[fade-in_0.2s_ease]"
+    class="fixed inset-0 z-[210] bg-black/42 backdrop-blur-[2px]"
     onclick={handleBackdropClick}
     aria-hidden="true"
     style="pointer-events: {isDraggingFromDrawer ? 'none' : 'auto'}"
+    transition:fade={{ duration: 140 }}
   ></div>
-{/if}
 
-<aside
-  class="fixed z-[200] flex flex-col bg-surface overflow-hidden transition-transform duration-300 ease-out
-    bottom-0 left-0 w-full rounded-t-xl border-t border-border
-    sm:top-0 sm:right-0 sm:bottom-0 sm:left-auto sm:w-[380px] sm:rounded-t-none sm:rounded-l-xl sm:border-t-0 sm:border-l
-    {open ? 'translate-y-0 sm:translate-y-0 sm:translate-x-0' : 'translate-y-full sm:translate-y-0 sm:translate-x-full'}
-    {isResizing ? 'select-none !transition-none' : ''}"
-  style="height: {isDesktop ? '100%' : `${mobileDrawerHeight}vh`}"
-  aria-label={labels.title ?? 'Add Widgets'}
-  aria-hidden={!open}
->
-  <!-- Mobile resize handle -->
-  <div
-    class="flex sm:hidden justify-center py-2 shrink-0 cursor-ns-resize touch-none"
-    onpointerdown={handleMobileResizeStart}
-    onpointermove={handleMobileResizeMove}
-    onpointerup={handleMobileResizeEnd}
-    role="separator"
-    aria-label="Resize drawer"
-    aria-orientation="horizontal"
+  <aside
+    class="widget-tray fixed z-[220] flex flex-col overflow-hidden"
+    class:drawer-resizing={isResizing}
+    style="height: {isDesktop ? 'min(72dvh, 760px)' : `${mobileDrawerHeight}vh`}"
+    aria-label={labels.title ?? 'Widget Tray'}
+    transition:fly={{ y: isDesktop ? 520 : 360, duration: isDesktop ? 260 : 220 }}
   >
-    <div class="w-10 h-1 rounded-full bg-border"></div>
-  </div>
-
-  <!-- Header -->
-  <div class="flex items-center justify-between px-5 pt-5 pb-3 shrink-0">
-    <div class="flex flex-col gap-0.5">
-      <span class="text-base font-semibold text-text">{labels.title ?? 'Add Widgets'}</span>
-      <span class="text-xs text-text-muted">{labels.subtitle ?? 'Drag to place or click to add'}</span>
-    </div>
-    <button class="flex items-center justify-center w-8 h-8 text-text-muted bg-transparent border-none rounded cursor-pointer transition-colors hover:text-text hover:bg-hover" onclick={onClose} aria-label="Close">
-      <Icon name="x" size={16} />
-    </button>
-  </div>
-
-  <!-- Category filter pills -->
-  <div class="flex gap-2 px-5 pb-3 shrink-0 overflow-x-auto">
-    {#each filters as f (f.key)}
-      <button
-        class="px-3 py-1 text-xs font-medium rounded-full border whitespace-nowrap transition-all cursor-pointer
-          {activeFilter === f.key
-            ? 'bg-accent text-black border-accent'
-            : 'bg-transparent text-text-muted border-border hover:text-text hover:border-text-muted'}"
-        onclick={() => (activeFilter = f.key)}
-      >
-        {f.label()}
-      </button>
-    {/each}
-  </div>
-
-{#snippet drawerCardInner(w: WidgetManifestEntry, inst: WidgetInstance | undefined, locked: boolean)}
-  <!-- Preview area -->
-  <div class="relative h-[140px] overflow-hidden border-b border-border-subtle bg-surface {locked ? 'flex flex-1 items-center justify-center min-h-[140px] p-4 bg-base/20' : ''}">
-    {#if locked}
-      <div class="flex flex-col items-center justify-center gap-1.5">
-        <span class="text-yellow-500 flex"><Icon name="lock" size={20} /></span>
-        <span class="text-[11px] font-semibold text-yellow-500 tracking-wider uppercase">{labels.locked ?? 'LOCKED'}</span>
-      </div>
-    {:else if preview && isWidgetDefinition(w)}
-      <div class="w-[145%] h-[145%] scale-[0.69] origin-top-left pointer-events-none">
-        {@render preview(
-          w.id,
-          previewData[w.id],
-          previewLoading[w.id] === true,
-          (previewErrors[w.id] ?? null) !== null,
-        )}
-      </div>
-    {:else}
-      <div class="flex items-center justify-center h-full text-text-muted text-sm font-medium">
-        <span class="opacity-60">{w.name}</span>
-      </div>
-    {/if}
-  </div>
-
-  <!-- Card footer -->
-  <div class="p-3 flex flex-col gap-2">
-    <div class="flex flex-col gap-0.5 min-w-0">
-      <span class="text-[13px] font-semibold text-text truncate">{w.name}</span>
-      <span class="text-[11px] text-text-muted line-clamp-2">{w.description}</span>
+    <div
+      class="tray-resize-handle sm:hidden"
+      onpointerdown={handleMobileResizeStart}
+      onpointermove={handleMobileResizeMove}
+      onpointerup={handleMobileResizeEnd}
+      role="separator"
+      aria-label="Resize drawer"
+      aria-orientation="horizontal"
+    >
+      <div class="tray-resize-pill"></div>
     </div>
 
-    <!-- Size selector + action -->
-    <div class="flex items-center justify-between gap-2">
-      {#if isWidgetDefinition(w)}
-        <div class="flex gap-0.5">
-          {#each w.sizes as s (s)}
-            <button
-              class="text-[10px] font-semibold px-1.5 py-0.5 rounded border transition-all cursor-pointer
-                {getSelectedSize(w) === s
-                  ? 'bg-accent text-black border-accent'
-                  : 'bg-transparent text-text-muted border-border hover:text-text hover:border-text-muted'}
-                disabled:opacity-40 disabled:cursor-not-allowed"
-              onclick={() => handleSizeSelect(w.id, s)}
-              disabled={locked}
-            >
-              {s}
-            </button>
-          {/each}
+    <div class="tray-header">
+      <div class="tray-header-copy">
+        <span class="tray-eyebrow">Widget library</span>
+        <div class="tray-title-row">
+          <h2 class="tray-title">{labels.title ?? 'Widget Tray'}</h2>
+          <span class="tray-count">{visibleTileCount} tiles</span>
         </div>
-      {/if}
+        <p class="tray-description">
+          {labels.subtitle ?? 'Browse structured S-size widget tiles and place them onto the board.'}
+        </p>
+      </div>
 
-      <!-- Action button -->
-      {#if locked}
-        {#if activeLockedId === w.id}
-          <div class="inline-flex items-center flex-wrap gap-1 px-2 py-1 rounded bg-accent-subtle text-black text-[11px] font-semibold leading-snug">
-            <span class="flex shrink-0"><Icon name="lock" size={12} /></span>
-            <span>{labels.upgradePrompt ?? 'Upgrade to Standard to unlock this widget — €8.99 one-time'}</span>
-            <a
-              class="text-black font-bold underline hover:text-text"
-              href="https://phavo.net/upgrade"
-              target="_blank"
-              rel="noreferrer"
-              onclick={(event) => event.stopPropagation()}
-            >
-              phavo.net/upgrade
-            </a>
-          </div>
-        {/if}
-      {:else if inst}
-        {#if confirmRemoveId === inst.id}
-          <button class="flex items-center gap-1 px-2.5 py-0.5 text-[11px] font-semibold rounded border cursor-pointer transition-all whitespace-nowrap text-white bg-red-500 border-red-500" onclick={() => handleRemoveConfirm(inst.id)}>
-            {labels.removeConfirm ?? 'Remove?'}
-          </button>
-        {:else}
-          <button class="flex items-center gap-1 px-2.5 py-0.5 text-[11px] font-semibold rounded border cursor-pointer transition-all whitespace-nowrap text-green-400 border-green-400 bg-transparent hover:text-red-400 hover:border-red-400" onclick={() => handleRemoveClick(inst.id)}>
-            <Icon name="check" size={12} />
-            <span>{labels.alreadyAdded ?? 'Added'}</span>
-          </button>
-        {/if}
-      {:else}
-        {#if isWidgetDefinition(w)}
-          <button class="flex items-center gap-1 px-2.5 py-0.5 text-[11px] font-semibold rounded border cursor-pointer transition-all whitespace-nowrap text-accent border-accent bg-transparent hover:bg-accent hover:text-black" onclick={() => handleAdd(w)}>
-            <Icon name="plus" size={12} />
-            <span>{labels.addToBoard ?? 'Add'}</span>
-          </button>
-        {/if}
-      {/if}
+      <button class="tray-close" onclick={onClose} aria-label="Close">
+        <Icon name="x" size={16} />
+      </button>
     </div>
-  </div>
-{/snippet}
 
-  <!-- Widget grid -->
-  <div class="flex-1 min-h-0 px-5 pb-5 overflow-y-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
-    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4" role="list">
-      {#each filteredWidgets as w (w.id)}
-        {@const inst = getInstanceForWidget(w.id)}
-        {@const locked = isLocked(w)}
-        {#if locked}
-          <div
-            class="flex flex-col border border-border rounded-lg bg-base overflow-hidden transition-[border-color,box-shadow] duration-150 cursor-pointer hover:border-accent hover:shadow-md"
-            role="button"
-            tabindex="0"
-            aria-label="{w.name} locked"
-            onclick={() => handleLockedClick(w.id)}
-            onkeydown={(event) => {
-              if (event.key === 'Enter' || event.key === ' ') {
-                event.preventDefault();
-                handleLockedClick(w.id);
-              }
-            }}
-            ondragstart={(e) => handleDragStart(e, w)}
-            ondragend={handleDragEnd}
-          >
-            {@render drawerCardInner(w, inst, locked)}
-          </div>
-        {:else}
-          <div
-            class="flex flex-col border rounded-lg bg-base overflow-hidden transition-[border-color,box-shadow] duration-150
-              {inst ? 'border-green-400 cursor-default' : 'border-border cursor-grab hover:border-accent hover:shadow-md'}"
-            role="listitem"
-            draggable={!inst ? 'true' : 'false'}
-            ondragstart={(e) => handleDragStart(e, w)}
-            ondragend={handleDragEnd}
-          >
-            {@render drawerCardInner(w, inst, locked)}
-          </div>
-        {/if}
+    <div class="tray-filter-row">
+      {#each filters as filter (filter.key)}
+        <button
+          class="tray-filter-chip"
+          class:tray-filter-chip-active={activeFilter === filter.key}
+          onclick={() => (activeFilter = filter.key)}
+        >
+          {filter.label()}
+        </button>
       {/each}
     </div>
-  </div>
-</aside>
+
+    <div class="tray-scroll">
+      <div class="tray-grid" role="list">
+        {#each filteredWidgets as widget (widget.id)}
+          {@const instance = getInstanceForWidget(widget.id)}
+          {@const locked = isLocked(widget)}
+          <div
+            class="tray-tile"
+            class:tray-tile-added={!!instance && !locked}
+            class:tray-tile-locked={locked}
+            role="listitem"
+            draggable={!locked && !instance ? 'true' : 'false'}
+            ondragstart={(event) => handleDragStart(event, widget)}
+            ondragend={handleDragEnd}
+          >
+            <div class="tray-tile-preview">
+              <span class="tray-tile-icon">
+                <Icon name={getWidgetIcon(widget)} size={18} />
+              </span>
+
+              <div class="tray-tile-bars" aria-hidden="true">
+                <span class="tray-tile-bar tray-tile-bar-strong"></span>
+                <span class="tray-tile-bar"></span>
+                <span class="tray-tile-bar tray-tile-bar-short"></span>
+              </div>
+
+              <div class="tray-tile-meta-row">
+                <span class="tray-tile-category">{getWidgetCategoryLabel(widget)}</span>
+                <span class="tray-tile-tier">{getTierLabel(widget)}</span>
+              </div>
+            </div>
+
+            <div class="tray-tile-body">
+              <div class="tray-tile-copy">
+                <h3 class="tray-tile-title">{widget.name}</h3>
+                <p class="tray-tile-description">{widget.description}</p>
+              </div>
+
+              <div class="tray-size-row" aria-label="Widget sizes">
+                {#each ['S', 'M', 'L', 'XL'] as size}
+                  <button
+                    class="tray-size-chip"
+                    class:tray-size-chip-active={size === 'S'}
+                    type="button"
+                    disabled={true}
+                    aria-pressed={size === 'S'}
+                  >
+                    {size}
+                  </button>
+                {/each}
+              </div>
+
+              <div class="tray-tile-footer">
+                {#if locked}
+                  <button class="tray-action tray-action-locked" onclick={() => handleLockedClick(widget.id)}>
+                    <Icon name="lock" size={14} />
+                    <span>{labels.locked ?? 'Locked'}</span>
+                  </button>
+                {:else if instance}
+                  {#if confirmRemoveId === instance.id}
+                    <button class="tray-action tray-action-remove" onclick={() => handleRemoveConfirm(instance.id)}>
+                      {labels.removeConfirm ?? 'Remove?'}
+                    </button>
+                  {:else}
+                    <button class="tray-action tray-action-added" onclick={() => handleRemoveClick(instance.id)}>
+                      <Icon name="check" size={14} />
+                      <span>{labels.alreadyAdded ?? 'Added'}</span>
+                    </button>
+                  {/if}
+                {:else}
+                  <button class="tray-action tray-action-add" onclick={() => handleAdd(widget.id)}>
+                    <Icon name="plus" size={14} />
+                    <span>{labels.addToBoard ?? 'Add to board'}</span>
+                  </button>
+                {/if}
+              </div>
+
+              {#if locked && activeLockedId === widget.id}
+                <div class="tray-tile-message">
+                  <Icon name="sparkles" size={14} />
+                  <span>
+                    {labels.upgradePrompt ?? 'Upgrade to Standard to unlock this widget and add it to the board.'}
+                  </span>
+                </div>
+              {/if}
+            </div>
+          </div>
+        {/each}
+      </div>
+    </div>
+  </aside>
+{/if}
+
+<style>
+  .widget-tray {
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background:
+      radial-gradient(
+        ellipse 78% 90% at 50% 0%,
+        color-mix(in srgb, var(--color-accent-t) 38%, transparent),
+        transparent 74%
+      ),
+      linear-gradient(
+        180deg,
+        color-mix(in srgb, var(--color-bg-elevated) 94%, transparent),
+        color-mix(in srgb, var(--color-bg-surface) 98%, transparent)
+      );
+    border: 1px solid color-mix(in srgb, var(--color-accent) 20%, var(--color-border-subtle));
+    border-bottom: none;
+    border-radius: calc(var(--radius-xl) + 4px) calc(var(--radius-xl) + 4px) 0 0;
+    box-shadow:
+      0 -22px 60px rgba(0, 0, 0, 0.56),
+      inset 0 1px 0 color-mix(in srgb, var(--color-accent) 12%, transparent);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+  }
+
+  .widget-tray.drawer-resizing {
+    user-select: none;
+    transition: none;
+  }
+
+  .tray-resize-handle {
+    display: flex;
+    justify-content: center;
+    padding: var(--space-2) 0;
+    cursor: ns-resize;
+    touch-action: none;
+    flex-shrink: 0;
+  }
+
+  .tray-resize-pill {
+    width: 44px;
+    height: 4px;
+    border-radius: 999px;
+    background: var(--color-border-strong);
+  }
+
+  .tray-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--space-4);
+    padding: var(--space-6) var(--space-6) var(--space-5);
+    border-bottom: 1px solid color-mix(in srgb, var(--color-border-subtle) 88%, transparent);
+  }
+
+  .tray-header-copy {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    min-width: 0;
+  }
+
+  .tray-eyebrow {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+    color: var(--color-accent-text);
+  }
+
+  .tray-title-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    flex-wrap: wrap;
+  }
+
+  .tray-title {
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    color: var(--color-text-primary);
+  }
+
+  .tray-count {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px var(--space-2);
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--color-bg-base) 72%, transparent);
+    border: 1px solid color-mix(in srgb, var(--color-accent) 20%, transparent);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--color-text-secondary);
+  }
+
+  .tray-description {
+    margin: 0;
+    font-size: var(--font-size-sm);
+    line-height: 1.6;
+    color: var(--color-text-secondary);
+    max-width: 58ch;
+  }
+
+  .tray-close {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    flex-shrink: 0;
+    background: color-mix(in srgb, var(--color-bg-base) 76%, transparent);
+    border: 1px solid var(--color-border-subtle);
+    border-radius: 999px;
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+  }
+
+  .tray-close:hover {
+    color: var(--color-text-primary);
+    border-color: color-mix(in srgb, var(--color-accent) 24%, transparent);
+    background: color-mix(in srgb, var(--color-bg-hover) 84%, transparent);
+  }
+
+  .tray-filter-row {
+    display: flex;
+    gap: var(--space-2);
+    padding: 0 var(--space-6) var(--space-5);
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .tray-filter-row::-webkit-scrollbar {
+    display: none;
+  }
+
+  .tray-filter-chip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 34px;
+    padding: 0 var(--space-4);
+    border-radius: 999px;
+    border: 1px solid var(--color-border-subtle);
+    background: color-mix(in srgb, var(--color-bg-base) 72%, transparent);
+    color: var(--color-text-secondary);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+  }
+
+  .tray-filter-chip:hover {
+    color: var(--color-text-primary);
+    border-color: color-mix(in srgb, var(--color-accent) 18%, transparent);
+  }
+
+  .tray-filter-chip-active {
+    color: var(--color-bg-base);
+    border-color: var(--color-accent);
+    background: var(--color-accent);
+  }
+
+  .tray-scroll {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 0 var(--space-6) var(--space-6);
+    scrollbar-width: none;
+    background:
+      linear-gradient(180deg, transparent, color-mix(in srgb, var(--color-bg-base) 12%, transparent));
+  }
+
+  .tray-scroll::-webkit-scrollbar {
+    display: none;
+  }
+
+  .tray-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: var(--space-4);
+    align-content: start;
+  }
+
+  .tray-tile {
+    display: flex;
+    flex-direction: column;
+    min-height: 248px;
+    border-radius: var(--radius-xl);
+    border: 1px solid color-mix(in srgb, var(--color-accent) 10%, var(--color-border-subtle));
+    background:
+      linear-gradient(
+        180deg,
+        color-mix(in srgb, var(--color-bg-elevated) 88%, transparent),
+        color-mix(in srgb, var(--color-bg-surface) 96%, transparent)
+      );
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+    transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+  }
+
+  .tray-tile:hover {
+    transform: translateY(-1px);
+    border-color: color-mix(in srgb, var(--color-accent) 24%, var(--color-border-subtle));
+    box-shadow: var(--shadow-md);
+  }
+
+  .tray-tile-added {
+    border-color: color-mix(in srgb, var(--color-success) 32%, var(--color-border-subtle));
+  }
+
+  .tray-tile-locked {
+    border-color: color-mix(in srgb, var(--color-warning) 28%, var(--color-border-subtle));
+  }
+
+  .tray-tile-preview {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: var(--space-4);
+    min-height: 110px;
+    padding: var(--space-5);
+    border-bottom: 1px solid color-mix(in srgb, var(--color-border-subtle) 86%, transparent);
+    background:
+      radial-gradient(
+        ellipse 56% 70% at 0% 0%,
+        color-mix(in srgb, var(--color-accent-t) 30%, transparent),
+        transparent 78%
+      ),
+      color-mix(in srgb, var(--color-bg-base) 18%, var(--color-bg-surface));
+  }
+
+  .tray-tile-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 12px;
+    background: color-mix(in srgb, var(--color-accent-t) 90%, transparent);
+    border: 1px solid color-mix(in srgb, var(--color-accent) 18%, transparent);
+    color: var(--color-accent-text);
+  }
+
+  .tray-tile-bars {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    width: 100%;
+  }
+
+  .tray-tile-bar {
+    height: 7px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--color-bg-hover) 92%, transparent);
+  }
+
+  .tray-tile-bar-strong {
+    width: 72%;
+    background: color-mix(in srgb, var(--color-accent) 42%, var(--color-bg-hover));
+  }
+
+  .tray-tile-bar-short {
+    width: 46%;
+  }
+
+  .tray-tile-meta-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+  }
+
+  .tray-tile-category,
+  .tray-tile-tier {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+  }
+
+  .tray-tile-category {
+    color: var(--color-text-muted);
+  }
+
+  .tray-tile-tier {
+    color: var(--color-text-secondary);
+  }
+
+  .tray-tile-body {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: var(--space-4);
+    padding: var(--space-4) var(--space-5) var(--space-5);
+  }
+
+  .tray-tile-copy {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    min-height: 0;
+  }
+
+  .tray-tile-title {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: var(--color-text-primary);
+  }
+
+  .tray-tile-description {
+    margin: 0;
+    font-size: var(--font-size-sm);
+    line-height: 1.55;
+    color: var(--color-text-secondary);
+    line-clamp: 2;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .tray-size-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+  }
+
+  .tray-size-chip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 28px;
+    min-height: 28px;
+    padding: 0 var(--space-2);
+    border-radius: 999px;
+    border: 1px solid var(--color-border-subtle);
+    background: color-mix(in srgb, var(--color-bg-base) 60%, transparent);
+    color: var(--color-text-muted);
+    font-size: 11px;
+    font-weight: 700;
+    cursor: default;
+    opacity: 0.4;
+  }
+
+  .tray-size-chip-active {
+    opacity: 1;
+    border-color: color-mix(in srgb, var(--color-accent) 26%, transparent);
+    color: var(--color-accent-text);
+    background: color-mix(in srgb, var(--color-accent-t) 90%, transparent);
+  }
+
+  .tray-tile-footer {
+    margin-top: auto;
+  }
+
+  .tray-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+    width: 100%;
+    min-height: 40px;
+    padding: 0 var(--space-4);
+    border-radius: 999px;
+    border: 1px solid var(--color-border-subtle);
+    background: color-mix(in srgb, var(--color-bg-base) 68%, transparent);
+    color: var(--color-text-primary);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    cursor: pointer;
+    transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+  }
+
+  .tray-action:hover {
+    border-color: color-mix(in srgb, var(--color-accent) 22%, transparent);
+    background: color-mix(in srgb, var(--color-bg-hover) 86%, transparent);
+  }
+
+  .tray-action-add {
+    border-color: color-mix(in srgb, var(--color-accent) 24%, var(--color-border-subtle));
+    color: var(--color-accent-text);
+  }
+
+  .tray-action-added {
+    color: var(--color-success);
+    border-color: color-mix(in srgb, var(--color-success) 28%, transparent);
+  }
+
+  .tray-action-remove {
+    color: var(--color-text-primary);
+    border-color: color-mix(in srgb, var(--color-danger) 32%, transparent);
+    background: color-mix(in srgb, var(--color-danger-subtle) 72%, transparent);
+  }
+
+  .tray-action-locked {
+    color: var(--color-warning);
+    border-color: color-mix(in srgb, var(--color-warning) 28%, transparent);
+  }
+
+  .tray-tile-message {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-2);
+    padding: var(--space-3);
+    border-radius: var(--radius-lg);
+    border: 1px solid color-mix(in srgb, var(--color-warning) 24%, transparent);
+    background: color-mix(in srgb, var(--color-warning-subtle) 78%, transparent);
+    color: var(--color-text-primary);
+    font-size: 11px;
+    line-height: 1.5;
+  }
+
+  @media (min-width: 640px) {
+    .widget-tray {
+      left: calc(var(--shell-sidebar-offset, 0px) + var(--space-4));
+      right: var(--space-4);
+      bottom: var(--space-4);
+      border-bottom: 1px solid color-mix(in srgb, var(--color-accent) 20%, var(--color-border-subtle));
+      border-radius: calc(var(--radius-xl) + 12px);
+    }
+  }
+
+  @media (max-width: 639px) {
+    .tray-header,
+    .tray-filter-row,
+    .tray-scroll {
+      padding-left: var(--space-5);
+      padding-right: var(--space-5);
+    }
+
+    .tray-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: var(--space-3);
+    }
+
+    .tray-tile {
+      min-height: 228px;
+    }
+  }
+</style>

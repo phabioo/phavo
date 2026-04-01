@@ -8,6 +8,7 @@
   ],
   "scripts": {
     "dev": "node ./node_modules/turbo/bin/turbo run dev",
+    "dev:mock": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/dev-mock-auth.ps1",
     "build": "node ./node_modules/turbo/bin/turbo run build",
     "lint": "node ./node_modules/@biomejs/biome/bin/biome check .",
     "format": "node ./node_modules/@biomejs/biome/bin/biome format --write .",

@@ -21,6 +21,7 @@ export const load = async ({ cookies, url }: ServerLoadEvent) => {
   let config: DashboardConfig = {
     setupComplete: false,
     dashboardName: 'My Dashboard',
+    dashboardSubtitle: 'System overview & performance',
     tabs: [],
     sessionTimeout: '7d',
   };
@@ -36,6 +37,7 @@ export const load = async ({ cookies, url }: ServerLoadEvent) => {
     config = {
       setupComplete,
       dashboardName: entries.dashboard_name ?? 'My Dashboard',
+      dashboardSubtitle: entries.dashboard_subtitle ?? 'System overview & performance',
       tabs: [],
       sessionTimeout:
         (entries.session_timeout as '1d' | '7d' | '30d' | 'never' | undefined) ?? '7d',

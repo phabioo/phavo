@@ -189,6 +189,9 @@ phavo/
 # Install dependencies
 bun install
 
+# Quick start dashboard in dev mock auth mode (Windows)
+bun run dev:mock
+
 # Start dev server (Windows PowerShell)
 $env:PHAVO_DEV_MOCK_AUTH="true"; $env:PHAVO_SECRET="dev-secret"
 $env:PHAVO_PORT="3000"; $env:PHAVO_ENV="development"

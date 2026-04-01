@@ -15,7 +15,7 @@ interface TabItem {
 
 interface Props {
   collapsed?: boolean;
-  tier?: 'standard' | 'pro' | 'local';
+  tier?: 'free' | 'standard' | 'pro' | 'local';
   deviceName?: string;
   items?: NavItem[];
   bottomItems?: NavItem[];
@@ -31,7 +31,7 @@ interface Props {
 
 let {
   collapsed = $bindable(false),
-  tier = 'standard',
+  tier = 'free',
   deviceName = '',
   items = [],
   bottomItems = [],
@@ -48,7 +48,7 @@ let {
 let dashExpanded = $state(true);
 
 const tierLabel = $derived(tier.toUpperCase());
-const showUpgrade = $derived(tier === 'standard');
+const showUpgrade = $derived(tier === 'free');
 </script>
 
 <aside class="sidebar" class:collapsed>
@@ -165,20 +165,21 @@ const showUpgrade = $derived(tier === 'standard');
   </div>
 
   <!-- Bottom section: upgrade card or children -->
-  {#if !collapsed}
+  <div class="sidebar-bottom-section" class:sidebar-bottom-hidden={collapsed}>
     {#if children}
       <div class="sidebar-footer">
         {@render children()}
       </div>
     {:else if showUpgrade}
       <div class="upgrade-card">
-        <p class="upgrade-text">Unlock detailed metrics and remote access features.</p>
+        <p class="upgrade-kicker">Free</p>
+        <p class="upgrade-text">More widgets. More pages. Fewer limits.</p>
         <button class="upgrade-btn" onclick={() => onnavigate?.('license')} type="button">
-          Upgrade to Pro
+          Upgrade to Standard
         </button>
       </div>
     {/if}
-  {/if}
+  </div>
 </aside>
 
 <!-- Mobile bottom navigation bar (visible only <640px) -->
@@ -224,6 +225,7 @@ const showUpgrade = $derived(tier === 'standard');
     transition: width 0.3s ease;
     z-index: 100;
     overflow: hidden;
+    box-shadow: 0 0 0 1px var(--color-border-subtle);
   }
 
   .sidebar.collapsed {
@@ -236,13 +238,18 @@ const showUpgrade = $derived(tier === 'standard');
     flex: 1;
     min-height: 0;
     overflow-y: auto;
+    scrollbar-width: none;
+  }
+
+  .sidebar-top::-webkit-scrollbar {
+    display: none;
   }
 
   /* ── Header ──────────────────────────────────────────────────────────── */
   .sidebar-header {
     display: flex;
     flex-direction: column;
-    gap: var(--space-1);
+    gap: var(--space-2);
     padding: var(--space-6);
   }
 
@@ -257,8 +264,8 @@ const showUpgrade = $derived(tier === 'standard');
   }
 
   .sidebar-logo {
-    font-size: 22px;
-    font-weight: 900;
+    font-size: 1.75rem;
+    font-weight: 800;
     letter-spacing: -0.05em;
     color: var(--color-accent);
     text-transform: uppercase;
@@ -288,7 +295,7 @@ const showUpgrade = $derived(tier === 'standard');
     font-size: var(--font-size-xs);
     font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.25em;
+    letter-spacing: 0.28em;
     color: var(--color-text-muted);
     font-family: var(--font-ui);
   }
@@ -302,10 +309,10 @@ const showUpgrade = $derived(tier === 'standard');
     color: var(--color-text-secondary);
     font-size: var(--font-size-xs);
     font-weight: 700;
-    letter-spacing: 0.1em;
+    letter-spacing: 0.16em;
     text-transform: uppercase;
     width: fit-content;
-    margin-top: var(--space-3);
+    margin-top: var(--space-2);
   }
 
   /* ── Navigation ──────────────────────────────────────────────────────── */
@@ -337,20 +344,23 @@ const showUpgrade = $derived(tier === 'standard');
     font-size: var(--font-size-sm);
     font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.15em;
+    letter-spacing: 0.12em;
     cursor: pointer;
-    transition: background 0.15s, color 0.15s;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
     text-align: left;
     min-height: 44px;
+    border: 1px solid transparent;
   }
 
   .nav-item:hover {
     color: var(--color-text-primary);
+    background: color-mix(in srgb, var(--color-bg-hover) 70%, transparent);
   }
 
   .nav-item.active {
-    background: var(--color-bg-hover);
-    color: var(--color-accent);
+    background: color-mix(in srgb, var(--color-accent-t) 60%, var(--color-bg-hover));
+    color: var(--color-accent-text);
+    border-color: color-mix(in srgb, var(--color-accent) 28%, transparent);
   }
 
   .collapsed .nav-item {
@@ -380,10 +390,10 @@ const showUpgrade = $derived(tier === 'standard');
 
   /* ── Sub-nav (tabs) ──────────────────────────────────────────────────── */
   .sub-nav {
-    padding: var(--space-2) 0 var(--space-2) calc(var(--space-6) + var(--space-4));
+    padding: var(--space-1) 0 var(--space-3) calc(var(--space-6) + var(--space-4));
     display: flex;
     flex-direction: column;
-    gap: var(--space-2);
+    gap: var(--space-1);
   }
 
   .sub-nav-item {
@@ -397,10 +407,10 @@ const showUpgrade = $derived(tier === 'standard');
     font-size: var(--font-size-xs);
     font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.15em;
+    letter-spacing: 0.12em;
     cursor: pointer;
     transition: color 0.15s;
-    padding: var(--space-1) 0;
+    padding: var(--space-2) 0;
     text-align: left;
   }
 
@@ -409,7 +419,7 @@ const showUpgrade = $derived(tier === 'standard');
   }
 
   .sub-nav-active {
-    color: var(--color-accent);
+    color: var(--color-accent-text);
   }
 
   .sub-nav-dot {
@@ -429,6 +439,19 @@ const showUpgrade = $derived(tier === 'standard');
   }
 
   /* ── Footer / Upgrade card ───────────────────────────────────────────── */
+  .sidebar-bottom-section {
+    overflow: hidden;
+    opacity: 1;
+    max-height: 200px;
+    transition: opacity 0.2s ease, max-height 0.3s ease;
+  }
+
+  .sidebar-bottom-hidden {
+    opacity: 0;
+    max-height: 0;
+    pointer-events: none;
+  }
+
   .sidebar-footer {
     padding: var(--space-4) var(--space-6);
     border-top: 1px solid var(--color-border-subtle);
@@ -437,21 +460,38 @@ const showUpgrade = $derived(tier === 'standard');
   .upgrade-card {
     margin: var(--space-4) var(--space-6) var(--space-6);
     padding: var(--space-4);
-    background: var(--color-bg-elevated);
+    background: color-mix(in srgb, var(--color-bg-elevated) 92%, transparent);
     border-radius: var(--radius-xl);
+    border: 1px solid var(--color-border-subtle);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+
+  .upgrade-kicker {
+    color: var(--color-text-muted);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    margin: 0;
+    text-transform: uppercase;
   }
 
   .upgrade-text {
     font-size: var(--font-size-xs);
     color: var(--color-text-secondary);
     line-height: 1.5;
-    margin-bottom: var(--space-3);
+    margin: 0;
   }
 
   .upgrade-btn {
     width: 100%;
     padding: var(--space-2) var(--space-4);
-    background: linear-gradient(135deg, var(--color-accent-hover), var(--color-accent));
+    background: linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--color-accent-hover) 88%, transparent),
+      color-mix(in srgb, var(--color-accent) 96%, transparent)
+    );
     color: var(--color-text-inverse);
     font-family: var(--font-ui);
     font-size: var(--font-size-sm);
@@ -459,12 +499,13 @@ const showUpgrade = $derived(tier === 'standard');
     border: none;
     border-radius: var(--radius-lg);
     cursor: pointer;
-    transition: opacity 0.15s;
-    letter-spacing: -0.01em;
+    transition: opacity 0.15s, transform 0.15s;
+    letter-spacing: 0.01em;
   }
 
   .upgrade-btn:hover {
     opacity: 0.9;
+    transform: translateY(-1px);
   }
 
   /* ── TABLET (640px–1023px): icon-only rail ────────────────────────────── */
@@ -479,8 +520,7 @@ const showUpgrade = $derived(tier === 'standard');
     .sub-nav,
     .nav-label,
     .nav-chevron,
-    .upgrade-card,
-    .sidebar-footer {
+    .sidebar-bottom-section {
       display: none;
     }
 

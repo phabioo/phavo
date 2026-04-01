@@ -10,6 +10,7 @@ interface Props {
   title: string;
   subtitle?: string;
   icon?: string;
+  showHeader?: boolean;
   colSpan?: number;
   rowSpan?: number;
   class?: string;
@@ -42,6 +43,7 @@ let {
   title,
   subtitle,
   icon,
+  showHeader = true,
   colSpan = 4,
   rowSpan = 1,
   class: cls = '',
@@ -130,6 +132,8 @@ function isSizeAvailable(s: WidgetSize): boolean {
   class="widget-card {cls}"
   class:widget-dragging={isDragging}
   class:widget-drop-target={dropIndicator}
+  class:widget-featured={colSpan >= 8}
+  class:widget-compact={colSpan <= 4}
   style:grid-column="span {colSpan}"
   style:grid-row="span {rowSpan}"
   ondragover={handleCardDragOver}
@@ -204,42 +208,62 @@ function isSizeAvailable(s: WidgetSize): boolean {
 
   <!-- Widget body — renders children (backward compat) or state-based defaults -->
   <div class="widget-body">
-    {#if children}
-      {#if effectiveStatus === 'loading'}
+    {#if showHeader && (title || subtitle || icon)}
+      <div class="widget-meta">
+        <div class="widget-copy">
+          {#if subtitle}
+            <p class="widget-subtitle">{subtitle}</p>
+          {/if}
+          {#if title}
+            <h3 class="widget-title">{title}</h3>
+          {/if}
+        </div>
+        {#if icon}
+          <span class="widget-icon-shell" aria-hidden="true">
+            <Icon name={icon} size={colSpan >= 8 ? 22 : 18} />
+          </span>
+        {/if}
+      </div>
+    {/if}
+
+    <div class="widget-content">
+      {#if children}
+        {#if effectiveStatus === 'loading'}
+          <div class="widget-skeleton">
+            <div class="skeleton-line"></div>
+            <div class="skeleton-line short"></div>
+            <div class="skeleton-line"></div>
+          </div>
+        {:else}
+          {@render children()}
+        {/if}
+      {:else if effectiveStatus === 'loading'}
         <div class="widget-skeleton">
           <div class="skeleton-line"></div>
           <div class="skeleton-line short"></div>
           <div class="skeleton-line"></div>
         </div>
-      {:else}
-        {@render children()}
-      {/if}
-    {:else if effectiveStatus === 'loading'}
-      <div class="widget-skeleton">
-        <div class="skeleton-line"></div>
-        <div class="skeleton-line short"></div>
-        <div class="skeleton-line"></div>
-      </div>
-    {:else if effectiveStatus === 'error'}
-      <div class="widget-error">
-        <Icon name="alert-triangle" size={20} />
-        <span>{error ?? 'Failed to load'}</span>
-        <button class="retry-btn" type="button">Retry</button>
-      </div>
-    {:else if effectiveStatus === 'unconfigured'}
-      <div class="widget-unconfigured">
-        <Icon name="settings" size={20} />
-        <span>Widget needs configuration</span>
-        <a class="configure-link" href="/settings">Configure &rarr;</a>
-      </div>
-    {:else if effectiveStatus === 'stale'}
-      <div class="widget-stale">
-        <div class="stale-badge">
-          <Icon name="clock" size={12} />
-          <span>Stale data</span>
+      {:else if effectiveStatus === 'error'}
+        <div class="widget-error">
+          <Icon name="alert-triangle" size={20} />
+          <span>{error ?? 'Failed to load'}</span>
+          <button class="retry-btn" type="button">Retry</button>
         </div>
-      </div>
-    {/if}
+      {:else if effectiveStatus === 'unconfigured'}
+        <div class="widget-unconfigured">
+          <Icon name="settings" size={20} />
+          <span>Widget needs configuration</span>
+          <a class="configure-link" href="/settings">Configure &rarr;</a>
+        </div>
+      {:else if effectiveStatus === 'stale'}
+        <div class="widget-stale">
+          <div class="stale-badge">
+            <Icon name="clock" size={12} />
+            <span>Stale data</span>
+          </div>
+        </div>
+      {/if}
+    </div>
   </div>
 </div>
 
@@ -253,7 +277,23 @@ function isSizeAvailable(s: WidgetSize): boolean {
     flex-direction: column;
     position: relative;
     padding: var(--space-6);
-    transition: opacity 0.15s;
+    min-height: 188px;
+    box-shadow: var(--shadow-md);
+    transition: opacity 0.15s, border-color 0.15s, transform 0.15s;
+  }
+
+  .widget-card:hover {
+    border-color: color-mix(in srgb, var(--color-accent) 20%, var(--color-border-subtle));
+    transform: translateY(-1px);
+  }
+
+  .widget-featured {
+    min-height: 264px;
+    padding: var(--space-8);
+  }
+
+  .widget-compact {
+    min-height: 156px;
   }
 
   .widget-dragging {
@@ -273,12 +313,12 @@ function isSizeAvailable(s: WidgetSize): boolean {
     display: flex;
     align-items: center;
     gap: var(--space-1);
-    background: rgba(0, 0, 0, 0.4);
+    background: color-mix(in srgb, var(--color-bg-base) 72%, transparent);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
     padding: var(--space-1) var(--space-3);
     border-radius: 9999px;
-    border: 1px solid rgba(255, 255, 255, 0.05);
+    border: 1px solid color-mix(in srgb, var(--color-text-primary) 8%, transparent);
     opacity: 0;
     transition: opacity 0.2s ease;
     pointer-events: none;
@@ -378,6 +418,62 @@ function isSizeAvailable(s: WidgetSize): boolean {
     flex: 1;
     display: flex;
     flex-direction: column;
+    gap: var(--space-5);
+    min-height: 0;
+  }
+
+  .widget-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  .widget-meta {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--space-3);
+    min-width: 0;
+  }
+
+  .widget-copy {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    min-width: 0;
+  }
+
+  .widget-subtitle {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+    margin: 0;
+  }
+
+  .widget-title {
+    font-size: 1.3rem;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    color: var(--color-text-primary);
+    line-height: 1.08;
+    margin: 0;
+    max-width: 22ch;
+  }
+
+  .widget-icon-shell {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--color-accent-t) 86%, transparent);
+    color: var(--color-accent-text);
+    flex-shrink: 0;
+    border: 1px solid color-mix(in srgb, var(--color-accent) 24%, transparent);
   }
 
   /* ── Default state renders ───────────────────────────────────────────── */
@@ -481,6 +577,10 @@ function isSizeAvailable(s: WidgetSize): boolean {
       min-height: 120px;
     }
 
+    .widget-title {
+      font-size: 1.05rem;
+    }
+
     .widget-controls {
       opacity: 1;
       pointer-events: auto;
@@ -500,5 +600,14 @@ function isSizeAvailable(s: WidgetSize): boolean {
       grid-column: span 1 !important;
       grid-row: auto !important;
     }
+  }
+
+  .widget-featured .widget-title {
+    font-size: 1.85rem;
+    max-width: 18ch;
+  }
+
+  .widget-compact .widget-title {
+    font-size: 1.05rem;
   }
 </style>

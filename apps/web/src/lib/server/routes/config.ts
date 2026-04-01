@@ -76,6 +76,7 @@ async function exportDecrypt(ciphertext: string, passphrase: string): Promise<st
 // Zod schema for the export envelope — validated on import before any DB write.
 const ExportConfigSchema = z.object({
   dashboardName: z.string().optional(),
+  dashboardSubtitle: z.string().optional(),
   sessionTimeout: z.enum(['1d', '7d', '30d', 'never']).optional(),
   location: z
     .object({ name: z.string(), latitude: z.number(), longitude: z.number() })
@@ -140,6 +141,7 @@ async function buildExportPayload(): Promise<Omit<ExportEnvelope, 'credentials'>
     exportedAt: Date.now(),
     config: {
       dashboardName: parsed.dashboardName,
+      dashboardSubtitle: parsed.dashboardSubtitle,
       sessionTimeout: parsed.sessionTimeout,
       location: parsed.location,
     },
@@ -183,6 +185,7 @@ export function registerConfigRoutes(app: Hono<{ Variables: AppVariables }>): vo
         ok({
           setupComplete: false,
           dashboardName: 'My Dashboard',
+          dashboardSubtitle: 'System overview & performance',
           tabs: [],
           sessionTimeout: '7d',
         }),
@@ -202,6 +205,7 @@ export function registerConfigRoutes(app: Hono<{ Variables: AppVariables }>): vo
       const ConfigPostSchema = z.object({
         setupComplete: z.boolean().optional(),
         dashboardName: z.string().max(100).optional(),
+        dashboardSubtitle: z.string().max(120).optional(),
         sessionTimeout: z.enum(['1d', '7d', '30d', 'never']).optional(),
         location: z
           .object({
@@ -230,6 +234,11 @@ export function registerConfigRoutes(app: Hono<{ Variables: AppVariables }>): vo
         upserts.push({
           key: 'dashboard_name',
           value: body.dashboardName.trim() || 'My Dashboard',
+        });
+      if (body.dashboardSubtitle !== undefined)
+        upserts.push({
+          key: 'dashboard_subtitle',
+          value: body.dashboardSubtitle.trim() || 'System overview & performance',
         });
       if (body.sessionTimeout) upserts.push({ key: 'session_timeout', value: body.sessionTimeout });
       if (body.telemetryAsked !== undefined)
@@ -396,6 +405,13 @@ export function registerConfigRoutes(app: Hono<{ Variables: AppVariables }>): vo
           cfgUpserts.push({
             key: 'dashboard_name',
             value: exportData.config.dashboardName.trim() || 'My Dashboard',
+          });
+        }
+        if (exportData.config.dashboardSubtitle !== undefined) {
+          cfgUpserts.push({
+            key: 'dashboard_subtitle',
+            value:
+              exportData.config.dashboardSubtitle.trim() || 'System overview & performance',
           });
         }
         if (exportData.config.sessionTimeout !== undefined) {

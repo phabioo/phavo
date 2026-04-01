@@ -1,7 +1,8 @@
 <script lang="ts">
-  import { Badge, Button, Card, Input, icons } from '@phavo/ui';
+  import { Badge, Button, Input, icons } from '@phavo/ui';
   import en from '$lib/i18n/en.json';
   import { fetchWithCsrf } from '$lib/utils/api';
+  import SettingsSection from './SettingsSection.svelte';
 
   type Tier = 'free' | 'standard' | 'local';
   type AuthMode = 'phavo-net' | 'local' | null;
@@ -69,7 +70,8 @@
       successMessage = en.settings.licenseActivated;
       licenseKey = '';
     } catch (error) {
-      errorMessage = error instanceof Error ? error.message : en.settings.licenseActivateFailed;
+      errorMessage =
+        error instanceof Error ? error.message : en.settings.licenseActivateFailed;
     } finally {
       activating = false;
     }
@@ -99,23 +101,30 @@
 
       successMessage = en.settings.licenseDeactivated;
     } catch (error) {
-      errorMessage = error instanceof Error ? error.message : en.settings.licenseDeactivateFailed;
+      errorMessage =
+        error instanceof Error ? error.message : en.settings.licenseDeactivateFailed;
     } finally {
       deactivating = false;
     }
   }
 </script>
 
-<Card padding="none">
-  <div class="licence-tab">
+<div class="licence-stack">
+  <SettingsSection
+    eyebrow="Licence"
+    title="Current entitlement"
+    description="Review the active tier and the masked key attached to this installation."
+  >
     <div class="licence-summary">
-      <div>
+      <div class="licence-card">
         <span class="setting-label">{en.settings.tier}</span>
         <Badge variant={tierVariant(tier)}>{tierLabel(tier)}</Badge>
       </div>
-      <div>
+      <div class="licence-card">
         <span class="setting-label">{en.settings.licenseKey}</span>
-        <p class="licence-key" class:mono={!!licenseKeyMasked}>{licenseKeyMasked ?? en.settings.noLicense}</p>
+        <p class="licence-key" class:mono={!!licenseKeyMasked}>
+          {licenseKeyMasked ?? en.settings.noLicense}
+        </p>
       </div>
     </div>
 
@@ -128,48 +137,60 @@
         </a>
       </div>
     {/if}
+  </SettingsSection>
 
-    {#if tier !== 'local'}
+  {#if tier !== 'local'}
+    <SettingsSection
+      title={en.settings.activateLicense}
+      description={en.settings.licenseActivationHint}
+      tone="accent"
+    >
       <div class="form-panel">
-        <h3>{en.settings.activateLicense}</h3>
         <Input
           label={en.settings.enterLicenseKey}
           placeholder={en.settings.licenseKeyPlaceholder}
           bind:value={licenseKey}
         />
-        <p class="setting-description">{en.settings.licenseActivationHint}</p>
-        <div class="btn-wrap">
-          <Button onclick={activateLicense} disabled={activating}>
-            {activating ? en.settings.activatingLicense : en.settings.activateLicense}
-          </Button>
-        </div>
       </div>
-    {:else}
-      <div class="form-panel danger-panel">
-        <h3>{en.settings.localLicenseActive}</h3>
-        <p class="setting-description">{en.settings.licenseDeactivateHint}</p>
+
+      {#snippet footer()}
+        <Button onclick={activateLicense} disabled={activating}>
+          {activating ? en.settings.activatingLicense : en.settings.activateLicense}
+        </Button>
+      {/snippet}
+    </SettingsSection>
+  {:else}
+    <SettingsSection
+      title={en.settings.localLicenseActive}
+      description={en.settings.licenseDeactivateHint}
+      tone="danger"
+    >
+      <div class="info-panel">
+        <p>{en.settings.licenseDeactivateHint}</p>
+      </div>
+
+      {#snippet footer()}
         <Button variant="danger" onclick={deactivateLicense} disabled={deactivating}>
           {deactivating ? en.settings.deactivatingLicense : en.settings.deactivateLicense}
         </Button>
-      </div>
-    {/if}
+      {/snippet}
+    </SettingsSection>
+  {/if}
 
-    {#if successMessage}
-      <p class="status-message status-success">{successMessage}</p>
-    {/if}
+  {#if successMessage}
+    <p class="status-message status-success">{successMessage}</p>
+  {/if}
 
-    {#if errorMessage}
-      <p class="status-message status-error">{errorMessage}</p>
-    {/if}
-  </div>
-</Card>
+  {#if errorMessage}
+    <p class="status-message status-error">{errorMessage}</p>
+  {/if}
+</div>
 
 <style>
-  .licence-tab {
+  .licence-stack {
     display: flex;
     flex-direction: column;
-    gap: var(--space-5);
-    padding: var(--space-5);
+    gap: var(--space-4);
   }
 
   .licence-summary {
@@ -178,48 +199,57 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .licence-card {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    padding: var(--space-4);
+    border-radius: calc(var(--radius-xl) - 4px);
+    border: 1px solid var(--color-border-subtle);
+    background: color-mix(in srgb, var(--color-bg-base) 24%, transparent);
+  }
+
   .setting-label {
     color: var(--color-text-muted);
     display: block;
     font-size: 0.8rem;
-    margin-bottom: var(--space-2);
     text-transform: uppercase;
+    letter-spacing: 0.16em;
   }
 
   .licence-key {
     margin: 0;
+    color: var(--color-text-primary);
     font-family: var(--font-ui);
   }
 
-  .btn-wrap {
-    align-self: flex-start;
-  }
-
-  .info-panel,
-  .form-panel {
-    border: 1px solid var(--color-border-subtle);
-    border-radius: var(--radius-md);
+  .form-panel,
+  .info-panel {
     display: flex;
     flex-direction: column;
     gap: var(--space-3);
+  }
+
+  .info-panel {
     padding: var(--space-4);
-  }
-
-  .danger-panel {
-    border-color: var(--color-danger);
-  }
-
-  .setting-description {
+    border-radius: calc(var(--radius-xl) - 4px);
+    border: 1px solid var(--color-border-subtle);
+    background: color-mix(in srgb, var(--color-bg-base) 24%, transparent);
     color: var(--color-text-secondary);
+  }
+
+  .info-panel p {
     margin: 0;
+    line-height: 1.6;
   }
 
   .external-link {
-    align-items: center;
-    color: var(--color-accent-text);
     display: inline-flex;
+    align-items: center;
     gap: var(--space-2);
+    color: var(--color-accent-text);
     text-decoration: none;
+    font-weight: 600;
   }
 
   .external-icon {
@@ -228,17 +258,25 @@
 
   .status-message {
     margin: 0;
+    padding: var(--space-3) var(--space-4);
+    border-radius: calc(var(--radius-xl) - 4px);
+    border: 1px solid transparent;
+    font-size: 13px;
   }
 
   .status-success {
     color: var(--color-success);
+    border-color: color-mix(in srgb, var(--color-success) 28%, transparent);
+    background: color-mix(in srgb, var(--color-accent-t) 62%, transparent);
   }
 
   .status-error {
     color: var(--color-danger);
+    border-color: color-mix(in srgb, var(--color-danger) 28%, transparent);
+    background: color-mix(in srgb, var(--color-danger-subtle) 78%, transparent);
   }
 
-  @media (max-width: 640px) {
+  @media (max-width: 639px) {
     .licence-summary {
       grid-template-columns: 1fr;
     }

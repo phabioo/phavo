@@ -2,7 +2,7 @@
 import '@phavo/ui/src/theme.css';
 import { onMount, type Snippet } from 'svelte';
 import { goto } from '$app/navigation';
-import { Sidebar, Header, NotificationPanel } from '@phavo/ui';
+import { Sidebar, Header, NotificationPanel, Modal, Button, Icon } from '@phavo/ui';
 import type { SearchEntry } from '@phavo/ui';
 import type { DashboardConfig, Notification, Session } from '@phavo/types';
 import en from '$lib/i18n/en.json';
@@ -17,7 +17,19 @@ import {
   clearHistory,
   syncFromServer,
 } from '$lib/stores/notifications.svelte';
-import { getIsDrawerOpen, setDrawerOpen, getWidgetManifest, getTabs } from '$lib/stores/widgets.svelte';
+import {
+  createTab,
+  getCurrentTabId,
+  getIsDrawerOpen,
+  getTabs,
+  getWidgetData,
+  getWidgetManifest,
+  loadTabs,
+  loadWidgetManifest,
+  setActiveTab,
+  setDrawerOpen,
+} from '$lib/stores/widgets.svelte';
+import type { WeatherMetrics } from '@phavo/types';
 import { fetchWithCsrf } from '$lib/utils/api';
 
 interface Props {
@@ -37,13 +49,17 @@ let panelOpen = $state(false);
 let updateAvailable = $state(false);
 let latestUpdateVersion = $state('');
 let currentPathname = $state('/');
+let currentHash = $state('');
+let tabLimitModalOpen = $state(false);
 
 const sidebarItems = [
-  { id: 'home', label: 'Dashboard', icon: 'layout-dashboard' },
-];
-
-const sidebarBottomItems = [
-  { id: 'settings', label: en.settings.title, icon: 'settings' },
+  { id: 'general', label: 'General', icon: 'settings-2' },
+  { id: 'widgets', label: 'Widgets', icon: 'puzzle' },
+  { id: 'import-export', label: 'Backup & Export', icon: 'archive' },
+  { id: 'license', label: 'Licence', icon: 'shield-check' },
+  { id: 'account', label: 'Account', icon: 'user' },
+  { id: 'plugins', label: 'Plugins', icon: 'plug' },
+  { id: 'about', label: 'About', icon: 'info' },
 ];
 
 /**
@@ -54,17 +70,19 @@ const isDashboard = $derived(
   Boolean(data.setupComplete && data.session),
 );
 
-/**
- * Derive which sidebar item is active from the current URL.
- * '/' → 'home', '/settings' → 'settings', etc.
- */
-const activeSidebarItem = $derived(
-  currentPathname === '/' ? 'home' : (currentPathname.replace(/^\//, '').split('/')[0] || 'home'),
-);
+const SETTINGS_TAB_IDS = new Set(sidebarItems.map((i) => i.id));
+
+const activeSidebarItem = $derived.by(() => {
+  if (currentPathname !== '/settings') return 'home';
+  const hashTab = currentHash.replace(/^#/, '').split('/')[0] ?? '';
+  return SETTINGS_TAB_IDS.has(hashTab) ? hashTab : 'general';
+});
 
 const headerTitle = $derived(
   data.dashboardName || getConfig().dashboardName || en.dashboard.brandName,
 );
+
+const shellTier = $derived(data.session?.tier ?? 'free');
 
 const headerBrandingLabel = $derived(
   getSession()?.tier === 'free' ? en.dashboard.poweredBy : undefined,
@@ -72,30 +90,94 @@ const headerBrandingLabel = $derived(
 
 const aiStatus = $derived(getAiStatus());
 
+const WMO_SHORT: Record<number, string> = {
+  0: 'Clear', 1: 'Clear', 2: 'Partly Cloudy', 3: 'Overcast',
+  45: 'Fog', 48: 'Fog', 51: 'Drizzle', 53: 'Drizzle', 55: 'Drizzle',
+  61: 'Rain', 63: 'Rain', 65: 'Heavy Rain',
+  71: 'Snow', 73: 'Snow', 75: 'Heavy Snow',
+  80: 'Showers', 81: 'Showers', 82: 'Showers',
+  95: 'Storm', 96: 'Storm', 99: 'Storm',
+};
+
+const headerWeather = $derived.by(() => {
+  const w = getWidgetData('weather') as WeatherMetrics | undefined;
+  if (!w) return undefined;
+  return { temp: Math.round(w.currentTemp), condition: WMO_SHORT[w.conditionCode] ?? 'Unknown' };
+});
+
 function navigate(id: string) {
-  goto(id === 'home' ? '/' : `/${id}`);
+  panelOpen = false;
+  setDrawerOpen(false);
+
+  if (id === 'home') {
+    void goto('/');
+    return;
+  }
+
+  // All sidebar items except 'home' are settings tabs
+  if (SETTINGS_TAB_IDS.has(id)) {
+    navigateToSettings(id);
+    return;
+  }
+
+  void goto(`/${id}`);
 }
 
 function navigateToSettings(hash?: string) {
+  panelOpen = false;
+  setDrawerOpen(false);
+
   if (typeof window !== 'undefined' && window.location.pathname === '/settings') {
-    if (hash) {
-      window.location.hash = hash;
-      window.dispatchEvent(new HashChangeEvent('hashchange'));
-    }
+    const nextHash = hash ?? 'general';
+    window.location.hash = nextHash;
+    window.dispatchEvent(new HashChangeEvent('hashchange'));
     return;
   }
 
   void goto(hash ? `/settings#${hash}` : '/settings');
 }
 
+async function handleDashboardTabSelect(tabId: string): Promise<void> {
+  panelOpen = false;
+  setDrawerOpen(false);
+
+  if (currentPathname !== '/') {
+    await goto('/');
+  }
+  await setActiveTab(tabId);
+}
+
+async function handleSidebarNewTab(): Promise<void> {
+  if (shellTier === 'free' && getTabs().length >= 1) {
+    tabLimitModalOpen = true;
+    return;
+  }
+
+  const nextLabel = getTabs().length === 0 ? 'Home' : `Page ${getTabs().length + 1}`;
+  const previousCount = getTabs().length;
+  const result = await createTab(nextLabel);
+
+  if (!result.ok) {
+    if (result.error?.includes('Tab limit')) {
+      tabLimitModalOpen = true;
+    }
+    return;
+  }
+
+  const nextTab = getTabs()[previousCount];
+  if (nextTab) {
+    await handleDashboardTabSelect(nextTab.id);
+  }
+}
+
 // ─── Command Palette helpers ──────────────────────────────────────────
 
-const SETTINGS_TABS = [
+const COMMAND_SETTINGS_TABS = [
   { id: 'general', label: 'General' },
-  { id: 'account', label: 'Account' },
-  { id: 'security', label: 'Security' },
   { id: 'widgets', label: 'Widgets' },
-  { id: 'license', label: 'License' },
+  { id: 'license', label: 'Licence' },
+  { id: 'account', label: 'Account' },
+  { id: 'plugins', label: 'Plugins' },
   { id: 'import-export', label: 'Import / Export' },
   { id: 'about', label: 'About' },
 ];
@@ -117,7 +199,7 @@ const searchIndex = $derived.by((): SearchEntry[] => {
   }
 
   // Settings tabs
-  for (const tab of SETTINGS_TABS) {
+  for (const tab of COMMAND_SETTINGS_TABS) {
     entries.push({
       id: `settings:${tab.id}`,
       label: tab.label,
@@ -134,10 +216,10 @@ const searchIndex = $derived.by((): SearchEntry[] => {
     entries.push({
       id: `tab:${tab.id}`,
       label: tab.label,
-      subtitle: 'Dashboard Tab',
+      subtitle: 'Dashboard page',
       category: 'tab',
       action: () => {
-        goto('/');
+        void handleDashboardTabSelect(tab.id);
       },
     });
   }
@@ -208,26 +290,28 @@ async function handleAiChat(provider: 'ollama' | 'openai' | 'anthropic', query: 
 }
 
 onMount(() => {
-  const syncPathname = () => {
+  const syncLocation = () => {
     currentPathname = window.location.pathname;
+    currentHash = window.location.hash;
   };
 
-  syncPathname();
+  syncLocation();
 
   const originalPushState = window.history.pushState.bind(window.history);
   const originalReplaceState = window.history.replaceState.bind(window.history);
 
   window.history.pushState = ((...args) => {
     originalPushState(...args);
-    syncPathname();
+    syncLocation();
   }) as History['pushState'];
 
   window.history.replaceState = ((...args) => {
     originalReplaceState(...args);
-    syncPathname();
+    syncLocation();
   }) as History['replaceState'];
 
-  window.addEventListener('popstate', syncPathname);
+  window.addEventListener('popstate', syncLocation);
+  window.addEventListener('hashchange', syncLocation);
 
 
   const cleanupEffects = $effect.root(() => {
@@ -239,6 +323,18 @@ onMount(() => {
 
     $effect(() => {
       setSession(data.session ?? null);
+    });
+
+    $effect(() => {
+      if (!isDashboard) return;
+      void loadWidgetManifest();
+      void loadTabs();
+    });
+
+    $effect(() => {
+      if (currentPathname !== '/') {
+        setDrawerOpen(false);
+      }
     });
 
     $effect(() => {
@@ -264,7 +360,8 @@ onMount(() => {
   return () => {
     window.history.pushState = originalPushState;
     window.history.replaceState = originalReplaceState;
-    window.removeEventListener('popstate', syncPathname);
+    window.removeEventListener('popstate', syncLocation);
+    window.removeEventListener('hashchange', syncLocation);
     cleanupEffects();
   };
 });
@@ -306,9 +403,13 @@ function handleNotificationClick(n: Notification) {
   <div class="dashboard-layout">
     <Sidebar
       bind:collapsed={sidebarCollapsed}
+      tier={shellTier}
+      tabs={getTabs()}
+      activeTab={getCurrentTabId()}
       items={sidebarItems}
-      bottomItems={sidebarBottomItems}
       activeItem={activeSidebarItem}
+      onTabSelect={(tabId) => void handleDashboardTabSelect(tabId)}
+      onNewTab={() => void handleSidebarNewTab()}
       ontoggle={() => (sidebarCollapsed = !sidebarCollapsed)}
       onnavigate={navigate}
     />
@@ -325,17 +426,25 @@ function handleNotificationClick(n: Notification) {
         {/if}
       {/snippet}
       <Header
-        dashboardName={headerTitle}
+        dashboardName={currentPathname === '/' || currentPathname === '/settings' ? '' : headerTitle}
         brandingLabel={headerBrandingLabel}
+        weather={headerWeather}
         unreadCount={getUnreadCount()}
-        onBellClick={() => (panelOpen = !panelOpen)}
-        onAddWidgetClick={() => setDrawerOpen(!getIsDrawerOpen())}
+        onBellClick={() => {
+          setDrawerOpen(false);
+          panelOpen = !panelOpen;
+        }}
+        onAddWidgetClick={currentPathname === '/' ? () => {
+          panelOpen = false;
+          setDrawerOpen(!getIsDrawerOpen());
+        } : undefined}
         addWidgetLabel={en.dashboard.addWidget}
+        {updateAvailable}
         {updateBadge}
         {searchIndex}
         searchEngineUrl={aiStatus.searchEngineUrl}
         aiProviders={aiStatus.providers}
-        tier={data.session?.tier ?? 'free'}
+        tier={shellTier}
         onAiChat={handleAiChat}
       />
       {@render children()}
@@ -348,6 +457,23 @@ function handleNotificationClick(n: Notification) {
       onClear={clearHistory}
       onNotificationClick={handleNotificationClick}
     />
+    <Modal bind:open={tabLimitModalOpen}>
+      <div class="flex flex-col items-center gap-4 text-center p-4">
+        <Icon name="lock" size={32} class="text-accent" />
+        <h2 class="text-lg font-bold text-text">Page limit reached</h2>
+        <p class="text-sm text-text-secondary max-w-[36ch] leading-relaxed">
+          Free tier supports 1 dashboard page. Upgrade to Standard to create unlimited pages.
+        </p>
+        <div class="flex gap-3 mt-2">
+          <Button variant="secondary" onclick={() => (tabLimitModalOpen = false)}>
+            Close
+          </Button>
+          <Button onclick={() => { tabLimitModalOpen = false; navigateToSettings('license'); }}>
+            View Licence
+          </Button>
+        </div>
+      </div>
+    </Modal>
   </div>
 {:else}
   {@render children()}
@@ -356,46 +482,69 @@ function handleNotificationClick(n: Notification) {
 <style>
   .dashboard-layout {
     display: flex;
-    min-height: 100vh;
+    min-height: 100dvh;
+    width: 100%;
   }
 
   .main-content {
-    flex: 1;
+    --shell-sidebar-offset: var(--sidebar-width);
+    flex: 1 1 auto;
     display: flex;
     flex-direction: column;
-    min-height: 0;
-    margin-left: var(--sidebar-width);
-    transition: margin-left 0.2s;
+    min-height: 100dvh;
+    max-height: 100dvh;
+    overflow-y: auto;
     min-width: 0;
+    width: 100%;
+    padding-left: var(--shell-sidebar-offset);
+    box-sizing: border-box;
+    transition: padding-left 0.3s ease;
+    background:
+      radial-gradient(
+        ellipse 60% 40% at 80% 0%,
+        color-mix(in srgb, var(--color-accent-t) 50%, transparent) 0%,
+        transparent 100%
+      ),
+      var(--color-bg-base);
   }
 
   .main-content.sidebar-collapsed {
-    margin-left: var(--sidebar-collapsed-width);
+    --shell-sidebar-offset: var(--sidebar-collapsed-width);
   }
 
   .update-badge {
     display: inline-flex;
     align-items: center;
-    padding: 2px var(--space-2);
+    justify-content: center;
+    min-height: 34px;
+    padding: 0 var(--space-4);
     font-size: 11px;
-    font-weight: 600;
-    background: var(--color-accent);
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    background: color-mix(in srgb, var(--color-bg-elevated) 94%, transparent);
     color: var(--color-accent-text);
-    border: none;
-    border-radius: var(--radius-sm);
+    border: 1px solid color-mix(in srgb, var(--color-accent) 24%, var(--color-border-subtle));
+    border-radius: 999px;
     cursor: pointer;
-    transition: opacity 0.15s;
+    transition:
+      color 0.15s ease,
+      border-color 0.15s ease,
+      background 0.15s ease,
+      transform 0.15s ease;
   }
 
   .update-badge:hover {
-    opacity: 0.8;
+    border-color: color-mix(in srgb, var(--color-accent) 34%, var(--color-border-subtle));
+    background: color-mix(in srgb, var(--color-bg-hover) 88%, transparent);
+    transform: translateY(-1px);
   }
 
   /* ── TABLET (640px–1023px): fixed icon-only rail, no collapse toggle ── */
   @media (min-width: 640px) and (max-width: 1023px) {
     .main-content,
     .main-content.sidebar-collapsed {
-      margin-left: var(--sidebar-collapsed-width);
+      --shell-sidebar-offset: var(--sidebar-collapsed-width);
     }
   }
 
@@ -403,7 +552,7 @@ function handleNotificationClick(n: Notification) {
   @media (max-width: 639px) {
     .main-content,
     .main-content.sidebar-collapsed {
-      margin-left: 0;
+      --shell-sidebar-offset: 0px;
       padding-bottom: calc(56px + env(safe-area-inset-bottom));
     }
   }

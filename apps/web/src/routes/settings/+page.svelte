@@ -1,17 +1,18 @@
 <script lang="ts">
 import { goto } from '$app/navigation';
 import { onMount } from 'svelte';
-import { Badge, Button, Icon, Input, Select, Switch, Tooltip } from '@phavo/ui';
+  import { Badge, Button, Card, Icon, Input, Select, Tooltip } from '@phavo/ui';
 import en from '$lib/i18n/en.json';
 import ImportExportTab from '$lib/components/settings/ImportExportTab.svelte';
 import LicenceTab from '$lib/components/settings/LicenceTab.svelte';
+import SettingsSection from '$lib/components/settings/SettingsSection.svelte';
 import WidgetsTab from '$lib/components/settings/WidgetsTab.svelte';
 import type { AiStatusResponseData } from '$lib/stores/ai.svelte';
 import { updateAiStatusFromPayload } from '$lib/stores/ai.svelte';
 import { setConfig, updateConfig } from '$lib/stores/config.svelte';
 import { fetchWithCsrf } from '$lib/utils/api';
 
-type TabId = 'general' | 'tabs' | 'widgets' | 'import-export' | 'license' | 'account' | 'plugins' | 'about';
+type TabId = 'general' | 'widgets' | 'import-export' | 'license' | 'account' | 'plugins' | 'about';
 type SaveState = 'idle' | 'saving' | 'saved';
 type GeoResult = {
   id: number;
@@ -44,6 +45,7 @@ type UpdateInfo = {
 type ConfigResponse = {
   setupComplete: boolean;
   dashboardName: string;
+  dashboardSubtitle: string;
   tabs: Array<{ id: string; label: string; order: number }>;
   sessionTimeout: '1d' | '7d' | '30d' | 'never';
   location?: {
@@ -64,7 +66,6 @@ type AiSettingsResponseData = AiStatusResponseData & {
 
 const settingsTabs: Array<{ id: TabId; label: string; icon: string }> = [
   { id: 'general', label: 'General', icon: 'settings-2' },
-  { id: 'tabs', label: 'Tabs', icon: 'layout-template' },
   { id: 'widgets', label: 'Widgets', icon: 'puzzle' },
   { id: 'import-export', label: 'Backup & Export', icon: 'archive' },
   { id: 'license', label: 'Licence', icon: 'shield-check' },
@@ -72,6 +73,37 @@ const settingsTabs: Array<{ id: TabId; label: string; icon: string }> = [
   { id: 'plugins', label: 'Plugins', icon: 'plug' },
   { id: 'about', label: 'About', icon: 'info' },
 ];
+
+const tabMeta: Record<TabId, { title: string; description: string }> = {
+  general: {
+    title: 'General',
+    description: 'Update your dashboard identity, location, search defaults, and AI connections.',
+  },
+  widgets: {
+    title: 'Widgets',
+    description: 'Review live previews, configure installed widgets, and keep every board component ready.',
+  },
+  'import-export': {
+    title: 'Backup & Export',
+    description: 'Create portable backups, restore previous exports, and manage credential-protected bundles.',
+  },
+  license: {
+    title: 'Licence',
+    description: 'Check the active tier on this installation and manage licence activation where applicable.',
+  },
+  account: {
+    title: 'Account',
+    description: 'Manage session security, local password changes, and account details for this dashboard.',
+  },
+  plugins: {
+    title: 'Plugins',
+    description: 'Track the plugin pipeline and prepare for first-party or uploaded widget extensions.',
+  },
+  about: {
+    title: 'About',
+    description: 'See version details, update status, and the core PHAVO resources for this install.',
+  },
+};
 
 const sessionTimeoutOptions = [
   { value: '1d', label: en.settings.sessionTimeout1d },
@@ -156,7 +188,6 @@ let securityInitial = $state<'1d' | '7d' | '30d' | 'never'>('7d');
 
 let saveStates = $state<Record<TabId, SaveState>>({
   general: 'idle',
-  tabs: 'idle',
   account: 'idle',
   widgets: 'idle',
   license: 'idle',
@@ -166,7 +197,6 @@ let saveStates = $state<Record<TabId, SaveState>>({
 });
 let tabErrors = $state<Record<TabId, string>>({
   general: '',
-  tabs: '',
   account: '',
   widgets: '',
   license: '',
@@ -198,6 +228,7 @@ const canSaveCurrentTab = $derived.by(() => {
 const currentSaveLabel = $derived(
   saveStates[activeTab] === 'saved' ? en.settings.saved : en.settings.saveChanges,
 );
+const activeTabMeta = $derived(tabMeta[activeTab]);
 
 let didLoad = false;
 onMount(() => {
@@ -651,33 +682,28 @@ function formatReleaseDate(iso: string): string {
 }
 </script>
 
-<div class="flex flex-col lg:flex-row gap-6 max-w-[1100px] mx-auto w-full p-6">
-  <!-- Left vertical tab list -->
-  <nav class="flex flex-row lg:flex-col gap-1 lg:w-56 shrink-0 overflow-x-auto lg:overflow-x-visible">
-    {#each settingsTabs as tab (tab.id)}
-      <button
-        type="button"
-        class="flex items-center gap-3 px-4 py-2.5 text-sm rounded-lg whitespace-nowrap transition-colors
-          {activeTab === tab.id
-            ? 'bg-elevated text-text border-l-2 border-accent'
-            : 'text-text-muted hover:bg-hover'}"
-        onclick={() => { activeTab = tab.id; }}
-      >
-        <Icon name={tab.icon} size={16} />
-        <span>{tab.label}</span>
-      </button>
-    {/each}
-  </nav>
+<div class="settings-content">
+  <Card padding="none">
+    <section class="settings-hero">
+      <div class="settings-hero-copy">
+        <span class="settings-eyebrow">Settings</span>
+        <h1 class="settings-hero-title">{activeTabMeta.title}</h1>
+        <p class="settings-hero-description">{activeTabMeta.description}</p>
+      </div>
+    </section>
+  </Card>
 
-  <!-- Right content area -->
-  <div class="flex-1 min-w-0">
-    {#if loadError}
-      <p class="text-sm text-red-400 mb-4">{loadError}</p>
-    {/if}
+  {#if loadError}
+    <div class="settings-alert settings-alert-danger">{loadError}</div>
+  {/if}
 
     {#if activeTab === 'general'}
-      <div class="flex flex-col gap-5">
-        <div class="p-5 bg-surface border border-border rounded-lg">
+      <div class="settings-stack">
+        <SettingsSection
+          eyebrow="General"
+          title="Dashboard identity & search"
+          description="Manage the dashboard name, location, search defaults, and AI provider connections from one structured section."
+        >
           <div class="flex flex-col gap-4">
             <Input label="Dashboard Name" bind:value={dashboardName} />
 
@@ -728,28 +754,25 @@ function formatReleaseDate(iso: string): string {
             <Input label="OpenAI API Key" type="password" placeholder="sk-…" bind:value={openaiKey} />
             <Input label="Anthropic API Key" type="password" placeholder="sk-ant-…" bind:value={anthropicKey} />
           </div>
-        </div>
+        </SettingsSection>
 
-        <div class="p-5 bg-surface border border-border rounded-lg">
-          <Button variant="ghost" onclick={reRunSetup}>Re-run Setup</Button>
-        </div>
+        <SettingsSection
+          title="Setup tools"
+          description="Re-open guided setup when you want to rebuild the onboarding baseline instead of patching everything manually."
+          tone="accent"
+        >
+          <Button variant="secondary" onclick={reRunSetup}>Re-run Setup</Button>
+        </SettingsSection>
 
         {#if tabErrors.general}
-          <p class="text-sm text-red-400">{tabErrors.general}</p>
+          <div class="settings-alert settings-alert-danger">{tabErrors.general}</div>
         {/if}
 
-        <div class="flex justify-end">
+        <div class="settings-action-row">
           <Button onclick={saveCurrentTab} disabled={!canSaveCurrentTab || saveStates.general === 'saving'}>
             {currentSaveLabel}
           </Button>
         </div>
-      </div>
-
-    {:else if activeTab === 'tabs'}
-      <div class="p-5 bg-surface border border-border rounded-lg">
-        <p class="text-xs text-text-muted uppercase tracking-widest mb-3">Tab Management</p>
-        <p class="text-sm text-text-muted mb-4">Drag to reorder, click to rename, or delete tabs.</p>
-        <p class="text-sm text-text-muted italic">Coming soon — manage tabs from the dashboard header.</p>
       </div>
 
     {:else if activeTab === 'widgets'}
@@ -767,8 +790,12 @@ function formatReleaseDate(iso: string): string {
       />
 
     {:else if activeTab === 'account'}
-      <div class="flex flex-col gap-5">
-        <div class="p-5 bg-surface border border-border rounded-lg">
+      <div class="settings-stack">
+        <SettingsSection
+          eyebrow="Account"
+          title="Access overview"
+          description="Review the active auth mode, account contact details, and the tier currently attached to this install."
+        >
           <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
             <div>
               <span class="text-xs text-text-muted uppercase tracking-widest">Auth Mode</span>
@@ -800,22 +827,29 @@ function formatReleaseDate(iso: string): string {
               <Icon name="external-link" size={14} />
             </a>
           {/if}
-        </div>
+        </SettingsSection>
 
         {#if canChangePassword}
-          <div class="p-5 bg-surface border border-border rounded-lg">
+          <SettingsSection
+            title="Local password"
+            description="Keep password changes inside the account section so access controls stay in one place."
+          >
             <p class="text-xs text-text-muted uppercase tracking-widest mb-3">Change Password</p>
             <div class="flex flex-col gap-3">
               <Input label="New Password" type="password" bind:value={newPassword} />
               <Input label="Confirm Password" type="password" bind:value={confirmPassword} />
             </div>
             {#if passwordError}
-              <p class="text-sm text-red-400 mt-2">{passwordError}</p>
+              <div class="settings-alert settings-alert-danger mt-2">{passwordError}</div>
             {/if}
-          </div>
+          </SettingsSection>
         {/if}
 
-        <div class="p-5 bg-surface border border-border rounded-lg">
+        <SettingsSection
+          title="Two-factor authentication"
+          description="TOTP stays grouped with account controls instead of returning as a separate security tab."
+          tone="accent"
+        >
           <p class="text-xs text-text-muted uppercase tracking-widest mb-3">2FA (TOTP)</p>
           <div class="flex items-center justify-between">
             <p class="text-sm text-text-muted">Not configured</p>
@@ -825,9 +859,12 @@ function formatReleaseDate(iso: string): string {
               </span>
             </Tooltip>
           </div>
-        </div>
+        </SettingsSection>
 
-        <div class="p-5 bg-surface border border-border rounded-lg">
+        <SettingsSection
+          title="Session security"
+          description="Adjust session lifetime and close every active session from one structured control surface."
+        >
           <p class="text-xs text-text-muted uppercase tracking-widest mb-3">Session</p>
           <Select label="Session Timeout" options={sessionTimeoutOptions} bind:value={sessionTimeout} />
           <div class="flex items-center justify-between mt-4 pt-4 border-t border-border-subtle">
@@ -837,13 +874,13 @@ function formatReleaseDate(iso: string): string {
             </div>
             <Button variant="ghost" onclick={signOutAllSessions}>Sign out all sessions</Button>
           </div>
-        </div>
+        </SettingsSection>
 
         {#if tabErrors.account}
-          <p class="text-sm text-red-400">{tabErrors.account}</p>
+          <div class="settings-alert settings-alert-danger">{tabErrors.account}</div>
         {/if}
 
-        <div class="flex justify-end">
+        <div class="settings-action-row">
           <Button onclick={saveCurrentTab} disabled={!canSaveCurrentTab || saveStates.account === 'saving'}>
             {currentSaveLabel}
           </Button>
@@ -851,19 +888,30 @@ function formatReleaseDate(iso: string): string {
       </div>
 
     {:else if activeTab === 'plugins'}
-      <div class="p-5 bg-surface border border-border rounded-lg">
-        <p class="text-xs text-text-muted uppercase tracking-widest mb-3">Plugins</p>
-        <p class="text-sm text-text-muted mb-4">Upload <code class="font-mono text-xs bg-elevated px-1.5 py-0.5 rounded">.phwidget</code> or <code class="font-mono text-xs bg-elevated px-1.5 py-0.5 rounded">.phtheme</code> files to install plugins.</p>
-        <div class="border-2 border-dashed border-border rounded-lg p-8 text-center">
-          <Icon name="upload" size={32} class="mx-auto mb-2 text-text-muted" />
-          <p class="text-sm text-text-muted">Drag & drop plugin files here</p>
-          <p class="text-xs text-text-dim mt-1">Plugin support coming in v1.1</p>
-        </div>
+      <div class="settings-stack">
+        <SettingsSection
+          eyebrow="Plugins"
+          title="Plugin pipeline"
+          description="Plugin upload remains part of the PHAVO surface system even before the install flow opens."
+          tone="accent"
+        >
+          <p class="text-xs text-text-muted uppercase tracking-widest mb-3">Plugin pipeline</p>
+          <p class="text-sm text-text-muted mb-4">Upload <code class="font-mono text-xs bg-elevated px-1.5 py-0.5 rounded">.phwidget</code> or <code class="font-mono text-xs bg-elevated px-1.5 py-0.5 rounded">.phtheme</code> files to install plugins.</p>
+          <div class="settings-dropzone">
+            <Icon name="upload" size={32} class="mx-auto mb-2 text-text-muted" />
+            <p class="text-sm text-text-muted">Drag & drop plugin files here</p>
+            <p class="text-xs text-text-dim mt-1">Plugin support coming in v1.1</p>
+          </div>
+        </SettingsSection>
       </div>
 
     {:else if activeTab === 'about'}
-      <div class="flex flex-col gap-5">
-        <div class="p-5 bg-surface border border-border rounded-lg">
+      <div class="settings-stack">
+        <SettingsSection
+          eyebrow="About"
+          title="Release channel"
+          description="Check the current build, inspect update state, and trigger or copy the next update command."
+        >
           <div class="flex items-center justify-between mb-4">
             <div>
               <span class="text-xs text-text-muted uppercase tracking-widest">Version</span>
@@ -918,9 +966,13 @@ function formatReleaseDate(iso: string): string {
           {:else}
             <p class="text-sm text-text-muted">Up to date</p>
           {/if}
-        </div>
+        </SettingsSection>
 
-        <div class="p-5 bg-surface border border-border rounded-lg flex flex-wrap gap-4">
+        <SettingsSection
+          title="Resources"
+          description="Official PHAVO references for documentation, code, and community support."
+        >
+          <div class="settings-links-surface">
           <a class="inline-flex items-center gap-2 text-sm text-text hover:text-accent-text transition-colors" href={DOCS_URL} target="_blank" rel="noreferrer">
             Documentation <Icon name="external-link" size={14} />
           </a>
@@ -930,12 +982,157 @@ function formatReleaseDate(iso: string): string {
           <a class="inline-flex items-center gap-2 text-sm text-text hover:text-accent-text transition-colors" href={DISCORD_URL} target="_blank" rel="noreferrer">
             Discord <Icon name="external-link" size={14} />
           </a>
-        </div>
+          </div>
+        </SettingsSection>
 
         {#if tabErrors.about}
-          <p class="text-sm text-red-400">{tabErrors.about}</p>
+          <div class="settings-alert settings-alert-danger">{tabErrors.about}</div>
         {/if}
       </div>
     {/if}
-  </div>
 </div>
+
+<style>
+  .settings-content {
+    width: 100%;
+    max-width: 1120px;
+    margin: 0 auto;
+    padding: var(--space-6) var(--space-8) var(--space-10);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-5);
+  }
+
+  .settings-hero {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--space-6);
+    padding: var(--space-7) var(--space-7);
+    border-radius: var(--radius-xl);
+    background:
+      radial-gradient(
+        ellipse 62% 82% at 0% 0%,
+        color-mix(in srgb, var(--color-accent-t) 30%, transparent),
+        transparent 76%
+      ),
+      linear-gradient(
+        180deg,
+        color-mix(in srgb, var(--color-bg-elevated) 76%, transparent),
+        color-mix(in srgb, var(--color-bg-surface) 92%, transparent)
+      );
+  }
+
+  .settings-hero-copy {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    max-width: 64ch;
+  }
+
+  .settings-eyebrow {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+    color: var(--color-accent-text);
+    font-family: var(--font-ui);
+  }
+
+  .settings-hero-title {
+    margin: 0;
+    font-size: clamp(1.9rem, 4vw, 2.6rem);
+    font-weight: 800;
+    letter-spacing: -0.04em;
+    color: var(--color-text-primary);
+    line-height: 1.02;
+    font-family: var(--font-ui);
+  }
+
+  .settings-hero-description {
+    margin: 0;
+    max-width: 58ch;
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-sm);
+    line-height: 1.6;
+  }
+
+  .settings-stack {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+  }
+
+  .settings-links-surface {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: var(--space-3);
+  }
+
+  .settings-action-row {
+    display: flex;
+    justify-content: flex-end;
+    padding-top: var(--space-1);
+  }
+
+  .settings-links-surface a {
+    display: inline-flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+    padding: var(--space-4);
+    border-radius: calc(var(--radius-xl) - 4px);
+    border: 1px solid var(--color-border-subtle);
+    background: color-mix(in srgb, var(--color-bg-base) 26%, transparent);
+    text-decoration: none;
+    transition:
+      color 0.15s ease,
+      border-color 0.15s ease,
+      background 0.15s ease,
+      transform 0.15s ease;
+  }
+
+  .settings-links-surface a:hover {
+    border-color: color-mix(in srgb, var(--color-accent) 24%, transparent);
+    background: color-mix(in srgb, var(--color-bg-hover) 82%, transparent);
+    transform: translateY(-1px);
+  }
+
+  .settings-alert {
+    padding: var(--space-3) var(--space-4);
+    border-radius: var(--radius-xl);
+    border: 1px solid transparent;
+    font-size: var(--font-size-sm);
+    line-height: 1.5;
+  }
+
+  .settings-alert-danger {
+    color: var(--color-danger);
+    border-color: color-mix(in srgb, var(--color-danger) 36%, transparent);
+    background: color-mix(in srgb, var(--color-danger-subtle) 86%, transparent);
+  }
+
+  .settings-dropzone {
+    border: 1px dashed color-mix(in srgb, var(--color-accent) 26%, var(--color-border));
+    border-radius: calc(var(--radius-xl) - 4px);
+    padding: var(--space-8);
+    text-align: center;
+    background:
+      radial-gradient(
+        ellipse 55% 60% at 50% 0%,
+        color-mix(in srgb, var(--color-accent-t) 26%, transparent),
+        transparent 72%
+      ),
+      color-mix(in srgb, var(--color-bg-elevated) 76%, transparent);
+  }
+
+  @media (max-width: 639px) {
+    .settings-content {
+      padding: var(--space-4);
+    }
+
+    .settings-hero {
+      padding: var(--space-5);
+    }
+  }
+</style>

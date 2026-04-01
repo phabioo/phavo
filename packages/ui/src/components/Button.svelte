@@ -36,7 +36,7 @@ const variantClasses: Record<string, string> = {
 </script>
 
 <button
-  class="inline-flex items-center justify-center gap-2 rounded-md transition-colors cursor-pointer
+  class="inline-flex items-center justify-center gap-2 rounded-lg font-[var(--font-ui)] tracking-wide transition-colors cursor-pointer
     disabled:opacity-50 disabled:cursor-not-allowed
     {sizeClasses[size] ?? sizeClasses.md}
     {variantClasses[variant] ?? variantClasses.primary}"

@@ -18,7 +18,8 @@ let { padding = 'md', elevated = false, children }: Props = $props();
   .card {
     background: var(--color-bg-surface);
     border: 1px solid var(--color-border-subtle);
-    border-radius: var(--radius-md);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-sm);
   }
 
   .card.elevated {
