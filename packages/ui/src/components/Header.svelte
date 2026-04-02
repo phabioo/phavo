@@ -89,17 +89,20 @@ const formattedTime = $derived(
     {/if}
 
     <div class="header-control-rail">
-      <div class="status-chip status-chip-time">
-        <span class="status-label">Time</span>
-        <span class="header-clock mono">{formattedTime}</span>
-      </div>
-
-      {#if weather}
-        <div class="status-chip status-chip-weather">
-          <span class="status-label">Weather</span>
-          <span class="header-weather">{weather.temp}&deg;C, {weather.condition}</span>
+      <div class="status-cluster" role="group" aria-label="Current status">
+        <div class="status-segment status-segment-time">
+          <span class="status-label">Time</span>
+          <span class="header-clock mono">{formattedTime}</span>
         </div>
-      {/if}
+
+        {#if weather}
+          <span class="status-divider" aria-hidden="true"></span>
+          <div class="status-segment status-segment-weather">
+            <span class="status-label">Weather</span>
+            <span class="header-weather">{weather.temp}&deg;C &middot; {weather.condition}</span>
+          </div>
+        {/if}
+      </div>
 
       {#if onAddWidgetClick}
         <button class="control-btn add-widget-btn" onclick={onAddWidgetClick} aria-label={addWidgetLabel}>
@@ -218,7 +221,7 @@ const formattedTime = $derived(
     min-width: 0;
   }
 
-  .status-chip,
+  .status-cluster,
   .control-btn {
     display: inline-flex;
     align-items: center;
@@ -231,11 +234,32 @@ const formattedTime = $derived(
     box-shadow: 0 8px 22px rgba(0, 0, 0, 0.16);
   }
 
-  .status-chip {
+  .status-cluster {
     display: inline-flex;
     align-items: center;
     gap: var(--space-3);
+    min-width: 0;
+    max-width: min(100%, 30rem);
     color: var(--color-text-primary);
+  }
+
+  .status-segment {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-3);
+    min-width: 0;
+  }
+
+  .status-segment-weather {
+    flex: 1 1 auto;
+  }
+
+  .status-divider {
+    width: 1px;
+    align-self: stretch;
+    background: color-mix(in srgb, var(--color-border-subtle) 82%, var(--color-accent-t));
+    opacity: 0.9;
+    flex-shrink: 0;
   }
 
   .status-label {
@@ -257,6 +281,8 @@ const formattedTime = $derived(
     font-size: 12px;
     font-weight: 600;
     white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
     color: var(--color-text-secondary);
   }
 
@@ -402,16 +428,28 @@ const formattedTime = $derived(
       gap: var(--space-2);
     }
 
-    .status-chip-weather,
+    .status-label,
     .add-widget-text,
     .bell-label {
       display: none;
     }
 
-    .status-chip,
+    .status-cluster,
     .control-btn {
       min-height: 38px;
       padding: 0 var(--space-3);
+    }
+
+    .status-cluster {
+      gap: var(--space-2);
+    }
+
+    .status-segment {
+      gap: var(--space-2);
+    }
+
+    .header-weather {
+      max-width: 12ch;
     }
 
     .page-title-section {

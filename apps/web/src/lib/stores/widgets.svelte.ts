@@ -23,6 +23,10 @@ let widgetErrors = $state<Record<string, string | null>>({});
 let widgetWarnings = $state<Record<string, string | null>>({});
 let widgetLastSuccess = $state<Record<string, number | null>>({});
 let widgetFailureCounts = $state<Record<string, number>>({});
+let widgetPreviewLoading = $state<Record<string, boolean>>({});
+let widgetPreviewErrors = $state<Record<string, string | null>>({});
+let drawerPreviewToken = $state(0);
+let drawerPreviewRequests = $state<Record<string, number>>({});
 
 const inflightFetches = new Map<string, Promise<void>>();
 
@@ -42,6 +46,12 @@ export function getIsDrawerOpen(): boolean {
 }
 
 export function setDrawerOpen(open: boolean): void {
+  if (open && !isDrawerOpen) {
+    drawerPreviewToken += 1;
+    drawerPreviewRequests = {};
+    widgetPreviewLoading = {};
+    widgetPreviewErrors = {};
+  }
   isDrawerOpen = open;
 }
 
@@ -55,6 +65,14 @@ export function getWidgetManifest(): WidgetManifestEntry[] {
 
 export function getWidgetData(widgetId: string): unknown {
   return widgetData[widgetId];
+}
+
+export function getWidgetPreviewLoading(widgetId: string): boolean {
+  return widgetPreviewLoading[widgetId] ?? false;
+}
+
+export function getWidgetPreviewError(widgetId: string): string | null {
+  return widgetPreviewErrors[widgetId] ?? null;
 }
 
 export function getWidgetState(instanceId: string): WidgetState {
@@ -203,7 +221,8 @@ function trackPiholeFailure(widgetId: string): void {
 
 async function fetchWidgetData(def: WidgetDefinition, silent: boolean): Promise<void> {
   const activeInstances = getPollableInstances(def.id);
-  if (activeInstances.length === 0) return;
+  const previewOnly = activeInstances.length === 0;
+  if (previewOnly && !isDrawerOpen) return;
 
   const existing = inflightFetches.get(def.id);
   if (existing) {
@@ -225,30 +244,39 @@ async function fetchWidgetData(def: WidgetDefinition, silent: boolean): Promise<
       widgetData = { ...widgetData, [def.id]: nextData };
       widgetFailureCounts = { ...widgetFailureCounts, [def.id]: 0 };
       piholeFailStreak = def.id === 'pihole' ? 0 : piholeFailStreak;
+      widgetPreviewLoading = { ...widgetPreviewLoading, [def.id]: false };
+      widgetPreviewErrors = { ...widgetPreviewErrors, [def.id]: null };
 
-      const nextStates = { ...widgetStates };
-      const nextErrors = { ...widgetErrors };
-      const nextWarnings = { ...widgetWarnings };
-      const nextLastSuccess = { ...widgetLastSuccess };
+      if (activeInstances.length > 0) {
+        const nextStates = { ...widgetStates };
+        const nextErrors = { ...widgetErrors };
+        const nextWarnings = { ...widgetWarnings };
+        const nextLastSuccess = { ...widgetLastSuccess };
 
-      for (const instance of activeInstances) {
-        nextStates[instance.id] = 'active';
-        nextErrors[instance.id] = null;
-        nextWarnings[instance.id] = null;
-        nextLastSuccess[instance.id] = timestamp;
+        for (const instance of activeInstances) {
+          nextStates[instance.id] = 'active';
+          nextErrors[instance.id] = null;
+          nextWarnings[instance.id] = null;
+          nextLastSuccess[instance.id] = timestamp;
+        }
+
+        widgetStates = nextStates;
+        widgetErrors = nextErrors;
+        widgetWarnings = nextWarnings;
+        widgetLastSuccess = nextLastSuccess;
       }
 
-      widgetStates = nextStates;
-      widgetErrors = nextErrors;
-      widgetWarnings = nextWarnings;
-      widgetLastSuccess = nextLastSuccess;
-
-      if (nextData !== undefined) {
+      if (activeInstances.length > 0 && nextData !== undefined) {
         checkThresholds(def.id, nextData);
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : en.errors.networkError;
       const previousData = widgetData[def.id];
+      widgetPreviewLoading = { ...widgetPreviewLoading, [def.id]: false };
+      widgetPreviewErrors = { ...widgetPreviewErrors, [def.id]: message };
+
+      if (previewOnly) return;
+
       const nextFailureCount = (widgetFailureCounts[def.id] ?? 0) + 1;
       widgetFailureCounts = { ...widgetFailureCounts, [def.id]: nextFailureCount };
 
@@ -500,13 +528,15 @@ export function removeWidgetInstanceFromStore(instanceId: string): void {
   );
 
   if (!hasRemainingInstances) {
-    const nextData = { ...widgetData };
-    delete nextData[removedInstance.widgetId];
-    widgetData = nextData;
+    if (!isDrawerOpen) {
+      const nextData = { ...widgetData };
+      delete nextData[removedInstance.widgetId];
+      widgetData = nextData;
 
-    const nextFailureCounts = { ...widgetFailureCounts };
-    delete nextFailureCounts[removedInstance.widgetId];
-    widgetFailureCounts = nextFailureCounts;
+      const nextFailureCounts = { ...widgetFailureCounts };
+      delete nextFailureCounts[removedInstance.widgetId];
+      widgetFailureCounts = nextFailureCounts;
+    }
   }
 
   reconcileWidgetRuntime();
@@ -577,6 +607,37 @@ export async function swapWidgets(draggedId: string, targetId: string): Promise<
 }
 
 $effect.root(() => {
+  $effect(() => {
+    if (!isDrawerOpen || drawerPreviewToken === 0) return;
+
+    const previewDefs = widgetManifest.filter(
+      (entry): entry is WidgetDefinition =>
+        isWidgetDefinition(entry) &&
+        widgetData[entry.id] === undefined &&
+        drawerPreviewRequests[entry.id] !== drawerPreviewToken,
+    );
+
+    if (previewDefs.length === 0) return;
+
+    const nextRequests = { ...drawerPreviewRequests };
+    const nextPreviewLoading = { ...widgetPreviewLoading };
+    const nextPreviewErrors = { ...widgetPreviewErrors };
+
+    for (const def of previewDefs) {
+      nextRequests[def.id] = drawerPreviewToken;
+      nextPreviewLoading[def.id] = true;
+      nextPreviewErrors[def.id] = null;
+    }
+
+    drawerPreviewRequests = nextRequests;
+    widgetPreviewLoading = nextPreviewLoading;
+    widgetPreviewErrors = nextPreviewErrors;
+
+    for (const def of previewDefs) {
+      void fetchWidgetData(def, false);
+    }
+  });
+
   $effect(() => {
     const activeDefinitions = widgetManifest.filter(
       (entry): entry is WidgetDefinition =>

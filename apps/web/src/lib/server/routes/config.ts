@@ -410,8 +410,7 @@ export function registerConfigRoutes(app: Hono<{ Variables: AppVariables }>): vo
         if (exportData.config.dashboardSubtitle !== undefined) {
           cfgUpserts.push({
             key: 'dashboard_subtitle',
-            value:
-              exportData.config.dashboardSubtitle.trim() || 'System overview & performance',
+            value: exportData.config.dashboardSubtitle.trim() || 'System overview & performance',
           });
         }
         if (exportData.config.sessionTimeout !== undefined) {

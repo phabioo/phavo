@@ -51,6 +51,7 @@ let latestUpdateVersion = $state('');
 let currentPathname = $state('/');
 let currentHash = $state('');
 let tabLimitModalOpen = $state(false);
+let headerWeatherFallback = $state<{ temp: number; condition: string } | undefined>(undefined);
 
 const sidebarItems = [
   { id: 'general', label: 'General', icon: 'settings-2' },
@@ -99,11 +100,34 @@ const WMO_SHORT: Record<number, string> = {
   95: 'Storm', 96: 'Storm', 99: 'Storm',
 };
 
+function toHeaderWeather(weather: WeatherMetrics | undefined): { temp: number; condition: string } | undefined {
+  if (!weather) return undefined;
+  return {
+    temp: Math.round(weather.currentTemp),
+    condition: WMO_SHORT[weather.conditionCode] ?? 'Unknown',
+  };
+}
+
 const headerWeather = $derived.by(() => {
-  const w = getWidgetData('weather') as WeatherMetrics | undefined;
-  if (!w) return undefined;
-  return { temp: Math.round(w.currentTemp), condition: WMO_SHORT[w.conditionCode] ?? 'Unknown' };
+  const widgetWeather = toHeaderWeather(getWidgetData('weather') as WeatherMetrics | undefined);
+  return widgetWeather ?? headerWeatherFallback;
 });
+
+async function refreshHeaderWeather(): Promise<void> {
+  try {
+    const response = await fetchWithCsrf('/api/v1/weather');
+    const payload = (await response.json()) as {
+      ok: boolean;
+      data?: WeatherMetrics;
+    };
+
+    if (payload.ok && payload.data) {
+      headerWeatherFallback = toHeaderWeather(payload.data);
+    }
+  } catch {
+    // Header weather is additive; keep the last successful value.
+  }
+}
 
 function navigate(id: string) {
   panelOpen = false;
@@ -354,6 +378,13 @@ onMount(() => {
     $effect(() => {
       if (!isDashboard) return;
       void loadAiStatus();
+    });
+
+    $effect(() => {
+      if (!isDashboard) return;
+      void refreshHeaderWeather();
+      const interval = setInterval(() => void refreshHeaderWeather(), 300_000);
+      return () => clearInterval(interval);
     });
   });
 

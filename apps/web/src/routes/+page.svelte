@@ -17,6 +17,7 @@ import {
   type UptimeMetrics,
   type WeatherMetrics,
   type WidgetDefinition,
+  type WidgetManifestEntry,
   type WidgetSize,
 } from '@phavo/types';
 import { BentoGrid, Button, Icon, Modal, WidgetCard, WidgetDrawer } from '@phavo/ui';
@@ -31,6 +32,8 @@ import {
   getIsDrawerOpen,
   getTabs,
   getWidgetData,
+  getWidgetPreviewError,
+  getWidgetPreviewLoading,
   getWidgetError,
   getWidgetInstances,
   getWidgetLastSuccess,
@@ -403,7 +406,7 @@ onMount(() => {
     </section>
 
     {#if sortedInstances.length === 0}
-      <section class="dashboard-empty">
+      <button class="dashboard-empty" type="button" onclick={() => setDrawerOpen(true)}>
         <div class="empty-icon">
           <Icon name="layout-dashboard" size={20} />
         </div>
@@ -411,8 +414,11 @@ onMount(() => {
           <h2>Build your dashboard</h2>
           <p>Add a widget to start shaping this page.</p>
         </div>
-        <Button onclick={() => setDrawerOpen(true)}>{en.dashboard.addWidget}</Button>
-      </section>
+        <span class="empty-action">
+          <Icon name="plus" size={15} />
+          <span>{en.dashboard.addWidget}</span>
+        </span>
+      </button>
     {:else}
       <section class="dashboard-stage">
         <BentoGrid class="dashboard-grid" gap="1.75rem">
@@ -541,6 +547,110 @@ onMount(() => {
   </div>
 </div>
 
+{#snippet drawerTilePreview(widget: WidgetManifestEntry)}
+  {@const liveData = isWidgetDefinition(widget) ? getWidgetData(widget.id) : null}
+  {@const previewLoading = isWidgetDefinition(widget) ? getWidgetPreviewLoading(widget.id) : false}
+  {@const previewError = isWidgetDefinition(widget) ? getWidgetPreviewError(widget.id) : null}
+
+  {#if !isWidgetDefinition(widget)}
+    <div class="tray-live-state tray-live-state-locked">
+      <span class="tray-live-icon" aria-hidden="true">
+        <Icon name="lock" size={16} />
+      </span>
+      <div class="tray-live-copy-group">
+        <span class="tray-live-kicker">Preview locked</span>
+        <p class="tray-live-copy">Upgrade to unlock this widget and its live dashboard data.</p>
+      </div>
+    </div>
+  {:else if previewLoading && !liveData}
+    <div class="tray-live-state">
+      <span class="tray-live-icon" aria-hidden="true">
+        <Icon name="activity" size={16} />
+      </span>
+      <div class="tray-live-copy-group">
+        <span class="tray-live-kicker">Checking live data</span>
+        <p class="tray-live-copy">Phavo is loading the latest widget snapshot for this tray preview.</p>
+      </div>
+    </div>
+  {:else if widget.id === 'cpu' && liveData}
+    <div class="tray-live-render"><CpuWidget data={liveData as CpuMetrics} size="S" /></div>
+  {:else if widget.id === 'memory' && liveData}
+    <div class="tray-live-render"><MemoryWidget data={liveData as MemoryMetrics} size="S" /></div>
+  {:else if widget.id === 'disk' && liveData}
+    <div class="tray-live-render"><DiskWidget data={liveData as DiskMetrics[]} size="S" /></div>
+  {:else if widget.id === 'network' && liveData}
+    <div class="tray-live-render"><NetworkWidget data={liveData as NetworkMetrics} size="S" /></div>
+  {:else if widget.id === 'temperature' && liveData}
+    <div class="tray-live-render"><TemperatureWidget data={liveData as TemperatureMetrics} size="S" /></div>
+  {:else if widget.id === 'uptime' && liveData}
+    <div class="tray-live-render"><UptimeWidget data={liveData as UptimeMetrics} size="S" /></div>
+  {:else if widget.id === 'weather' && liveData}
+    <div class="tray-live-render"><WeatherWidget data={liveData as WeatherMetrics} size="S" /></div>
+  {:else if widget.id === 'pihole' && liveData}
+    <div class="tray-live-render"><PiholeWidget data={liveData as PiholeMetrics} size="S" /></div>
+  {:else if widget.id === 'rss' && liveData}
+    <div class="tray-live-render"><RssWidget data={liveData as RssFeedResult} size="S" /></div>
+  {:else if widget.id === 'links' && liveData}
+    <div class="tray-live-render"><LinksWidget data={liveData as LinksMetrics} size="S" /></div>
+  {:else if widget.id === 'docker' && liveData}
+    <div class="tray-live-render"><DockerWidget data={liveData as DockerMetrics} size="S" /></div>
+  {:else if widget.id === 'service-health' && liveData}
+    <div class="tray-live-render">
+      <ServiceHealthWidget data={liveData as ServiceHealthMetrics} size="S" />
+    </div>
+  {:else if widget.id === 'speedtest' && liveData}
+    <div class="tray-live-render"><SpeedtestWidget data={liveData as SpeedtestMetrics} size="S" /></div>
+  {:else if widget.id === 'calendar' && liveData}
+    <div class="tray-live-render"><CalendarWidget data={liveData as CalendarMetrics} size="S" /></div>
+  {:else if previewError}
+    <div class="tray-live-state">
+      <span class="tray-live-icon" aria-hidden="true">
+        <Icon name={widget.configSchema ? 'sliders-horizontal' : 'activity'} size={16} />
+      </span>
+      <div class="tray-live-copy-group">
+        <span class="tray-live-kicker">
+          {widget.configSchema ? 'Preview unavailable' : 'Live data unavailable'}
+        </span>
+        <p class="tray-live-copy">
+          {widget.configSchema
+            ? 'Finish this widget’s configuration in Settings to load a live tray preview.'
+            : 'Phavo could not load a live preview for this widget yet. Try again after the next refresh.'}
+        </p>
+      </div>
+    </div>
+  {:else if isWidgetDefinition(widget) && widget.configSchema}
+    <div class="tray-live-state">
+      <span class="tray-live-icon" aria-hidden="true">
+        <Icon name="sliders-horizontal" size={16} />
+      </span>
+      <div class="tray-live-copy-group">
+        <span class="tray-live-kicker">Awaiting configuration</span>
+        <p class="tray-live-copy">Configure this widget or add it to the board to start live updates.</p>
+      </div>
+    </div>
+  {:else if liveData}
+    <div class="tray-live-state">
+      <span class="tray-live-icon" aria-hidden="true">
+        <Icon name="sparkles" size={16} />
+      </span>
+      <div class="tray-live-copy-group">
+        <span class="tray-live-kicker">Live data ready</span>
+        <p class="tray-live-copy">This widget is active, but its compact tray preview is not available yet.</p>
+      </div>
+    </div>
+  {:else}
+    <div class="tray-live-state">
+      <span class="tray-live-icon" aria-hidden="true">
+        <Icon name="activity" size={16} />
+      </span>
+      <div class="tray-live-copy-group">
+        <span class="tray-live-kicker">Live when available</span>
+        <p class="tray-live-copy">This preview fills with real board data once the widget is active.</p>
+      </div>
+    </div>
+  {/if}
+{/snippet}
+
 <WidgetDrawer
   open={getIsDrawerOpen()}
   widgets={getWidgetManifest()}
@@ -550,6 +660,7 @@ onMount(() => {
   onRemove={handleDrawerRemove}
   onDragStartFromDrawer={() => (isDrawerDragging = true)}
   onDragEndFromDrawer={() => (isDrawerDragging = false)}
+  tilePreview={drawerTilePreview}
   labels={{
     title: en.dashboard.addWidgets,
     subtitle: 'Browse widgets, drag them into place, or add them directly',
@@ -758,15 +869,44 @@ onMount(() => {
   }
 
   .dashboard-empty {
+    appearance: none;
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: var(--space-6);
+    width: 100%;
     padding: var(--space-8);
     border: 1px solid var(--color-border-subtle);
     border-radius: 28px;
     background: color-mix(in srgb, var(--color-bg-elevated) 92%, transparent);
     box-shadow: var(--shadow-md);
+    cursor: pointer;
+    font: inherit;
+    text-align: left;
+    transition:
+      transform 0.18s ease,
+      border-color 0.18s ease,
+      background 0.18s ease,
+      box-shadow 0.18s ease;
+  }
+
+  .dashboard-empty:hover,
+  .dashboard-empty:focus-visible {
+    border-color: color-mix(in srgb, var(--color-accent) 28%, var(--color-border-subtle));
+    background:
+      radial-gradient(
+        ellipse 78% 90% at 0% 0%,
+        color-mix(in srgb, var(--color-accent-t) 20%, transparent),
+        transparent 78%
+      ),
+      color-mix(in srgb, var(--color-bg-elevated) 96%, transparent);
+    box-shadow: 0 24px 52px rgba(0, 0, 0, 0.28);
+    transform: translateY(-1px);
+  }
+
+  .dashboard-empty:focus-visible {
+    outline: 2px solid color-mix(in srgb, var(--color-accent) 56%, transparent);
+    outline-offset: 3px;
   }
 
   .empty-icon {
@@ -798,6 +938,97 @@ onMount(() => {
   .empty-copy p {
     color: var(--color-text-secondary);
     margin: 0;
+  }
+
+  .empty-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+    margin-left: auto;
+    min-height: 40px;
+    padding: 0 var(--space-4);
+    border-radius: 999px;
+    border: 1px solid color-mix(in srgb, var(--color-accent) 28%, var(--color-border-subtle));
+    background: color-mix(in srgb, var(--color-bg-base) 72%, transparent);
+    color: var(--color-accent-text);
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    flex-shrink: 0;
+    transition:
+      border-color 0.18s ease,
+      background 0.18s ease,
+      transform 0.18s ease;
+  }
+
+  .dashboard-empty:hover .empty-action,
+  .dashboard-empty:focus-visible .empty-action {
+    border-color: color-mix(in srgb, var(--color-accent) 40%, var(--color-border-subtle));
+    background: color-mix(in srgb, var(--color-accent-t) 92%, transparent);
+    transform: translateY(-1px);
+  }
+
+  .tray-live-render {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .tray-live-state {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    width: 100%;
+    min-height: 0;
+    padding: var(--space-3);
+    border-radius: var(--radius-lg);
+    border: 1px solid color-mix(in srgb, var(--color-border-subtle) 88%, transparent);
+    background: color-mix(in srgb, var(--color-bg-base) 42%, transparent);
+    overflow: hidden;
+  }
+
+  .tray-live-state-locked {
+    border-color: color-mix(in srgb, var(--color-warning) 24%, transparent);
+    background: color-mix(in srgb, var(--color-warning-subtle) 72%, transparent);
+  }
+
+  .tray-live-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 10px;
+    flex-shrink: 0;
+    background: color-mix(in srgb, var(--color-accent-t) 90%, transparent);
+    color: var(--color-accent-text);
+  }
+
+  .tray-live-copy-group {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .tray-live-kicker {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+  }
+
+  .tray-live-copy {
+    margin: 0;
+    color: var(--color-text-secondary);
+    font-size: 11px;
+    line-height: 1.45;
   }
 
   .widget-state {
@@ -978,6 +1209,10 @@ onMount(() => {
     .dashboard-empty {
       flex-direction: column;
       align-items: flex-start;
+    }
+
+    .empty-action {
+      margin-left: 0;
     }
 
     .widget-stale-banner {

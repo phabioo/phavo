@@ -260,44 +260,50 @@
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div class="hs-wrap" use:clickOutside={() => (open = false)}>
-  <!-- svelte-ignore a11y_click_events_have_key_events -->
-  <div
-    class="hs-bar"
-    class:open={open}
-    onclick={() => {
-      open = true;
-      requestAnimationFrame(() => inputEl?.focus());
-    }}
-  >
-    <span class="hs-leading" aria-hidden="true">
-      <Icon name="search" size={15} />
-    </span>
+  <div class="hs-shell" class:open={open}>
+    <!-- svelte-ignore a11y_click_events_have_key_events -->
+    <div
+      class="hs-bar"
+      onclick={() => {
+        open = true;
+        requestAnimationFrame(() => inputEl?.focus());
+      }}
+    >
+      <span class="hs-leading" aria-hidden="true">
+        <Icon name="search" size={15} />
+      </span>
 
-    <input
-      bind:this={inputEl}
-      bind:value={query}
-      class="hs-input"
-      placeholder="Search widgets, pages, or ask AI"
-      onfocus={() => (open = true)}
-      oninput={handleInput}
-      onkeydown={handleKeydown}
-      autocomplete="off"
-      spellcheck="false"
-      aria-label="Search or ask"
-    />
+      <input
+        bind:this={inputEl}
+        bind:value={query}
+        class="hs-input"
+        placeholder="Search widgets, pages, or ask AI"
+        onfocus={() => (open = true)}
+        oninput={handleInput}
+        onkeydown={handleKeydown}
+        autocomplete="off"
+        spellcheck="false"
+        aria-label="Search or ask"
+        aria-expanded={open}
+      />
 
-    {#if query}
-      <button class="hs-clear" aria-label="Clear search" onclick={clearQuery}>
-        <Icon name="x" size={12} />
-      </button>
-    {:else}
-      <kbd class="hs-kbd">{isMac ? 'Cmd+K' : 'Ctrl+K'}</kbd>
-    {/if}
-  </div>
+      {#if query}
+        <button class="hs-clear" aria-label="Clear search" onclick={clearQuery}>
+          <Icon name="x" size={12} />
+        </button>
+      {:else}
+        <kbd class="hs-kbd">{isMac ? 'Cmd+K' : 'Ctrl+K'}</kbd>
+      {/if}
+    </div>
 
-  {#if open}
     <!-- svelte-ignore a11y_no_static_element_interactions -->
-    <div class="hs-dropdown" onmousedown={(event) => event.preventDefault()}>
+    <div
+      class="hs-dropdown"
+      class:open={open}
+      aria-hidden={!open}
+      inert={!open}
+      onmousedown={(event) => event.preventDefault()}
+    >
       {#if !query.trim()}
         <div class="hs-hint">
           <span class="hs-hint-title">Command search</span>
@@ -413,51 +419,66 @@
         </div>
       {/if}
     </div>
-  {/if}
+  </div>
 </div>
 
 <style>
   .hs-wrap {
-    position: relative;
     width: 100%;
     min-width: 0;
   }
 
+  .hs-shell {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    min-width: 0;
+    border: 1px solid color-mix(in srgb, var(--color-accent) 18%, var(--color-border-subtle));
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--color-bg-elevated) 94%, transparent);
+    box-shadow: 0 8px 22px rgba(0, 0, 0, 0.16);
+    overflow: hidden;
+    transition:
+      border-color 0.15s ease,
+      background 0.15s ease,
+      box-shadow 0.15s ease,
+      border-radius 0s linear;
+  }
+
+  .hs-shell:hover {
+    border-color: color-mix(in srgb, var(--color-accent) 28%, var(--color-border-subtle));
+  }
+
+  .hs-shell.open {
+    border-color: color-mix(in srgb, var(--color-accent) 34%, var(--color-border-subtle));
+    border-radius: var(--radius-xl);
+    box-shadow: 0 18px 34px rgba(0, 0, 0, 0.38);
+  }
+
   .hs-bar {
+    position: relative;
     display: flex;
     align-items: center;
     gap: var(--space-3);
     min-height: 40px;
     padding: 0 var(--space-3) 0 calc(var(--space-4) + 14px);
-    background: color-mix(in srgb, var(--color-bg-elevated) 94%, transparent);
-    border: 1px solid color-mix(in srgb, var(--color-accent) 18%, var(--color-border-subtle));
-    border-radius: 999px;
+    background: transparent;
+    border: none;
+    border-radius: 0;
     cursor: text;
-    transition:
-      border-color 0.15s ease,
-      background 0.15s ease,
-      box-shadow 0.15s ease,
-      border-radius 0.15s ease;
-  }
-
-  .hs-bar:hover {
-    border-color: color-mix(in srgb, var(--color-accent) 28%, var(--color-border-subtle));
-  }
-
-  .hs-bar.open {
-    border-color: color-mix(in srgb, var(--color-accent) 34%, var(--color-border-subtle));
-    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
-    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.28);
   }
 
   .hs-leading {
     position: absolute;
     left: var(--space-4);
+    top: 50%;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     color: var(--color-text-muted);
     pointer-events: none;
+    transform: translateY(-50%);
   }
 
   .hs-input {
@@ -515,28 +536,38 @@
   }
 
   .hs-dropdown {
-    position: absolute;
-    top: calc(100% - 1px);
-    left: 0;
-    right: 0;
+    position: relative;
     display: flex;
     flex-direction: column;
     gap: 2px;
-    max-height: min(460px, 72dvh);
+    max-height: 0;
     overflow-y: auto;
-    padding: var(--space-3);
-    background:
-      linear-gradient(
-        180deg,
-        color-mix(in srgb, var(--color-bg-elevated) 96%, transparent),
-        color-mix(in srgb, var(--color-bg-surface) 98%, transparent)
-      );
-    border: 1px solid color-mix(in srgb, var(--color-accent) 34%, var(--color-border-subtle));
-    border-top: none;
-    border-radius: 0 0 var(--radius-xl) var(--radius-xl);
-    box-shadow: 0 18px 34px rgba(0, 0, 0, 0.38);
+    padding: 0 var(--space-3);
+    background: transparent;
+    border-top: 1px solid transparent;
+    border-radius: 0;
     z-index: 999;
     scrollbar-width: thin;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transform: translateY(-8px) scale(0.985);
+    transform-origin: top center;
+    transition:
+      opacity 0.18s ease,
+      transform 0.18s ease,
+      visibility 0s linear 0.18s;
+  }
+
+  .hs-dropdown.open {
+    max-height: min(460px, 72dvh);
+    padding: var(--space-3);
+    border-top-color: color-mix(in srgb, var(--color-accent) 18%, var(--color-border-subtle));
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transform: translateY(0) scale(1);
+    transition-delay: 0s;
   }
 
   .hs-hint {

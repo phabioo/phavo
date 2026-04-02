@@ -7,6 +7,7 @@
     type WidgetManifestEntry,
     type WidgetSize,
   } from '@phavo/types';
+  import type { Snippet } from 'svelte';
   import { onMount } from 'svelte';
   import { fade, fly } from 'svelte/transition';
   import Icon from './Icon.svelte';
@@ -23,6 +24,7 @@
     onRemove: (instanceId: string) => void;
     onDragStartFromDrawer?: () => void;
     onDragEndFromDrawer?: () => void;
+    tilePreview?: Snippet<[WidgetManifestEntry]>;
     labels?: {
       title?: string;
       subtitle?: string;
@@ -49,11 +51,13 @@
     onRemove,
     onDragStartFromDrawer,
     onDragEndFromDrawer,
+    tilePreview,
     labels = {},
   }: Props = $props();
 
   const DEFAULT_MOBILE_HEIGHT = 60;
   const DESKTOP_BREAKPOINT = 640;
+  const SIZE_OPTIONS: WidgetSize[] = ['S', 'M', 'L', 'XL'];
   const CATEGORY_ICONS: Record<Category, string> = {
     all: 'layout-grid',
     system: 'cpu',
@@ -68,7 +72,7 @@
   let isDraggingFromDrawer = $state(false);
   let isDesktop = $state(false);
   let mobileDrawerHeight = $state(DEFAULT_MOBILE_HEIGHT);
-  let isResizing = $state(false);
+  let selectedSizes = $state<Record<string, WidgetSize>>({});
 
   const filters: { key: Category; label: () => string }[] = [
     { key: 'all', label: () => labels.filterAll ?? 'All' },
@@ -98,6 +102,7 @@
         mobileDrawerHeight = DEFAULT_MOBILE_HEIGHT;
         confirmRemoveId = null;
         activeLockedId = null;
+        selectedSizes = {};
       });
     });
   });
@@ -122,8 +127,32 @@
     return isWidgetTeaserDefinition(widget);
   }
 
-  function handleAdd(widgetId: string) {
-    onAdd(widgetId, 'S');
+  function getAvailableSizes(widget: WidgetManifestEntry): WidgetSize[] {
+    return isWidgetDefinition(widget) ? widget.sizes : ['S'];
+  }
+
+  function getDefaultSize(widget: WidgetManifestEntry): WidgetSize {
+    const availableSizes = getAvailableSizes(widget);
+    return availableSizes.includes('S') ? 'S' : (availableSizes[0] ?? 'S');
+  }
+
+  function getSelectedSize(widget: WidgetManifestEntry): WidgetSize {
+    const selectedSize = selectedSizes[widget.id];
+    return selectedSize && getAvailableSizes(widget).includes(selectedSize)
+      ? selectedSize
+      : getDefaultSize(widget);
+  }
+
+  function handleSizeSelect(widget: WidgetManifestEntry, size: WidgetSize) {
+    if (!isWidgetDefinition(widget) || !widget.sizes.includes(size)) return;
+    selectedSizes = {
+      ...selectedSizes,
+      [widget.id]: size,
+    };
+  }
+
+  function handleAdd(widget: WidgetManifestEntry) {
+    onAdd(widget.id, getSelectedSize(widget));
   }
 
   function handleLockedClick(widgetId: string) {
@@ -151,7 +180,7 @@
       'application/phavo-widget',
       JSON.stringify({
         widgetId: widget.id,
-        size: 'S',
+        size: getSelectedSize(widget),
       }),
     );
     onDragStartFromDrawer?.();
@@ -160,28 +189,6 @@
   function handleDragEnd() {
     isDraggingFromDrawer = false;
     onDragEndFromDrawer?.();
-  }
-
-  function handleMobileResizeStart(event: PointerEvent) {
-    isResizing = true;
-    (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
-    (event.currentTarget as HTMLElement).dataset.startY = String(event.clientY);
-    (event.currentTarget as HTMLElement).dataset.startHeight = String(mobileDrawerHeight);
-  }
-
-  function handleMobileResizeMove(event: PointerEvent) {
-    if (!isResizing) return;
-    const handle = event.currentTarget as HTMLElement;
-    const startY = Number(handle.dataset.startY ?? event.clientY);
-    const startHeight = Number(handle.dataset.startHeight ?? mobileDrawerHeight);
-    const delta = startY - event.clientY;
-    const nextHeight = startHeight + (delta / window.innerHeight) * 100;
-    mobileDrawerHeight = Math.min(86, Math.max(26, nextHeight));
-  }
-
-  function handleMobileResizeEnd(event: PointerEvent) {
-    isResizing = false;
-    (event.currentTarget as HTMLElement).releasePointerCapture(event.pointerId);
   }
 
   function getWidgetCategory(widget: WidgetManifestEntry): TileCategory {
@@ -204,7 +211,7 @@
       return labels.locked ?? 'Locked';
     }
 
-    return widget.tier === 'standard' ? 'Standard' : 'Pro';
+    return widget.tier.charAt(0).toUpperCase() + widget.tier.slice(1);
   }
 </script>
 
@@ -220,23 +227,10 @@
 
   <aside
     class="widget-tray fixed z-[220] flex flex-col overflow-hidden"
-    class:drawer-resizing={isResizing}
     style="height: {isDesktop ? 'min(72dvh, 760px)' : `${mobileDrawerHeight}vh`}"
     aria-label={labels.title ?? 'Widget Tray'}
     transition:fly={{ y: isDesktop ? 520 : 360, duration: isDesktop ? 260 : 220 }}
   >
-    <div
-      class="tray-resize-handle sm:hidden"
-      onpointerdown={handleMobileResizeStart}
-      onpointermove={handleMobileResizeMove}
-      onpointerup={handleMobileResizeEnd}
-      role="separator"
-      aria-label="Resize drawer"
-      aria-orientation="horizontal"
-    >
-      <div class="tray-resize-pill"></div>
-    </div>
-
     <div class="tray-header">
       <div class="tray-header-copy">
         <span class="tray-eyebrow">Widget library</span>
@@ -281,19 +275,33 @@
             ondragend={handleDragEnd}
           >
             <div class="tray-tile-preview">
-              <span class="tray-tile-icon">
-                <Icon name={getWidgetIcon(widget)} size={18} />
-              </span>
-
-              <div class="tray-tile-bars" aria-hidden="true">
-                <span class="tray-tile-bar tray-tile-bar-strong"></span>
-                <span class="tray-tile-bar"></span>
-                <span class="tray-tile-bar tray-tile-bar-short"></span>
-              </div>
-
               <div class="tray-tile-meta-row">
                 <span class="tray-tile-category">{getWidgetCategoryLabel(widget)}</span>
                 <span class="tray-tile-tier">{getTierLabel(widget)}</span>
+              </div>
+
+              <div class="tray-tile-preview-body">
+                {#if tilePreview}
+                  <div class="tray-tile-preview-content">
+                    {@render tilePreview(widget)}
+                  </div>
+                {:else}
+                  <div class="tray-tile-preview-fallback">
+                    <span class="tray-tile-fallback-icon">
+                      <Icon name={getWidgetIcon(widget)} size={18} />
+                    </span>
+                    <div class="tray-tile-fallback-copy">
+                      <span class="tray-tile-fallback-kicker">
+                        {locked ? (labels.locked ?? 'Locked') : 'Live preview'}
+                      </span>
+                      <p class="tray-tile-fallback-text">
+                        {locked
+                          ? 'Upgrade to unlock this widget preview.'
+                          : 'Live widget data appears here when available.'}
+                      </p>
+                    </div>
+                  </div>
+                {/if}
               </div>
             </div>
 
@@ -304,13 +312,14 @@
               </div>
 
               <div class="tray-size-row" aria-label="Widget sizes">
-                {#each ['S', 'M', 'L', 'XL'] as size}
+                {#each SIZE_OPTIONS as size}
                   <button
                     class="tray-size-chip"
-                    class:tray-size-chip-active={size === 'S'}
+                    class:tray-size-chip-active={size === getSelectedSize(widget)}
                     type="button"
-                    disabled={true}
-                    aria-pressed={size === 'S'}
+                    disabled={locked || !getAvailableSizes(widget).includes(size)}
+                    aria-pressed={size === getSelectedSize(widget)}
+                    onclick={() => handleSizeSelect(widget, size)}
                   >
                     {size}
                   </button>
@@ -335,7 +344,7 @@
                     </button>
                   {/if}
                 {:else}
-                  <button class="tray-action tray-action-add" onclick={() => handleAdd(widget.id)}>
+                  <button class="tray-action tray-action-add" onclick={() => handleAdd(widget)}>
                     <Icon name="plus" size={14} />
                     <span>{labels.addToBoard ?? 'Add to board'}</span>
                   </button>
@@ -382,27 +391,6 @@
       inset 0 1px 0 color-mix(in srgb, var(--color-accent) 12%, transparent);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
-  }
-
-  .widget-tray.drawer-resizing {
-    user-select: none;
-    transition: none;
-  }
-
-  .tray-resize-handle {
-    display: flex;
-    justify-content: center;
-    padding: var(--space-2) 0;
-    cursor: ns-resize;
-    touch-action: none;
-    flex-shrink: 0;
-  }
-
-  .tray-resize-pill {
-    width: 44px;
-    height: 4px;
-    border-radius: 999px;
-    background: var(--color-border-strong);
   }
 
   .tray-header {
@@ -533,7 +521,7 @@
     flex: 1;
     min-height: 0;
     overflow-y: auto;
-    padding: 0 var(--space-6) var(--space-6);
+    padding: 0 var(--space-6) calc(var(--space-7) + env(safe-area-inset-bottom, 0px));
     scrollbar-width: none;
     background:
       linear-gradient(180deg, transparent, color-mix(in srgb, var(--color-bg-base) 12%, transparent));
@@ -547,13 +535,15 @@
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
     gap: var(--space-4);
+    grid-auto-rows: minmax(0, auto);
     align-content: start;
+    padding-bottom: var(--space-1);
   }
 
   .tray-tile {
-    display: flex;
-    flex-direction: column;
-    min-height: 248px;
+    display: grid;
+    grid-template-rows: minmax(128px, 144px) minmax(0, 1fr);
+    min-height: 264px;
     border-radius: var(--radius-xl);
     border: 1px solid color-mix(in srgb, var(--color-accent) 10%, var(--color-border-subtle));
     background:
@@ -582,12 +572,11 @@
   }
 
   .tray-tile-preview {
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr);
     gap: var(--space-4);
-    min-height: 110px;
-    padding: var(--space-5);
+    min-height: 0;
+    padding: var(--space-4) var(--space-5);
     border-bottom: 1px solid color-mix(in srgb, var(--color-border-subtle) 86%, transparent);
     background:
       radial-gradient(
@@ -596,40 +585,14 @@
         transparent 78%
       ),
       color-mix(in srgb, var(--color-bg-base) 18%, var(--color-bg-surface));
+    overflow: hidden;
   }
 
-  .tray-tile-icon {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 36px;
-    height: 36px;
-    border-radius: 12px;
-    background: color-mix(in srgb, var(--color-accent-t) 90%, transparent);
-    border: 1px solid color-mix(in srgb, var(--color-accent) 18%, transparent);
-    color: var(--color-accent-text);
-  }
-
-  .tray-tile-bars {
+  .tray-tile-preview-body {
     display: flex;
-    flex-direction: column;
-    gap: 6px;
-    width: 100%;
-  }
-
-  .tray-tile-bar {
-    height: 7px;
-    border-radius: 999px;
-    background: color-mix(in srgb, var(--color-bg-hover) 92%, transparent);
-  }
-
-  .tray-tile-bar-strong {
-    width: 72%;
-    background: color-mix(in srgb, var(--color-accent) 42%, var(--color-bg-hover));
-  }
-
-  .tray-tile-bar-short {
-    width: 46%;
+    align-items: stretch;
+    min-height: 0;
+    overflow: hidden;
   }
 
   .tray-tile-meta-row {
@@ -655,12 +618,68 @@
     color: var(--color-text-secondary);
   }
 
-  .tray-tile-body {
+  .tray-tile-preview-content {
     display: flex;
-    flex: 1;
+    align-items: center;
+    width: 100%;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .tray-tile-preview-fallback {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    width: 100%;
+    min-height: 0;
+    padding: var(--space-3);
+    border-radius: var(--radius-lg);
+    border: 1px solid color-mix(in srgb, var(--color-border-subtle) 84%, transparent);
+    background: color-mix(in srgb, var(--color-bg-base) 42%, transparent);
+    overflow: hidden;
+  }
+
+  .tray-tile-fallback-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    flex-shrink: 0;
+    background: color-mix(in srgb, var(--color-accent-t) 90%, transparent);
+    border: 1px solid color-mix(in srgb, var(--color-accent) 18%, transparent);
+    color: var(--color-accent-text);
+  }
+
+  .tray-tile-fallback-copy {
+    display: flex;
+    min-width: 0;
     flex-direction: column;
+    gap: 4px;
+  }
+
+  .tray-tile-fallback-kicker {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+  }
+
+  .tray-tile-fallback-text {
+    margin: 0;
+    color: var(--color-text-secondary);
+    font-size: 11px;
+    line-height: 1.45;
+  }
+
+  .tray-tile-body {
+    display: grid;
+    grid-template-rows: auto auto minmax(0, 1fr) auto;
     gap: var(--space-4);
     padding: var(--space-4) var(--space-5) var(--space-5);
+    min-height: 0;
   }
 
   .tray-tile-copy {
@@ -709,7 +728,16 @@
     color: var(--color-text-muted);
     font-size: 11px;
     font-weight: 700;
-    cursor: default;
+    cursor: pointer;
+    transition:
+      color 0.15s ease,
+      border-color 0.15s ease,
+      background 0.15s ease,
+      opacity 0.15s ease;
+  }
+
+  .tray-size-chip:disabled {
+    cursor: not-allowed;
     opacity: 0.4;
   }
 
@@ -784,9 +812,9 @@
 
   @media (min-width: 640px) {
     .widget-tray {
-      left: calc(var(--shell-sidebar-offset, 0px) + var(--space-4));
-      right: var(--space-4);
-      bottom: var(--space-4);
+      left: calc(var(--shell-sidebar-offset, 0px) + var(--space-8));
+      right: var(--space-8);
+      bottom: var(--space-6);
       border-bottom: 1px solid color-mix(in srgb, var(--color-accent) 20%, var(--color-border-subtle));
       border-radius: calc(var(--radius-xl) + 12px);
     }
@@ -806,7 +834,7 @@
     }
 
     .tray-tile {
-      min-height: 228px;
+      min-height: 236px;
     }
   }
 </style>
