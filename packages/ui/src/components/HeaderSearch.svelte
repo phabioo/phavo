@@ -424,8 +424,10 @@
 
 <style>
   .hs-wrap {
+    position: relative;
     width: 100%;
     min-width: 0;
+    z-index: 5;
   }
 
   .hs-shell {
@@ -438,7 +440,7 @@
     border-radius: 999px;
     background: color-mix(in srgb, var(--color-bg-elevated) 94%, transparent);
     box-shadow: 0 8px 22px rgba(0, 0, 0, 0.16);
-    overflow: hidden;
+    overflow: visible;
     transition:
       border-color 0.15s ease,
       background 0.15s ease,
@@ -452,7 +454,7 @@
 
   .hs-shell.open {
     border-color: color-mix(in srgb, var(--color-accent) 34%, var(--color-border-subtle));
-    border-radius: var(--radius-xl);
+    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
     box-shadow: 0 18px 34px rgba(0, 0, 0, 0.38);
   }
 
@@ -536,16 +538,21 @@
   }
 
   .hs-dropdown {
-    position: relative;
+    position: absolute;
+    top: calc(100% - 1px);
+    left: 0;
+    right: 0;
     display: flex;
     flex-direction: column;
     gap: 2px;
-    max-height: 0;
+    max-height: min(460px, 72dvh);
     overflow-y: auto;
-    padding: 0 var(--space-3);
-    background: transparent;
-    border-top: 1px solid transparent;
-    border-radius: 0;
+    padding: var(--space-3);
+    background: color-mix(in srgb, var(--color-bg-elevated) 96%, transparent);
+    border: 1px solid color-mix(in srgb, var(--color-accent) 34%, var(--color-border-subtle));
+    border-top: none;
+    border-radius: 0 0 var(--radius-xl) var(--radius-xl);
+    box-shadow: 0 18px 34px rgba(0, 0, 0, 0.38);
     z-index: 999;
     scrollbar-width: thin;
     opacity: 0;
@@ -560,9 +567,6 @@
   }
 
   .hs-dropdown.open {
-    max-height: min(460px, 72dvh);
-    padding: var(--space-3);
-    border-top-color: color-mix(in srgb, var(--color-accent) 18%, var(--color-border-subtle));
     opacity: 1;
     visibility: visible;
     pointer-events: auto;
@@ -766,9 +770,7 @@
     }
 
     .hs-dropdown {
-      right: 0;
-      left: auto;
-      width: min(360px, calc(100vw - (var(--space-4) * 2)));
+      max-height: min(60dvh, 420px);
     }
   }
 </style>

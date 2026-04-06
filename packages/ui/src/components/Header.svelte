@@ -82,12 +82,6 @@ const formattedTime = $derived(
       />
     </div>
 
-    {#if updateAvailable && updateBadge}
-      <div class="header-update-slot">
-        {@render updateBadge()}
-      </div>
-    {/if}
-
     <div class="header-control-rail">
       <div class="status-cluster" role="group" aria-label="Current status">
         <div class="status-segment status-segment-time">
@@ -104,31 +98,43 @@ const formattedTime = $derived(
         {/if}
       </div>
 
-      {#if onAddWidgetClick}
-        <button class="control-btn add-widget-btn" onclick={onAddWidgetClick} aria-label={addWidgetLabel}>
-          <Icon name="plus" size={15} />
-          <span class="add-widget-text">{addWidgetLabel}</span>
-        </button>
-      {/if}
-
-      <button
-        class="control-btn bell-btn"
-        onclick={onBellClick}
-        aria-label="Notifications{effectiveUnread > 0 ? ` (${effectiveUnread} unread)` : ''}"
-      >
-        <Icon name="bell" size={17} />
-        <span class="bell-label">Alerts</span>
-        {#if effectiveUnread > 0}
-          <span class="bell-badge" aria-hidden="true">
-            {effectiveUnread > 99 ? '99+' : effectiveUnread}
-          </span>
+      <div class="header-action-group">
+        {#if onAddWidgetClick}
+          <button class="control-btn add-widget-btn" onclick={onAddWidgetClick} aria-label={addWidgetLabel}>
+            <Icon name="plus" size={15} />
+            <span class="add-widget-text">{addWidgetLabel}</span>
+          </button>
         {/if}
-      </button>
+
+        <button
+          class="control-btn bell-btn"
+          onclick={onBellClick}
+          aria-label="Notifications{effectiveUnread > 0 ? ` (${effectiveUnread} unread)` : ''}"
+        >
+          <Icon name="bell" size={17} />
+          <span class="bell-label">Alerts</span>
+          {#if effectiveUnread > 0}
+            <span class="bell-badge" aria-hidden="true">
+              {effectiveUnread > 99 ? '99+' : effectiveUnread}
+            </span>
+          {/if}
+        </button>
+      </div>
     </div>
 
-    {#if userMenu}
-      <div class="header-user-slot">
-        {@render userMenu()}
+    {#if (updateAvailable && updateBadge) || userMenu}
+      <div class="header-meta-rail">
+        {#if updateAvailable && updateBadge}
+          <div class="header-update-slot">
+            {@render updateBadge()}
+          </div>
+        {/if}
+
+        {#if userMenu}
+          <div class="header-user-slot">
+            {@render userMenu()}
+          </div>
+        {/if}
       </div>
     {/if}
   </div>
@@ -206,17 +212,23 @@ const formattedTime = $derived(
     max-width: 520px;
   }
 
+  .header-meta-rail {
+    display: inline-flex;
+    align-items: center;
+    justify-self: end;
+    gap: var(--space-2);
+  }
+
   .header-update-slot,
   .header-user-slot {
     display: inline-flex;
     align-items: center;
-    justify-self: end;
   }
 
   .header-control-rail {
-    display: flex;
-    align-items: stretch;
-    justify-content: flex-end;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
     gap: var(--space-2);
     min-width: 0;
   }
@@ -241,6 +253,14 @@ const formattedTime = $derived(
     min-width: 0;
     max-width: min(100%, 30rem);
     color: var(--color-text-primary);
+  }
+
+  .header-action-group {
+    display: inline-flex;
+    align-items: stretch;
+    justify-content: flex-end;
+    gap: var(--space-2);
+    flex-shrink: 0;
   }
 
   .status-segment {
@@ -383,7 +403,7 @@ const formattedTime = $derived(
   @media (max-width: 1180px) {
     .header-shell {
       grid-template-columns: minmax(0, 1fr) auto;
-      align-items: start;
+      align-items: end;
     }
 
     .header-search-area {
@@ -393,29 +413,50 @@ const formattedTime = $derived(
 
     .header-control-rail {
       grid-column: 1 / 2;
-      flex-wrap: wrap;
+      width: 100%;
     }
 
-    .header-update-slot,
-    .header-user-slot {
+    .status-cluster {
+      max-width: none;
+    }
+
+    .header-meta-rail {
+      justify-self: end;
       align-self: center;
     }
   }
 
-  @media (max-width: 900px) {
+  @media (max-width: 960px) {
     .header-shell {
       grid-template-columns: 1fr;
     }
 
     .header-control-rail,
-    .header-update-slot,
-    .header-user-slot {
+    .header-meta-rail {
       grid-column: 1 / -1;
       justify-self: start;
     }
 
     .header-control-rail {
+      grid-template-columns: 1fr;
+      align-items: stretch;
+    }
+
+    .header-action-group {
       justify-content: flex-start;
+    }
+
+    .status-cluster,
+    .control-btn {
+      min-height: 38px;
+    }
+
+    .status-cluster {
+      padding-inline: var(--space-3);
+    }
+
+    .control-btn {
+      padding-inline: var(--space-3);
     }
   }
 
@@ -434,18 +475,17 @@ const formattedTime = $derived(
       display: none;
     }
 
-    .status-cluster,
-    .control-btn {
-      min-height: 38px;
-      padding: 0 var(--space-3);
-    }
-
     .status-cluster {
       gap: var(--space-2);
     }
 
     .status-segment {
       gap: var(--space-2);
+    }
+
+    .header-action-group {
+      width: 100%;
+      justify-content: flex-start;
     }
 
     .header-weather {

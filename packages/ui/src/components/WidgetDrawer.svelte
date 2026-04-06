@@ -369,6 +369,9 @@
 
 <style>
   .widget-tray {
+    --tray-inline-gutter: clamp(var(--space-6), 3vw, var(--space-10));
+    --tray-shell-width: calc(100vw - var(--shell-sidebar-offset, 0px));
+    --tray-max-width: 1440px;
     left: 0;
     right: 0;
     bottom: 0;
@@ -521,7 +524,9 @@
     flex: 1;
     min-height: 0;
     overflow-y: auto;
-    padding: 0 var(--space-6) calc(var(--space-7) + env(safe-area-inset-bottom, 0px));
+    padding: 0 var(--space-6) calc(var(--space-9) + env(safe-area-inset-bottom, 0px));
+    scroll-padding-bottom: calc(var(--space-8) + env(safe-area-inset-bottom, 0px));
+    overscroll-behavior: contain;
     scrollbar-width: none;
     background:
       linear-gradient(180deg, transparent, color-mix(in srgb, var(--color-bg-base) 12%, transparent));
@@ -537,7 +542,7 @@
     gap: var(--space-4);
     grid-auto-rows: minmax(0, auto);
     align-content: start;
-    padding-bottom: var(--space-1);
+    padding-bottom: var(--space-4);
   }
 
   .tray-tile {
@@ -812,8 +817,11 @@
 
   @media (min-width: 640px) {
     .widget-tray {
-      left: calc(var(--shell-sidebar-offset, 0px) + var(--space-8));
-      right: var(--space-8);
+      left: calc(
+        var(--shell-sidebar-offset, 0px) +
+          max(var(--tray-inline-gutter), (var(--tray-shell-width) - var(--tray-max-width)) / 2)
+      );
+      right: max(var(--tray-inline-gutter), (var(--tray-shell-width) - var(--tray-max-width)) / 2);
       bottom: var(--space-6);
       border-bottom: 1px solid color-mix(in srgb, var(--color-accent) 20%, var(--color-border-subtle));
       border-radius: calc(var(--radius-xl) + 12px);

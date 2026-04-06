@@ -49,6 +49,7 @@ let dashExpanded = $state(true);
 
 const tierLabel = $derived(tier.toUpperCase());
 const showUpgrade = $derived(tier === 'free');
+const mobileNavItems = $derived([{ id: 'home', label: 'Dashboard', icon: 'layout-dashboard' }, ...items, ...bottomItems]);
 </script>
 
 <aside class="sidebar" class:collapsed>
@@ -184,17 +185,7 @@ const showUpgrade = $derived(tier === 'free');
 
 <!-- Mobile bottom navigation bar (visible only <640px) -->
 <nav class="bottom-nav" aria-label="Main navigation">
-  <button
-    class="bottom-nav-item"
-    class:bottom-nav-active={activeItem === 'home'}
-    onclick={() => onnavigate?.('home')}
-    type="button"
-    aria-label="Dashboard"
-  >
-    <span class="bottom-nav-icon"><Icon name="layout-dashboard" size={20} /></span>
-    <span class="bottom-nav-label">Dashboard</span>
-  </button>
-  {#each [...items, ...bottomItems].slice(0, 3) as item}
+  {#each mobileNavItems as item (item.id)}
     <button
       class="bottom-nav-item"
       class:bottom-nav-active={activeItem === item.id}
@@ -552,10 +543,26 @@ const showUpgrade = $derived(tier === 'free');
     bottom: 0;
     left: 0;
     right: 0;
-    background: var(--color-bg-surface);
+    align-items: stretch;
+    gap: var(--space-2);
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+    background:
+      linear-gradient(
+        180deg,
+        color-mix(in srgb, var(--color-bg-elevated) 94%, transparent),
+        color-mix(in srgb, var(--color-bg-surface) 98%, transparent)
+      );
     border-top: 1px solid var(--color-border-subtle);
     z-index: 100;
-    padding-bottom: env(safe-area-inset-bottom);
+    padding: var(--space-2) var(--space-3) calc(var(--space-2) + env(safe-area-inset-bottom));
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+  }
+
+  .bottom-nav::-webkit-scrollbar {
+    display: none;
   }
 
   .bottom-nav-item {
@@ -564,24 +571,30 @@ const showUpgrade = $derived(tier === 'free');
     align-items: center;
     justify-content: center;
     gap: 3px;
-    flex: 1;
-    min-height: 56px;
-    padding: var(--space-1) var(--space-2);
+    min-width: 78px;
+    min-height: 52px;
+    padding: var(--space-2) var(--space-3);
     background: none;
-    border: none;
+    border: 1px solid transparent;
+    border-radius: var(--radius-xl);
     color: var(--color-text-secondary);
     font-family: var(--font-ui);
     font-size: 10px;
     cursor: pointer;
-    transition: color 0.15s;
+    flex: 0 0 auto;
+    scroll-snap-align: start;
+    transition: color 0.15s, background 0.15s, border-color 0.15s;
   }
 
   .bottom-nav-item:hover {
     color: var(--color-text-primary);
+    background: color-mix(in srgb, var(--color-bg-hover) 82%, transparent);
   }
 
   .bottom-nav-active {
     color: var(--color-accent-text);
+    border-color: color-mix(in srgb, var(--color-accent) 26%, transparent);
+    background: color-mix(in srgb, var(--color-accent-t) 74%, transparent);
   }
 
   .bottom-nav-icon {
@@ -591,11 +604,15 @@ const showUpgrade = $derived(tier === 'free');
 
   .bottom-nav-label {
     white-space: nowrap;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    font-weight: 700;
   }
 
   @media (max-width: 639px) {
     .bottom-nav {
       display: flex;
+      scroll-snap-type: x proximity;
     }
   }
 </style>
