@@ -4,16 +4,13 @@
   import { fetchWithCsrf } from '$lib/utils/api';
 
   type Tier = 'stellar' | 'celestial';
-  type AuthMode = 'phavo-net' | 'local' | null;
 
   interface Props {
     tier: Tier;
-    authMode: AuthMode;
     licenseKeyMasked: string | null;
-    manageUrl: string;
   }
 
-  let { tier, authMode, licenseKeyMasked, manageUrl }: Props = $props();
+  let { tier, licenseKeyMasked }: Props = $props();
 
   let licenseKey = $state('');
   let activating = $state(false);
@@ -106,8 +103,8 @@
   }
 </script>
 
-<div class="licence-layout">
-  <div class="settings-hero-card">
+<div class="settings-cards-grid">
+  <div class="settings-hero-card settings-card-full">
     <span class="settings-card-label">LICENCE TIER</span>
     <h2 class="settings-hero-value">{tierLabel(tier)}</h2>
     <p class="settings-hero-sub">{tier === 'celestial' ? 'Full access to all widgets and features' : 'Base tier — upgrade to unlock all widgets'}</p>
@@ -130,19 +127,9 @@
         </p>
       </div>
     </div>
-
-    {#if authMode === 'phavo-net'}
-      <div class="licence-info-panel">
-        <p>{en.settings.manageLicenseHosted}</p>
-        <a class="settings-help-link" href={manageUrl} target="_blank" rel="noreferrer">
-          {en.settings.manageLicense}
-          <Icon name="external-link" size={14} />
-        </a>
-      </div>
-    {/if}
   </div>
 
-  {#if authMode !== 'local'}
+  {#if tier !== 'celestial'}
     <div class="settings-form-card">
       <h3 class="settings-form-title">{en.settings.activateLicense}</h3>
       <p class="licence-hint">{en.settings.licenseActivationHint}</p>
@@ -164,8 +151,7 @@
     <div class="settings-form-card">
       <h3 class="settings-form-title">{en.settings.localLicenseActive}</h3>
       <p class="licence-hint">{en.settings.licenseDeactivateHint}</p>
-      <div class="settings-form-actions">
-        <span></span>
+      <div class="settings-form-actions" style="justify-content: flex-start;">
         <button class="settings-btn-danger" type="button" onclick={deactivateLicense} disabled={deactivating}>
           <Icon name="shield-off" size={14} />
           {deactivating ? en.settings.deactivatingLicense : en.settings.deactivateLicense}
@@ -184,11 +170,7 @@
 </div>
 
 <style>
-  .licence-layout {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-4);
-  }
+  /* licence-layout replaced by settings-cards-grid from theme.css */
 
   .licence-badge-row {
     margin-top: var(--space-2);
@@ -215,23 +197,6 @@
 
   .licence-key-mono {
     font-family: var(--font-mono);
-  }
-
-  .licence-info-panel {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-3);
-    padding: var(--space-4);
-    border-radius: 1.5rem;
-    border: 1px solid color-mix(in srgb, var(--color-outline-variant) 10%, transparent);
-    background: color-mix(in srgb, var(--color-surface-dim) 60%, transparent);
-    color: var(--color-on-surface-variant);
-  }
-
-  .licence-info-panel p {
-    margin: 0;
-    line-height: 1.6;
-    font-size: 13px;
   }
 
   .licence-hint {

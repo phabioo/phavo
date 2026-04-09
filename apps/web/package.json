@@ -1,6 +1,6 @@
 {
   "name": "@phavo/web",
-  "version": "1.0.0",
+  "version": "0.8.0",
   "type": "module",
   "scripts": {
     "dev": "node ./node_modules/vite/bin/vite.js dev",
@@ -13,7 +13,7 @@
     "@phavo/db": "workspace:*",
     "@phavo/types": "workspace:*",
     "@phavo/ui": "workspace:*",
-    "better-auth": "^1.0.0",
+    "better-auth": "^1",
     "drizzle-orm": "^0.45.1",
     "hono": "^4.3.0",
     "zod": "^3.23.0"

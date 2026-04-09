@@ -182,14 +182,86 @@ Every use of `backdrop-filter: blur()` must include a Pi 3/4 fallback.
 
 - Widgets are always **presentational** — no self-fetching
 - Data flows: store → widget component. Never widget → API
-- All 4 size variants (S/M/L/XL) must be implemented with meaningful content differentiation
+- S/M/L size variants must be implemented with meaningful content differentiation
+- **XL is inactive** — exists in `WidgetSize` type but no widget registers it. Do not add XL to any `availableSizes` array.
 - Category labels are ALL CAPS with `letter-spacing: 0.1em`
-- XL cards get `.nebula-*` background + `<WishStar>` in bottom-right corner
 - Widget tray shows **S-size previews only**
 
 ---
 
-## 11. Layout Rules
+## 11. Gold vs Teal — Color Role Rules
+
+| Color | Role | Use for |
+|---|---|---|
+| **Gold** (`--color-primary-fixed`) | Editorial | Hero stat numbers, wordmark, CTA buttons, active calendar date, WishStar |
+| **Teal** (`--color-secondary`) | Data viz | Progress bars, donut charts, sparklines, bar charts, swap bars, focus rings |
+
+```svelte
+<!-- ✅ Hero stat — always gold -->
+<span class="hero-stat hero-glow" style="color: var(--color-primary-fixed)">{value}%</span>
+
+<!-- ✅ Progress bar fill — always teal -->
+<div class="fill" style="background: var(--color-secondary)"></div>
+
+<!-- ❌ Never mix: teal hero stats or gold progress bars -->
+```
+
+---
+
+## 12. WidgetCard Non-Dashboard Contexts
+
+When using `<WidgetCard>` outside the BentoGrid (WidgetDrawer previews, Settings):
+
+```svelte
+<!-- ✅ Always in Drawer / Settings -->
+<WidgetCard showControls={false} clipContent={false} ... />
+
+<!-- ❌ Never omit these in non-dashboard contexts -->
+<WidgetCard ... />
+```
+
+`showControls={false}` hides resize/remove buttons.
+`clipContent={false}` allows glow bleed outside the card boundary.
+
+---
+
+## 13. Motion Tokens
+
+**Never hardcode duration or easing values.** Always use `var(--motion-*)` tokens.
+
+```css
+/* ✅ Always */
+transition: background var(--motion-micro);
+transition: transform var(--motion-component);
+
+/* ❌ Never */
+transition: background 150ms ease;
+transition: transform 0.3s cubic-bezier(...);
+```
+
+| Token | Value | Use |
+|---|---|---|
+| `--motion-micro` | `150ms ease` | Hover, focus, icon transitions |
+| `--motion-component` | `300ms cubic-bezier(0.32, 0.72, 0, 1)` | Panel slide, card entrance |
+| `--motion-page` | `200ms ease` | Route transitions |
+
+All collapse to `0ms` under `prefers-reduced-motion: reduce`.
+
+---
+
+## 14. Settings Pages
+
+Settings uses a master-detail layout. Always:
+
+- Wrap detail content in `.settings-cards-grid` (two-column card grid)
+- Hero/status card: uses `.settings-hero-card` (gold bg accent)
+- Form card: uses `.settings-form-card`
+- Full-width card: add `.settings-card-full` class
+- Input focus ring: always `--color-secondary` (teal), never gold
+
+---
+
+## 15. Layout Rules
 
 - No hidden elements affecting layout flow
 - No ghost columns or overflow hacks
@@ -198,7 +270,7 @@ Every use of `backdrop-filter: blur()` must include a Pi 3/4 fallback.
 
 ---
 
-## 12. No Micro-Tuning When Broken
+## 16. No Micro-Tuning When Broken
 
 If something is visually wrong:
 - Do NOT tweak values endlessly
@@ -208,7 +280,7 @@ If something is visually wrong:
 
 ---
 
-## 13. No Partial Implementations
+## 17. No Partial Implementations
 
 Never leave:
 - Imported components that are never used
@@ -220,7 +292,7 @@ If you add code, it must be complete and reachable.
 
 ---
 
-## 14. Anti-Patterns
+## 18. Anti-Patterns
 
 Never:
 - Use `overflow: hidden` to "fix" a layout bug
@@ -233,7 +305,7 @@ Never:
 
 ---
 
-## 15. Definition of Done
+## 19. Definition of Done
 
 A task is complete ONLY when ALL of these pass:
 

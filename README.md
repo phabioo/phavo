@@ -15,7 +15,7 @@ Phavo is a production-grade self-hosted dashboard built on a modern TypeScript s
 - **Import / Export** — full dashboard config as `.phavo` file with optional passphrase-encrypted credentials
 - **Secure by default** — AES-256-GCM credential storage, CSRF protection, Argon2id passwords, per-IP rate limiting, CSP headers
 - **Single Docker container** — multi-arch (amd64 + arm64), runs on Raspberry Pi
-- **Fully offline capable** — Local tier requires no internet after initial activation
+- **Fully offline capable** — no internet required after installation
 
 ---
 
@@ -56,7 +56,7 @@ volumes:
 
 ## 🧩 Widgets
 
-### Free Tier
+### Stellar (free)
 | Widget | Data |
 |---|---|
 | CPU | Usage %, per-core breakdown, load average, model name |
@@ -67,12 +67,18 @@ volumes:
 | Uptime | System uptime, human-readable |
 | Weather | Current conditions + 5-day forecast via Open-Meteo (no API key needed) |
 
-### Standard & Local Tier
+### Celestial (paid, one-time)
+All Stellar widgets plus:
+
 | Widget | Details |
 |---|---|
 | Pi-hole | Queries, blocked %, blocklist count, enable/disable toggle |
 | RSS Feed | Multiple feeds, Basic Auth + Bearer token for private feeds |
 | Links | Named bookmarks with icons, grouped by category |
+| Docker | Container list, status, start/stop controls |
+| Service Health | HTTP/TCP endpoint monitoring |
+| Speedtest | On-demand bandwidth measurement |
+| Calendar | Upcoming events from CalDAV / iCal |
 
 ---
 
@@ -82,7 +88,7 @@ Press `Cmd+K` (macOS) or `Ctrl+K` (Windows/Linux) from anywhere in the dashboard
 
 - **Local search** — instantly find and navigate to widgets, settings, tabs, and actions
 - **Web search** — search with your preferred engine (DuckDuckGo by default, configurable)
-- **AI assistant** — ask questions using Ollama (fully local/offline), OpenAI, or Anthropic Claude (Standard+ tier)
+- **AI assistant** — ask questions using Ollama (fully local/offline), OpenAI, or Anthropic Claude (Celestial tier)
 
 AI API keys are stored server-side in encrypted form and never exposed to the browser.
 
@@ -90,18 +96,17 @@ AI API keys are stored server-side in encrypted form and never exposed to the br
 
 ## 💳 Pricing
 
-| | Free | Standard | Local |
-|---|---|---|---|
-| Price | €0 | €8.99 one-time | €24.99 one-time |
-| Widgets | Core system + weather | All widgets | All widgets |
-| Tabs | 1 | Unlimited | Unlimited |
-| AI assistant | — | ✅ | ✅ |
-| Auth | phavo.net account | phavo.net account | Local account |
-| Offline | 24h grace | 72h grace | Fully offline forever |
-| Branding | "Powered by Phavo" | Removable | Removable |
+| | Stellar | Celestial |
+|---|---|---|
+| Price | €0 | €24.99 one-time (launch: €16.99) |
+| Widgets | Core system + weather | All 14 widgets |
+| Tabs | 1 (Home) | Unlimited |
+| AI assistant | — | ✅ |
+| Auth | Local (username + password) | Local (username + password) |
+| Offline | Fully offline | Fully offline |
 
-**Standard → Local upgrade:** pay the €16.00 difference, no repurchase needed.
-**14-day money-back guarantee** on all paid tiers via Gumroad.
+**14-day money-back guarantee** on Celestial via Gumroad.
+License key is a self-verifying Ed25519 payload — validated offline, no account required.
 
 ---
 
@@ -134,7 +139,7 @@ packages/
   @phavo/types    Shared TypeScript types & Zod schemas
   @phavo/agent    System metrics library
 
-Auth:       Custom (Argon2id + phavo.net OAuth)
+Auth:       Better Auth (local-only, Argon2id)
 Database:   libSQL (local SQLite)
 Docker:     Multi-arch (amd64 + arm64)
 CI/CD:      GitHub Actions
@@ -209,7 +214,8 @@ bun run typecheck
 bun run lint
 ```
 
-With `PHAVO_DEV_MOCK_AUTH=true`, you are automatically logged in as a Free tier user. Edit `apps/web/src/lib/server/mock-auth.ts` to test Standard or Local tier.
+With `PHAVO_DEV_MOCK_AUTH=true`, you are automatically logged in as a Stellar tier user.
+To test Celestial tier, add `PHAVO_DEV_TIER=celestial` to the environment.
 
 ---
 
@@ -218,9 +224,10 @@ With `PHAVO_DEV_MOCK_AUTH=true`, you are automatically logged in as a Free tier 
 After v1.0 ships, Phavo will be dual-licensed:
 
 - **AGPL-3.0** for open source / self-hosted use
-- **Commercial licence** included with Standard and Local tier purchases
+- **Commercial licence** included with Celestial tier purchase
 
-A self-compiled AGPL build without a phavo.net account defaults to Free tier behaviour. Tier enforcement is server-side via phavo.net — no code-level locks in the client.
+A self-compiled AGPL build defaults to Stellar tier behaviour.
+Celestial activation uses an offline Ed25519-signed license key — no account or network required.
 
 ---
 

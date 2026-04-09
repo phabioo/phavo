@@ -33,6 +33,7 @@ interface Props {
   onsettingsnav?: (tab: string) => void;
   onTabSelect?: (id: string) => void;
   onNewTab?: () => void;
+  ondeletepage?: ((id: string) => void) | undefined;
   children?: Snippet;
 }
 
@@ -50,6 +51,7 @@ let {
   onsettingsnav = undefined as ((tab: string) => void) | undefined,
   onTabSelect,
   onNewTab,
+  ondeletepage = undefined as ((id: string) => void) | undefined,
   children,
 }: Props = $props();
 
@@ -114,6 +116,16 @@ const mobileNavItems = $derived([{ id: 'home', label: 'Dashboard', icon: 'layout
             >
               <span class="nav-sub-dot"></span>
               <span class="nav-sub-label">{tab.label}</span>
+              {#if tab.id !== 'home' && tab.id !== tabs[0]?.id}
+                <button
+                  class="nav-sub-delete"
+                  onclick={(e) => { e.preventDefault(); e.stopPropagation(); ondeletepage?.(tab.id); }}
+                  aria-label="Delete page"
+                  type="button"
+                >
+                  <Icon name="x" size={10} />
+                </button>
+              {/if}
             </button>
           {/each}
           {#if onNewTab}
@@ -251,7 +263,7 @@ const mobileNavItems = $derived([{ id: 'home', label: 'Dashboard', icon: 'layout
     display: flex;
     flex-direction: column;
     justify-content: space-between;
-    transition: width 0.3s ease;
+    transition: width var(--motion-component);
     z-index: 100;
     overflow: hidden;
   }
@@ -300,7 +312,7 @@ const mobileNavItems = $derived([{ id: 'home', label: 'Dashboard', icon: 'layout
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: color 0.15s, background 0.15s;
+    transition: color var(--motion-micro), background var(--motion-micro);
   }
 
   .sidebar-toggle:hover {
@@ -340,7 +352,7 @@ const mobileNavItems = $derived([{ id: 'home', label: 'Dashboard', icon: 'layout
     background: transparent;
     border: 1px solid transparent;
     cursor: pointer;
-    transition: background 0.15s, border-color 0.15s;
+    transition: background var(--motion-micro), border-color var(--motion-micro);
     text-decoration: none;
     width: 100%;
     margin-bottom: var(--space-1);
@@ -353,6 +365,15 @@ const mobileNavItems = $derived([{ id: 'home', label: 'Dashboard', icon: 'layout
   .nav-card:hover {
     background: var(--color-surface-card);
     border-color: color-mix(in srgb, var(--color-outline-variant) 12%, transparent);
+  }
+
+  .nav-card:active {
+    transform: scale(0.98);
+  }
+
+  .nav-card:focus-visible {
+    outline: 2px solid var(--color-primary-fixed);
+    outline-offset: 2px;
   }
 
   .nav-card-active {
@@ -372,7 +393,7 @@ const mobileNavItems = $derived([{ id: 'home', label: 'Dashboard', icon: 'layout
     justify-content: center;
     color: var(--color-on-surface-variant);
     flex-shrink: 0;
-    transition: background 0.15s, color 0.15s;
+    transition: background var(--motion-micro), color var(--motion-micro);
   }
 
   .nav-card-active .nav-card-icon {
@@ -394,6 +415,24 @@ const mobileNavItems = $derived([{ id: 'home', label: 'Dashboard', icon: 'layout
     gap: 1px;
   }
 
+  /* Text labels fade out when collapsing */
+  .nav-card-info,
+  .nav-card-chevron,
+  .sidebar-wordmark,
+  .sidebar-upgrade-text {
+    transition: opacity var(--motion-micro), width var(--motion-micro);
+    overflow: hidden;
+    white-space: nowrap;
+  }
+
+  .sidebar-collapsed .nav-card-info,
+  .sidebar-collapsed .nav-card-chevron,
+  .sidebar-collapsed .sidebar-wordmark,
+  .sidebar-collapsed .sidebar-upgrade-text {
+    opacity: 0;
+    width: 0;
+  }
+
   .nav-card-label {
     font-size: 13px;
     font-weight: 600;
@@ -401,7 +440,7 @@ const mobileNavItems = $derived([{ id: 'home', label: 'Dashboard', icon: 'layout
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    transition: color 0.15s;
+    transition: color var(--motion-micro);
   }
 
   .nav-card-active .nav-card-label {
@@ -440,7 +479,7 @@ const mobileNavItems = $derived([{ id: 'home', label: 'Dashboard', icon: 'layout
   .nav-card-chevron {
     color: var(--color-outline);
     flex-shrink: 0;
-    transition: color 0.15s, transform 0.15s;
+    transition: color var(--motion-micro), transform var(--motion-micro);
     opacity: 0;
     display: flex;
     align-items: center;
@@ -479,6 +518,9 @@ const mobileNavItems = $derived([{ id: 'home', label: 'Dashboard', icon: 'layout
     width: 44px;
     height: 44px;
     margin: 0 auto var(--space-1);
+    display: flex;
+    align-items: center;
+    cursor: pointer;
   }
 
   .sidebar-collapsed .nav-card:hover {
@@ -495,6 +537,9 @@ const mobileNavItems = $derived([{ id: 'home', label: 'Dashboard', icon: 'layout
     border: none;
     width: 40px;
     height: 40px;
+    background: var(--color-surface-card);
+    color: var(--color-on-surface-variant);
+    transition: background var(--motion-micro), color var(--motion-micro);
   }
 
   .sidebar-collapsed .nav-card-active .nav-card-icon {
@@ -511,12 +556,12 @@ const mobileNavItems = $derived([{ id: 'home', label: 'Dashboard', icon: 'layout
 
   /* ── Sub-items ───────────────────────────────────────────────────────── */
   .nav-sub-items {
+    padding-left: 60px;
     margin: 0 0 var(--space-2) 0;
-    padding-left: calc(36px + var(--space-3) + var(--space-3));
+    border-left: none;
     display: flex;
     flex-direction: column;
-    gap: 1px;
-    border-left: none;
+    gap: 2px;
   }
 
   .nav-sub-item {
@@ -528,7 +573,7 @@ const mobileNavItems = $derived([{ id: 'home', label: 'Dashboard', icon: 'layout
     font-size: 12px;
     color: var(--color-on-surface-variant);
     text-decoration: none;
-    transition: color 0.15s, background 0.15s;
+    transition: color var(--motion-micro), background var(--motion-micro);
     background: none;
     border: none;
     cursor: pointer;
@@ -562,6 +607,33 @@ const mobileNavItems = $derived([{ id: 'home', label: 'Dashboard', icon: 'layout
     white-space: nowrap;
   }
 
+  .nav-sub-delete {
+    margin-left: auto;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: none;
+    border: none;
+    color: var(--color-outline);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity var(--motion-micro), background var(--motion-micro), color var(--motion-micro);
+    flex-shrink: 0;
+    padding: 0;
+  }
+
+  .nav-sub-item:hover .nav-sub-delete {
+    opacity: 1;
+  }
+
+  .nav-sub-delete:hover {
+    background: color-mix(in srgb, var(--color-error) 15%, transparent);
+    color: var(--color-error);
+  }
+
   .nav-sub-add {
     display: flex;
     align-items: center;
@@ -573,7 +645,7 @@ const mobileNavItems = $derived([{ id: 'home', label: 'Dashboard', icon: 'layout
     background: none;
     border: none;
     cursor: pointer;
-    transition: color 0.15s;
+    transition: color var(--motion-micro);
     font-family: var(--font-ui);
     width: 100%;
     text-align: left;
@@ -642,7 +714,7 @@ const mobileNavItems = $derived([{ id: 'home', label: 'Dashboard', icon: 'layout
     border: none;
     border-radius: var(--radius-full);
     cursor: pointer;
-    transition: opacity 0.15s, transform 0.15s;
+    transition: opacity var(--motion-micro), transform var(--motion-micro);
     letter-spacing: 0.01em;
     display: flex;
     align-items: center;
@@ -769,7 +841,7 @@ const mobileNavItems = $derived([{ id: 'home', label: 'Dashboard', icon: 'layout
     cursor: pointer;
     flex: 0 0 auto;
     scroll-snap-align: start;
-    transition: color 0.15s, background 0.15s, border-color 0.15s;
+    transition: color var(--motion-micro), background var(--motion-micro), border-color var(--motion-micro);
   }
 
   .bottom-nav-item:hover {

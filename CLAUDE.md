@@ -20,6 +20,17 @@ There are no subscriptions. There is no phavo.net account backend. The Celestial
 license key is a self-verifying Ed25519-signed payload — the app validates it
 offline against an embedded public key. phavo.net is never contacted at runtime.
 
+## Versioning Policy
+
+Two-digit scheme: MAJOR.MINOR (e.g. v0.8, v1.0, v1.1)
+Third digit .PATCH only for urgent hotfixes (e.g. v1.0.1)
+
+- v0.x — Pre-release development
+- v1.0 — First public release (MA + MB + MC complete)
+- v1.x — Post-release feature milestones
+
+Current version: 0.8.0
+
 ---
 
 ## Monorepo Structure
@@ -28,7 +39,7 @@ offline against an embedded public key. phavo.net is never contacted at runtime.
 phavo/
 ├── apps/
 │   ├── web/          ← SvelteKit web app (the ONLY active runtime)
-│   ├── desktop/      ← Tauri stub (inactive, v1.1+)
+│   ├── desktop/      ← Tauri stub (inactive, post-v1.0)
 │   └── mobile/       ← stub (inactive, future)
 ├── packages/
 │   ├── ui/           ← @phavo/ui — shared Svelte components + theme.css
@@ -126,7 +137,7 @@ tonal depth (no borders for layout). Full spec: `docs/design.md`.
 **Pi Performance Fallback:**
 ```css
 @media (prefers-reduced-motion: reduce), (max-resolution: 1.5dppx) {
-  .glass { background: var(--color-surface-container-high); backdrop-filter: none; }
+  .glass { background: var(--color-surface-high); backdrop-filter: none; }
 }
 ```
 
@@ -153,6 +164,7 @@ Key route modules:
 | `integrations.ts` | Pi-hole, RSS, links |
 | `license.ts` | Celestial key activation/deactivation |
 | `ai.ts` | AI provider config, chat |
+| `notifications.ts` | Notification queue, mark-read, clear-all |
 | `system.ts` | Health, version, update check |
 
 ---
@@ -177,13 +189,56 @@ Widget sizes and BentoGrid spans:
 Widgets are always **presentational** — no self-fetching.
 Data flows: store → widget component. Never widget → API.
 
+### WidgetCard Props
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `size` | `WidgetSize` | — | `'S' \| 'M' \| 'L' \| 'XL'` |
+| `colSpan` | `number` | from size | Grid column span |
+| `rowSpan` | `number` | from size | Grid row span |
+| `glowColor` | `'gold' \| 'teal'` | `'gold'` | Sets `--widget-glow` CSS variable |
+| `showControls` | `boolean` | `true` | Resize/remove buttons. Set `false` in Drawer & Settings previews. |
+| `clipContent` | `boolean` | `true` | Clips overflow. Set `false` in Drawer cards for glow bleed. |
+| `staggerIndex` | `number` | — | Entrance animation delay: `staggerIndex * 60ms` |
+| `draggable` | `boolean` | `false` | Enables WishStar drag handle |
+| `availableSizes` | `WidgetSize[]` | — | Which sizes this widget supports |
+| `loading` | `boolean` | `false` | Shows skeleton state |
+| `error` | `string \| null` | `null` | Shows error state with message |
+
+> **Non-dashboard contexts:** Always pass `showControls={false} clipContent={false}`
+> when using WidgetCard outside the BentoGrid (e.g. WidgetDrawer previews, Settings).
+
+---
+
+## Motion Tokens
+
+Defined in `:root` of `packages/ui/src/theme.css` (outside `@theme` — not tree-shaken).
+
+| Token | Value | Use |
+|---|---|---|
+| `--motion-micro` | `150ms ease` | Hover highlights, focus rings, icon transitions |
+| `--motion-component` | `300ms cubic-bezier(0.32, 0.72, 0, 1)` | Drawer open/close, panel slide-in, card entrance |
+| `--motion-page` | `200ms ease` | Route transitions, view switches |
+
+All three collapse to `0ms` under `prefers-reduced-motion: reduce`.
+**Never hardcode duration values** — always use `var(--motion-*)` tokens.
+
 ---
 
 ## Database
 
 SQLite via Drizzle + libSQL. Migrations in `packages/db/src/migrations/`.
 Core tables: `users`, `sessions`, `config`, `tabs`, `widget_instances`,
-`credentials`, `license_activation`, `plugin_data`
+`credentials`, `license_activation`, `plugin_data`, `notifications`
+
+Migrations:
+| File | Change |
+|---|---|
+| `0000_initial.sql` | Bootstrap |
+| `0001_spicy_clea.sql` | Core schema: users, sessions, config, tabs, widget_instances, credentials, license_activation |
+| `0002_keen_luminals.sql` | Auth tables |
+| `0003_auth_mode_rename.sql` | Rename authMode `phavo-io` → `local` |
+| `0004_notifications.sql` | Add `notifications` table (DB-persisted, survives restarts) |
 
 Sensitive widget config: AES-256-GCM encrypted in `widget_instances.config_encrypted`.
 Secrets: `credentials` table, keyed by widget instance path.
@@ -199,15 +254,52 @@ Secrets: `credentials` table, keyed by widget instance path.
 | `docs/roadmap.html` | Development roadmap to v1.0 |
 | `docs/design.md` | Celestial Wish Design System (full spec) |
 | `docs/rules.md` | Development rules and anti-patterns |
+| `docs/widget-guide.md` | Widget development guide |
 | `CLAUDE.md` | This file — agent entry point |
+
+### Key Files
+
+| File | Purpose |
+|---|---|
+| `packages/ui/src/theme.css` | All CSS tokens (`@theme` block + motion + utilities) |
+| `packages/ui/src/components/WidgetCard.svelte` | Widget card wrapper (all sizes, states, drag) |
+| `packages/ui/src/components/NotificationPanel.svelte` | Right-side slide-in notification drawer |
+| `packages/ui/src/components/WidgetDrawer.svelte` | Bottom sheet for adding widgets |
+| `packages/ui/src/components/WishStar.svelte` | 4-pointed SVG star (drag handle) |
+| `apps/web/src/lib/stores/notifications.svelte.ts` | Notification store (Svelte 5 Runes) |
+| `apps/web/src/lib/widgets/_widget-template.svelte` | Starting point for new widgets |
+| `apps/web/src/lib/components/settings/` | Settings page components (master-detail) |
+
+---
+
+## Dev Commands
+
+**Stellar tier (default):**
+```bash
+PHAVO_DEV_MOCK_AUTH=true PHAVO_SECRET=dev-secret PHAVO_ENV=development \
+  PHAVO_PORT=3000 PHAVO_DATA_DIR=./apps/web/.dev-data \
+  bun run --cwd apps/web dev -- --host 0.0.0.0
+```
+
+**Celestial tier:**
+```bash
+PHAVO_DEV_MOCK_AUTH=true PHAVO_SECRET=dev-secret PHAVO_ENV=development \
+  PHAVO_PORT=3000 PHAVO_DATA_DIR=./apps/web/.dev-data \
+  PHAVO_DEV_TIER=celestial \
+  bun run --cwd apps/web dev -- --host 0.0.0.0
+```
+
+**Checks:**
+```bash
+bun run typecheck   # Svelte + TypeScript
+bun run lint         # Biome
+```
 
 ---
 
 ## Known Pre-existing Issues (do not fix without context)
 
-1. `lucide-svelte` not installed in `packages/ui` — causes one typecheck warning
-   unrelated to app functionality. Fix: `cd packages/ui && bun add lucide-svelte`
-2. 89 CRLF line-ending warnings from Windows git checkout — known, ignored.
+1. 89 CRLF line-ending warnings from Windows git checkout — known, ignored.
 
 ---
 

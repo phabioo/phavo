@@ -477,7 +477,9 @@ pre {
 │   │   │   │   ├── login/+page.svelte   <span class="cm">← Auth page</span>
 │   │   │   │   └── api/v1/[...path]/+server.ts  <span class="cm">← Hono catch-all</span>
 │   │   │   ├── lib/
-│   │   │   │   ├── stores/              <span class="cm">← Svelte 5 Runes stores</span>
+│   │   │   │   ├── stores/              <span class="cm">← Svelte 5 Runes stores (incl. notifications.svelte.ts)</span>
+│   │   │   │   ├── components/settings/ <span class="cm">← Settings page components (master-detail)</span>
+│   │   │   │   ├── widgets/             <span class="cm">← Widget components + _widget-template.svelte</span>
 │   │   │   │   └── components/          <span class="cm">← Page-level Svelte components</span>
 │   │   │   └── hooks.server.ts          <span class="cm">← DB bootstrap, session pruning</span>
 │   ├── desktop/                <span class="cm">← Tauri stub (v1.1+, inactive)</span>
@@ -492,6 +494,8 @@ pre {
 │   │       ├── Header.svelte
 │   │       ├── BentoGrid.svelte
 │   │       ├── WidgetCard.svelte
+│   │       ├── WidgetDrawer.svelte  <span class="cm">← bottom sheet for adding widgets</span>
+│   │       ├── NotificationPanel.svelte <span class="cm">← right-side 380px slide-in</span>
 │   │       ├── WishStar.svelte  <span class="cm">← decorative 4-pointed star motif</span>
 │   │       └── ...
 │   ├── db/                     <span class="cm">← @phavo/db</span>
@@ -826,7 +830,7 @@ POST /api/v1/auth/totp/verify  { token }  → validates TOTP before completing l
     <thead><tr><th>Column</th><th>Type</th><th>Null</th><th>Notes</th></tr></thead>
     <tbody>
       <tr><td class="pk">id</td><td class="type">text PK</td><td class="nn">NOT NULL</td><td class="note">UUID</td></tr>
-      <tr><td>type</td><td class="type">text</td><td class="nn">NOT NULL</td><td class="note">'update' | 'widget-error' | 'widget-warning' | 'system-alert' | 'info'</td></tr>
+      <tr><td>type</td><td class="type">text</td><td class="nn">NOT NULL</td><td class="note">'update' | 'security' | 'widget-error' | 'widget-warning' | 'task' | 'info'</td></tr>
       <tr><td>title</td><td class="type">text</td><td class="nn">NOT NULL</td><td class="note"></td></tr>
       <tr><td>body</td><td class="type">text</td><td class="nn">NOT NULL</td><td class="note"></td></tr>
       <tr><td>widgetId</td><td class="type">text</td><td>nullable</td><td class="note">Links to widget if applicable</td></tr>
@@ -921,10 +925,10 @@ POST /api/v1/auth/totp/verify  { token }  → validates TOTP before completing l
 <div class="tbl-wrap"><table>
 <thead><tr><th>File</th><th>Change</th></tr></thead>
 <tbody>
-  <tr><td><code>0001_spicy_clea.sql</code></td><td class="note">Initial schema: users, sessions, config, tabs, widgetInstances, credentials, licenseActivation</td></tr>
-  <tr><td><code>0002_keen_luminals.sql</code></td><td class="note">Add notifications table, plugin_data table</td></tr>
-  <tr><td><code>0003_auth_mode_rename.sql</code></td><td class="note">Migrate authMode 'phavo-io' → 'local' in sessions</td></tr>
-  <tr><td><code>0004_tier_rename.sql</code></td><td class="note">Rename tier values: free→stellar, standard→celestial, local→celestial. Remove graceUntil + validatedAt columns from sessions. Drop phavo-net authMode support.</td></tr>
+  <tr><td><code>0001_spicy_clea.sql</code></td><td class="note">Core schema: users, sessions, config, tabs, widgetInstances, credentials, licenseActivation</td></tr>
+  <tr><td><code>0002_keen_luminals.sql</code></td><td class="note">Auth tables</td></tr>
+  <tr><td><code>0003_auth_mode_rename.sql</code></td><td class="note">Rename authMode 'phavo-io' → 'local' in sessions</td></tr>
+  <tr><td><code>0004_notifications.sql</code></td><td class="note">Add notifications table (DB-persisted, survives restarts)</td></tr>
 </tbody>
 </table></div>
 </section>
@@ -1168,7 +1172,7 @@ POST /api/v1/auth/totp/verify  { token }  → validates TOTP before completing l
 
 <span class="cm">// Built-in triggers:</span>
 <span class="cm">// Disk usage &gt;90%         → widget-warning</span>
-<span class="cm">// CPU temp &gt;80°C          → system-alert</span>
+<span class="cm">// CPU temp &gt;80°C          → widget-warning</span>
 <span class="cm">// Pi-hole 3 failed polls  → widget-error</span>
 <span class="cm">// RSS consistently failing→ widget-error</span>
 <span class="cm">// Update available        → update</span></pre>

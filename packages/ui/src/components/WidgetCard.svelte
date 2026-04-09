@@ -47,6 +47,8 @@ interface Props {
   showControls?: boolean;
   /** Whether to apply overflow:hidden on the inner card (disable in drawer to allow nebula bleed). */
   clipContent?: boolean;
+  /** Index for staggered entrance animation delay (multiplied by 40ms). */
+  staggerIndex?: number;
 }
 
 let {
@@ -77,6 +79,7 @@ let {
   glowColor,
   showControls = true,
   clipContent = true,
+  staggerIndex = 0,
 }: Props = $props();
 
 /** Effective status: explicit status prop wins, else derived from loading/error booleans. */
@@ -162,8 +165,10 @@ function isSizeAvailable(s: WidgetSize): boolean {
   class:widget-size-m={size === 'M'}
   class:widget-state-error={effectiveStatus === 'error'}
   class:widget-state-stale={effectiveStatus === 'stale'}
+  class:widget-card-loading={effectiveStatus === 'loading'}
   style:grid-column="span {colSpan}"
   style:grid-row="span {rowSpan}"
+  style:animation-delay="{staggerIndex * 40}ms"
   ondragover={handleCardDragOver}
   ondragleave={handleCardDragLeave}
   ondrop={handleCardDrop}
@@ -304,7 +309,18 @@ function isSizeAvailable(s: WidgetSize): boolean {
     flex-direction: column;
     min-height: 188px;
     box-shadow: var(--shadow-md);
-    transition: transform 0.3s ease;
+    transition: transform var(--motion-micro), box-shadow var(--motion-micro);
+    will-change: transform;
+    animation: widget-enter var(--motion-component) forwards;
+  }
+
+  @keyframes widget-enter {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
   }
 
   .widget-card-outer:hover {
@@ -578,6 +594,16 @@ function isSizeAvailable(s: WidgetSize): boolean {
   .widget-state-stale .widget-card-inner {
     border: 1px solid color-mix(in srgb, var(--color-outline) 15%, transparent);
     opacity: 0.7;
+  }
+
+  /* Loading: subtle pulse */
+  .widget-card-loading .widget-card-inner {
+    animation: widget-pulse 1.5s ease-in-out infinite;
+  }
+
+  @keyframes widget-pulse {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: 0.6; }
   }
 
   /* ── Responsive overrides ────────────────────────────────────────────── */

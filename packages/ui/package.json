@@ -1,6 +1,6 @@
 {
   "name": "@phavo/ui",
-  "version": "1.0.0",
+  "version": "0.8.0",
   "main": "./src/index.ts",
   "exports": {
     ".": {

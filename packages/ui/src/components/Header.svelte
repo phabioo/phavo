@@ -8,6 +8,7 @@ interface Props {
   dashboardName?: string;
   tierLabel?: string;
   weather?: { temp: number; condition: string } | undefined;
+  scrolled?: boolean;
   notificationCount?: number;
   unreadCount?: number;
   systemOnline?: boolean | null;
@@ -25,6 +26,7 @@ interface Props {
 let {
   dashboardName = 'PHAVO',
   tierLabel = 'STELLAR',
+  scrolled = false,
   notificationCount,
   unreadCount = 0,
   systemOnline = null,
@@ -58,7 +60,7 @@ const formattedTime = $derived(
 );
 </script>
 
-<header class="phavo-header">
+<header class={['phavo-header', scrolled && 'phavo-header-scrolled']}>
   <!-- LEFT: Dashboard name -->
   <div class="header-left">
     <span class="header-dashboard-name">{dashboardName}</span>
@@ -121,11 +123,33 @@ const formattedTime = $derived(
     height: 64px;
     padding: 0 var(--space-8);
     gap: var(--space-4);
-    background: color-mix(in srgb, var(--color-surface-dim) 60%, transparent);
-    backdrop-filter: blur(20px);
+    background: transparent;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    box-shadow: none;
     position: sticky;
     top: 0;
     z-index: 40;
+    transition:
+      background var(--motion-component),
+      backdrop-filter var(--motion-component),
+      -webkit-backdrop-filter var(--motion-component),
+      box-shadow var(--motion-component);
+  }
+
+  .phavo-header-scrolled {
+    background: color-mix(in srgb, var(--color-surface-dim) 70%, transparent);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    box-shadow: 0 1px 0 color-mix(in srgb, var(--color-outline-variant) 15%, transparent);
+  }
+
+  @media (max-resolution: 1.5dppx) {
+    .phavo-header-scrolled {
+      background: var(--color-surface);
+      backdrop-filter: none;
+      -webkit-backdrop-filter: none;
+    }
   }
 
   .header-left {
@@ -153,15 +177,15 @@ const formattedTime = $derived(
     justify-self: end;
     display: flex;
     align-items: center;
-    gap: 20px;
+    gap: var(--space-5);
   }
 
   /* ── Info pill: clock · weather ── */
   .header-info-pill {
     display: flex;
     align-items: center;
-    gap: 12px;
-    padding: 6px 16px;
+    gap: var(--space-3);
+    padding: 6px var(--space-4);
     border-radius: var(--radius-full);
     background: color-mix(in srgb, var(--color-surface-highest) 40%, transparent);
     backdrop-filter: blur(20px);
@@ -246,6 +270,11 @@ const formattedTime = $derived(
   .header-action:hover {
     color: var(--color-on-surface);
     background: var(--color-surface-bright);
+  }
+
+  .header-action:focus-visible {
+    outline: 2px solid var(--color-primary-fixed);
+    outline-offset: 2px;
   }
 
   .bell-btn {

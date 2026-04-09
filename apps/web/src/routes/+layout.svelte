@@ -1,7 +1,9 @@
 <script lang="ts">
 import '@phavo/ui/src/theme.css';
 import { onMount, type Snippet } from 'svelte';
+import { fade } from 'svelte/transition';
 import { goto } from '$app/navigation';
+import { page } from '$app/state';
 import { Sidebar, Header, NotificationPanel, Modal, Button, Icon } from '@phavo/ui';
 import type { SearchEntry } from '@phavo/ui';
 import type { DashboardConfig, Notification, Session } from '@phavo/types';
@@ -26,6 +28,7 @@ import {
 } from '$lib/stores/notifications.svelte';
 import {
   createTab,
+  deleteTab,
   getCurrentTabId,
   getIsDrawerOpen,
   getTabs,
@@ -60,6 +63,7 @@ let currentSearch = $state('');
 let tabLimitModalOpen = $state(false);
 let headerWeatherFallback = $state<{ temp: number; condition: string } | undefined>(undefined);
 let systemOnline = $state<boolean | null>(null);
+let headerScrolled = $state(false);
 
 const sidebarItems = [
   { id: 'general', label: 'General', icon: 'settings-2', status: { type: 'active' as const, label: 'Configured' } },
@@ -82,10 +86,10 @@ const isDashboard = $derived(
 const SETTINGS_TAB_IDS = new Set(sidebarItems.map((i) => i.id));
 
 const activeSidebarItem = $derived.by(() => {
-  if (!currentPathname.startsWith('/settings')) return 'home';
-  const params = new URLSearchParams(currentSearch.replace(/^\?/, ''));
-  const tab = params.get('tab') ?? 'general';
-  return SETTINGS_TAB_IDS.has(tab) ? tab : 'general';
+  const path = page.url.pathname;
+  const tab = page.url.searchParams.get('tab');
+  if (!path.startsWith('/settings')) return 'home';
+  return tab && SETTINGS_TAB_IDS.has(tab) ? tab : 'general';
 });
 
 const shellTier = $derived(data.session?.tier ?? 'stellar');
@@ -212,7 +216,7 @@ const COMMAND_SETTINGS_TABS = [
   { id: 'license', label: 'Licence' },
   { id: 'account', label: 'Account' },
   { id: 'plugins', label: 'Plugins' },
-  { id: 'import-export', label: 'Import / Export' },
+  { id: 'import-export', label: 'Backup & Export' },
   { id: 'about', label: 'About' },
 ];
 
@@ -348,6 +352,50 @@ onMount(() => {
   window.addEventListener('popstate', syncLocation);
   window.addEventListener('hashchange', syncLocation);
 
+  let headerScrollObserver: IntersectionObserver | undefined;
+  let headerScrollSentinel: HTMLDivElement | undefined;
+
+  const observeHeaderScroll = () => {
+    const scrollRoot = document.querySelector<HTMLElement>(
+      '.dashboard-grid, .dashboard-content, .page-content, main',
+    );
+    if (!scrollRoot || typeof IntersectionObserver === 'undefined') return;
+
+    headerScrollSentinel = document.createElement('div');
+    headerScrollSentinel.setAttribute('aria-hidden', 'true');
+    Object.assign(headerScrollSentinel.style, {
+      position: 'absolute',
+      top: '0',
+      left: '0',
+      width: '1px',
+      height: '1px',
+      pointerEvents: 'none',
+    });
+
+    if (window.getComputedStyle(scrollRoot).position === 'static') {
+      scrollRoot.style.position = 'relative';
+    }
+
+    scrollRoot.prepend(headerScrollSentinel);
+
+    headerScrollObserver = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0];
+        if (!entry) return;
+        headerScrolled = !entry.isIntersecting;
+      },
+      {
+        root: null,
+        rootMargin: '-64px 0px 0px 0px',
+        threshold: 0,
+      },
+    );
+
+    headerScrollObserver.observe(headerScrollSentinel);
+  };
+
+  observeHeaderScroll();
+
 
   const cleanupEffects = $effect.root(() => {
     $effect(() => {
@@ -400,6 +448,8 @@ onMount(() => {
   });
 
   return () => {
+    headerScrollObserver?.disconnect();
+    headerScrollSentinel?.remove();
     window.history.pushState = originalPushState;
     window.history.replaceState = originalReplaceState;
     window.removeEventListener('popstate', syncLocation);
@@ -445,14 +495,16 @@ function handleNotificationClick(n: Notification) {
       onsettingsnav={(tab) => navigateToSettings(tab)}
       onTabSelect={(tabId) => void handleDashboardTabSelect(tabId)}
       onNewTab={() => void handleSidebarNewTab()}
+      ondeletepage={(id) => void deleteTab(id)}
       ontoggle={() => (sidebarCollapsed = !sidebarCollapsed)}
       onnavigate={navigate}
     />
     <main class="main-content" class:sidebar-collapsed={sidebarCollapsed}>
       <Header
-        dashboardName={data.dashboardName ?? 'PHAVO'}
+        dashboardName={getConfig().dashboardName ?? data.dashboardName ?? 'PHAVO'}
         tierLabel={shellTierLabel}
         weather={headerWeather}
+        scrolled={headerScrolled}
         unreadCount={getUnreadCount()}
         {systemOnline}
         onBellClick={() => {
@@ -470,7 +522,11 @@ function handleNotificationClick(n: Notification) {
         tier={shellTier}
         onAiChat={handleAiChat}
       />
-      {@render children()}
+      {#key currentPathname}
+        <div class="page-content" in:fade={{ duration: 150, delay: 50 }} out:fade={{ duration: 100 }}>
+          {@render children()}
+        </div>
+      {/key}
     </main>
     <NotificationPanel
       open={getPanelOpen()}
@@ -524,10 +580,17 @@ function handleNotificationClick(n: Notification) {
     width: 100%;
     padding-left: var(--shell-sidebar-offset);
     box-sizing: border-box;
-    transition: padding-left 0.3s ease;
+    transition: padding-left var(--motion-component);
     position: relative;
     z-index: 10;
     background: transparent;
+  }
+
+  .page-content {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
   }
 
   .main-content.sidebar-collapsed {

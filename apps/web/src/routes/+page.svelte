@@ -45,6 +45,7 @@ import {
   setDrawerOpen,
   swapWidgets,
   updateInstance,
+  updateTab,
 } from '$lib/stores/widgets.svelte';
 import CalendarWidget from '$lib/widgets/CalendarWidget.svelte';
 import CpuWidget from '$lib/widgets/CpuWidget.svelte';
@@ -71,6 +72,8 @@ type LinksMetrics = {
 let telemetryOpen = $state(false);
 let gridDragOver = $state(false);
 let isDrawerDragging = $state(false);
+let editingPageName = $state(false);
+let editingName = $state('');
 
 const config = $derived(getConfig());
 const session = $derived(getSession());
@@ -209,6 +212,18 @@ const activePage = $derived(getTabs().find((tab) => tab.id === getCurrentTabId()
 
 const isHomePage = $derived(activePage?.order === 0);
 
+function startEditingPageName() {
+  editingName = activePage?.label ?? '';
+  editingPageName = true;
+}
+
+async function savePageName() {
+  editingPageName = false;
+  const trimmed = editingName.trim();
+  if (!trimmed || !activePage || trimmed === activePage.label) return;
+  await updateTab(activePage.id, { label: trimmed });
+}
+
 onMount(() => {
   return $effect.root(() => {
     $effect(() => {
@@ -248,7 +263,26 @@ onMount(() => {
         </button>
       </div>
     {:else}
-      <p class="page-label">{(activePage?.label ?? '').toUpperCase()}</p>
+      <div class="welcome-section">
+        <div class="welcome-copy">
+          <div class="page-title-row">
+            {#if editingPageName}
+              <input
+                class="page-name-input"
+                bind:value={editingName}
+                onblur={savePageName}
+                onkeydown={(e) => e.key === 'Enter' && savePageName()}
+                autofocus
+              />
+            {:else}
+              <h1 class="welcome-heading">{activePage?.label ?? ''}</h1>
+              <button class="page-edit-btn" onclick={() => startEditingPageName()}>
+                <Icon name="pencil" size={14} />
+              </button>
+            {/if}
+          </div>
+        </div>
+      </div>
     {/if}
 
     {#if sortedInstances.length === 0}
@@ -260,15 +294,11 @@ onMount(() => {
           <h2>Build your dashboard</h2>
           <p>Add a widget to start shaping this page.</p>
         </div>
-        <span class="empty-action">
-          <Icon name="plus" size={15} />
-          <span>{en.dashboard.addWidget}</span>
-        </span>
       </button>
     {:else}
       <section class="dashboard-stage">
         <BentoGrid class="dashboard-grid" gap="1.75rem">
-          {#each sortedInstances as instance (instance.id)}
+          {#each sortedInstances as instance, i (instance.id)}
             {@const def = getDef(instance.widgetId)}
             {@const state = getWidgetState(instance.id)}
             {@const data = getWidgetData(instance.widgetId)}
@@ -292,6 +322,7 @@ onMount(() => {
                 draggable={true}
                 starField={instance.widgetId === 'cpu'}
                 glowColor="gold"
+                staggerIndex={i}
                 onSizeChange={(size) => handleSizeChange(instance.id, size)}
                 onSwapDrop={(draggedId) => handleSwapDrop(instance.id, draggedId)}
                 onRemove={handleWidgetRemove}
@@ -630,12 +661,42 @@ onMount(() => {
     border-color: color-mix(in srgb, var(--color-primary) 32%, transparent);
   }
 
-  .page-label {
-    font-family: var(--font-mono);
-    font-size: var(--font-size-xs);
-    letter-spacing: 0.1em;
+  .page-title-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+  }
+
+  .page-edit-btn {
+    opacity: 0;
+    background: none;
+    border: none;
     color: var(--color-outline);
-    margin: 0 0 var(--space-4);
+    cursor: pointer;
+    padding: var(--space-1);
+    border-radius: var(--radius-sm);
+    transition: opacity 0.15s, color 0.15s;
+  }
+
+  .page-title-row:hover .page-edit-btn {
+    opacity: 1;
+  }
+
+  .page-edit-btn:hover {
+    color: var(--color-primary-fixed);
+  }
+
+  .page-name-input {
+    font-size: var(--font-size-3xl);
+    font-weight: 300;
+    letter-spacing: -0.02em;
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid var(--color-primary-fixed);
+    color: var(--color-on-surface);
+    outline: none;
+    padding: 0 var(--space-2);
+    font-family: var(--font-ui);
   }
 
   .dashboard-stage {
@@ -650,9 +711,9 @@ onMount(() => {
     gap: var(--space-6);
     width: 100%;
     padding: var(--space-8);
-    border: 1px solid var(--color-border-subtle);
+    border: 1px solid color-mix(in srgb, var(--color-outline-variant) 15%, transparent);
     border-radius: 28px;
-    background: color-mix(in srgb, var(--color-bg-elevated) 92%, transparent);
+    background: color-mix(in srgb, var(--color-surface-card) 92%, transparent);
     box-shadow: var(--shadow-md);
     cursor: pointer;
     font: inherit;
@@ -666,14 +727,14 @@ onMount(() => {
 
   .dashboard-empty:hover,
   .dashboard-empty:focus-visible {
-    border-color: color-mix(in srgb, var(--color-accent) 28%, var(--color-border-subtle));
+    border-color: color-mix(in srgb, var(--color-primary-fixed) 28%, transparent);
     background:
       radial-gradient(
         ellipse 78% 90% at 0% 0%,
-        color-mix(in srgb, var(--color-accent-t) 20%, transparent),
+        color-mix(in srgb, var(--color-primary-fixed) 8%, transparent),
         transparent 78%
       ),
-      color-mix(in srgb, var(--color-bg-elevated) 96%, transparent);
+      color-mix(in srgb, var(--color-surface-card) 96%, transparent);
     box-shadow: 0 24px 52px color-mix(in srgb, var(--color-surface-dim) 28%, transparent);
     transform: translateY(-1px);
   }
@@ -690,8 +751,8 @@ onMount(() => {
     align-items: center;
     justify-content: center;
     border-radius: 999px;
-    background: var(--color-accent-t);
-    color: var(--color-accent-text);
+    background: color-mix(in srgb, var(--color-primary-fixed) 12%, transparent);
+    color: var(--color-primary-fixed);
     flex-shrink: 0;
   }
 
@@ -707,42 +768,12 @@ onMount(() => {
     font-weight: 700;
     letter-spacing: -0.02em;
     margin: 0;
+    color: var(--color-on-surface);
   }
 
   .empty-copy p {
-    color: var(--color-text-secondary);
+    color: var(--color-on-surface-variant);
     margin: 0;
-  }
-
-  .empty-action {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: var(--space-2);
-    margin-left: auto;
-    min-height: 40px;
-    padding: 0 var(--space-4);
-    border-radius: 999px;
-    border: 1px solid color-mix(in srgb, var(--color-accent) 28%, var(--color-border-subtle));
-    background: color-mix(in srgb, var(--color-bg-base) 72%, transparent);
-    color: var(--color-accent-text);
-    font-size: 0.78rem;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    white-space: nowrap;
-    flex-shrink: 0;
-    transition:
-      border-color 0.18s ease,
-      background 0.18s ease,
-      transform 0.18s ease;
-  }
-
-  .dashboard-empty:hover .empty-action,
-  .dashboard-empty:focus-visible .empty-action {
-    border-color: color-mix(in srgb, var(--color-accent) 40%, var(--color-border-subtle));
-    background: color-mix(in srgb, var(--color-accent-t) 92%, transparent);
-    transform: translateY(-1px);
   }
 
   .tray-live-render {
@@ -886,7 +917,7 @@ onMount(() => {
     padding: 12px 32px;
     border-radius: 9999px;
     background: var(--color-surface-highest);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    border: 1px solid color-mix(in srgb, var(--color-outline-variant) 15%, transparent);
     font-family: var(--font-mono);
     font-size: 11px;
     font-weight: 700;

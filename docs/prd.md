@@ -2,7 +2,7 @@
 
 **Version:** 4.0
 **Date:** 2026-04-07
-**Status:** Active — M4 Graphic Polish in progress · Pre-Launch
+**Status:** Active — MA Design & Experience in progress · Pre-Launch
 **Owner:** getphavo
 
 **Changelog v4.0:** Complete product model revision. Tiers simplified to Stellar (free)
@@ -228,6 +228,25 @@ not lose progress. If `setupComplete = false`, redirect to `/setup` at last step
 - Docker Compose: optional one-click update if Docker socket is accessible (opt-in)
 - Accessible at any time via Settings → About
 
+#### Settings Pages
+
+Master-detail layout: Sidebar (280px) = navigation cards, detail panel = full-width content.
+
+**Tabs:**
+- **General** — Dashboard name, weather location, display preferences
+- **Widgets** — Per-widget configuration, size selection, data endpoint status
+- **Backup & Export** — .phavo export/import, credential inclusion toggle
+- **Licence** — Celestial key activation/deactivation, tier status, Gumroad link
+- **Account** — Username, password change, TOTP 2FA setup
+- **Plugins** — Installed plugin list, .phwidget upload
+- **About** — Version info, update check, system health
+
+**Visual architecture:**
+- Two-column card grid (`.settings-cards-grid`) for detail content
+- Hero/status card (`.settings-hero-card`) with gold background accent
+- Form card (`.settings-form-card`) for configuration inputs
+- Input fields: `--color-surface-dim` background, teal focus ring (`--color-secondary`)
+
 #### Widget System
 
 Auto-discovered from the backend registry. The manifest drives the setup flow,
@@ -291,14 +310,15 @@ DB-persisted (not in-memory — survives restarts).
 | Type | Source | Example |
 |---|---|---|
 | `update` | Phavo core | "Phavo v1.2.0 is available" |
+| `security` | Phavo core | "Brute-force attempt detected" |
 | `widget-error` | Any widget | "Pi-hole unreachable" |
 | `widget-warning` | Any widget | "Disk at 91% capacity" |
-| `system-alert` | @phavo/agent | "CPU temperature above 80°C" |
+| `task` | Phavo core | "Backup completed" |
 | `info` | Phavo core | "Setup completed successfully" |
 
 **Built-in triggers:**
 - Disk usage >90% on any mount → `widget-warning`
-- CPU temperature >80°C → `system-alert`
+- CPU temperature >80°C → `widget-warning`
 - Pi-hole unreachable after 3 failed polls → `widget-error`
 - RSS feed consistently failing → `widget-error`
 - Update available → `update`
@@ -694,10 +714,10 @@ Dev env only — not available in production builds.
 - [x] Hetzner Mail — MX + SPF + DKIM in Cloudflare
 - [x] GitHub Org — `getphavo/phavo`
 - [x] Version management — release scripts + Docker CI working
-- [ ] M1–M6 milestones complete
+- [ ] MA–MC milestones complete
 - [ ] `bun run release:minor` → v1.0.0 → Docker CI → `getphavo/phavo:1.0.0`
 - [ ] Pi 4/5 arm64 smoke test — fresh docker compose up, all 14 widgets
-- [ ] phavo.net landing page live (hero screenshot from M4)
+- [ ] phavo.net landing page live (hero screenshot from MA)
 - [ ] Gumroad product live — Celestial €16.99 launch price, 14-day refund visible
 - [ ] Public demo instance on phavo.net
 - [ ] Launch channels: r/selfhosted, r/homelab, Product Hunt, Hacker News Show HN

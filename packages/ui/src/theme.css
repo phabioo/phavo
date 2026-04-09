@@ -115,6 +115,21 @@
   --shadow-float: 0 8px 40px color-mix(in srgb, var(--color-surface-tint) 6%, transparent);
 }
 
+/* ── Motion tokens ─────────────────────────────────── */
+:root {
+  --motion-micro:     150ms ease;
+  --motion-component: 300ms cubic-bezier(0.32, 0.72, 0, 1);
+  --motion-page:      200ms ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --motion-micro:     0ms;
+    --motion-component: 0ms;
+    --motion-page:      0ms;
+  }
+}
+
 /* ── Force-emit tokens not picked up by Tailwind @theme tree-shaking ── */
 /* These variables are used via var() in Svelte scoped styles, which     */
 /* are outside Tailwind's content scan. Defining them here guarantees    */
@@ -305,6 +320,20 @@ html, body {
   flex-direction: column;
   gap: var(--space-4);
   overflow-y: auto;
+  overflow-x: visible;
+  padding: var(--space-6);
+}
+
+.settings-cards-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-4);
+  position: relative;
+  z-index: 0;
+}
+
+.settings-card-full {
+  grid-column: 1;
 }
 
 /* ── Master panel: item cards ────────────────────────────────────────── */
@@ -329,6 +358,11 @@ html, body {
 .settings-item-active {
   background: var(--color-surface-high);
   border-color: color-mix(in srgb, var(--color-primary-fixed) 30%, transparent);
+}
+
+.settings-item:focus-visible {
+  outline: 2px solid var(--color-primary-fixed);
+  outline-offset: 2px;
 }
 
 .settings-item-icon {
@@ -410,6 +444,8 @@ html, body {
   flex-direction: column;
   gap: var(--space-4);
   border: 1px solid color-mix(in srgb, var(--color-outline-variant) 10%, transparent);
+  position: relative;
+  z-index: 1;
 }
 
 .settings-card-label {
@@ -418,13 +454,6 @@ html, body {
   text-transform: uppercase;
   letter-spacing: 0.15em;
   color: var(--color-outline);
-}
-
-.settings-preview-content {
-  border-radius: 1.5rem;
-  background: color-mix(in srgb, var(--color-surface-dim) 60%, transparent);
-  padding: var(--space-5);
-  flex: 1;
 }
 
 /* ── Detail panel: hero / status card (gold accent) ──────────────────── */
@@ -437,6 +466,15 @@ html, body {
   gap: var(--space-2);
   position: relative;
   overflow: hidden;
+  transition:
+    transform var(--motion-micro),
+    box-shadow var(--motion-micro);
+}
+
+.settings-hero-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px color-mix(in srgb,
+    var(--color-surface-dim) 60%, transparent);
 }
 
 .settings-hero-card::after {
@@ -489,6 +527,10 @@ html, body {
 }
 
 .settings-hero-btn:hover { opacity: 0.85; }
+.settings-hero-btn:focus-visible {
+  outline: 2px solid var(--color-on-primary-fixed);
+  outline-offset: 2px;
+}
 
 /* ── Detail panel: configuration form card ───────────────────────────── */
 .settings-form-card {
@@ -499,6 +541,14 @@ html, body {
   display: flex;
   flex-direction: column;
   gap: var(--space-6);
+  overflow: visible;
+  position: relative;
+  z-index: 1;
+}
+
+/* Card containing an open/focused control floats above sibling cards */
+.settings-form-card:focus-within {
+  z-index: 10;
 }
 
 .settings-form-title {
@@ -517,6 +567,12 @@ html, body {
   color: var(--color-on-surface-variant);
   display: block;
   margin-bottom: var(--space-2);
+}
+
+.settings-field-error {
+  font-size: 11px;
+  color: var(--color-error);
+  margin-top: var(--space-1);
 }
 
 .settings-field-wrap {
@@ -550,6 +606,11 @@ html, body {
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-secondary) 15%, transparent);
 }
 
+.settings-input:focus-visible {
+  outline: 2px solid var(--color-secondary);
+  outline-offset: 2px;
+}
+
 .settings-select {
   width: 100%;
   background: var(--color-surface-dim);
@@ -568,6 +629,25 @@ html, body {
 .settings-select:focus {
   border-color: var(--color-secondary);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-secondary) 15%, transparent);
+}
+
+.settings-select:focus-visible {
+  outline: 2px solid var(--color-secondary);
+  outline-offset: 2px;
+}
+
+.settings-input:hover,
+.settings-select:hover {
+  border-color: color-mix(in srgb, var(--color-outline-variant) 40%, transparent);
+  background: color-mix(in srgb, var(--color-surface-high) 60%, transparent);
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.phavo-input:hover,
+.phavo-select-trigger:hover {
+  border-color: color-mix(in srgb, var(--color-outline-variant) 45%, transparent);
+  background: color-mix(in srgb, var(--color-surface-high) 60%, transparent);
+  transition: border-color 0.15s, background 0.15s;
 }
 
 /* ── Form actions row ────────────────────────────────────────────────── */
@@ -593,6 +673,14 @@ html, body {
   padding: var(--space-2);
 }
 .settings-btn-danger:hover { color: var(--color-error); }
+.settings-btn-danger:focus-visible {
+  outline: 2px solid var(--color-error);
+  outline-offset: 2px;
+}
+.settings-btn-danger:disabled {
+  opacity: 0.4;
+  pointer-events: none;
+}
 
 .settings-btn-ghost {
   padding: var(--space-3) var(--space-5);
@@ -603,11 +691,22 @@ html, body {
   font-size: 13px;
   font-weight: 700;
   cursor: pointer;
-  transition: background 0.15s, color 0.15s;
+  transition: background var(--motion-micro), color var(--motion-micro);
 }
 .settings-btn-ghost:hover {
   background: color-mix(in srgb, var(--color-surface-high) 60%, transparent);
   color: var(--color-on-surface);
+}
+.settings-btn-ghost:active {
+  transform: scale(0.97);
+}
+.settings-btn-ghost:focus-visible {
+  outline: 2px solid var(--color-primary-fixed);
+  outline-offset: 2px;
+}
+.settings-btn-ghost:disabled {
+  opacity: 0.4;
+  pointer-events: none;
 }
 
 .settings-btn-primary {
@@ -621,7 +720,7 @@ html, body {
   outline: 0 !important;
   outline-offset: 0;
   cursor: pointer;
-  transition: opacity 0.15s, transform 0.15s;
+  transition: opacity var(--motion-micro), transform var(--motion-micro);
   box-shadow: none;
 }
 .settings-btn-primary:hover {
@@ -633,10 +732,16 @@ html, body {
 .settings-btn-primary:focus,
 .settings-btn-primary:active {
   outline: 0 !important;
+  transform: scale(0.97);
+  transition: transform 80ms ease;
 }
 .settings-btn-primary:focus-visible {
   outline: 2px solid var(--color-primary-fixed) !important;
   outline-offset: 2px;
+}
+.settings-btn-primary:disabled {
+  opacity: 0.4;
+  pointer-events: none;
 }
 
 /* ── Help card ───────────────────────────────────────────────────────── */
@@ -648,6 +753,27 @@ html, body {
   display: flex;
   align-items: center;
   gap: var(--space-4);
+  position: relative;
+  z-index: 1;
+}
+
+.settings-form-card,
+.settings-preview-card,
+.settings-help-card {
+  transition:
+    transform var(--motion-micro),
+    box-shadow var(--motion-micro),
+    border-color var(--motion-micro);
+}
+
+.settings-form-card:hover,
+.settings-preview-card:hover,
+.settings-help-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px color-mix(in srgb,
+    var(--color-surface-dim) 60%, transparent);
+  border-color: color-mix(in srgb,
+    var(--color-outline-variant) 20%, transparent);
 }
 
 .settings-help-icon {
@@ -690,6 +816,33 @@ html, body {
   flex-shrink: 0;
 }
 .settings-help-link:hover { text-decoration: underline; }
+
+/* ── Toggle pill ─────────────────────────────────────────────────────── */
+.settings-toggle-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-full);
+  background: color-mix(in srgb, var(--color-surface-high) 60%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-outline-variant) 20%, transparent);
+  color: var(--color-on-surface-variant);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.settings-toggle-pill-active {
+  background: color-mix(in srgb, var(--color-secondary) 12%, transparent);
+  border-color: color-mix(in srgb, var(--color-secondary) 30%, transparent);
+  color: var(--color-secondary);
+}
+
+.settings-toggle-pill:focus-visible {
+  outline: 2px solid var(--color-primary-fixed);
+  outline-offset: 2px;
+}
 
 /* ── Responsive fallback ─────────────────────────────────────────────── */
 @media (max-width: 768px) {

@@ -284,6 +284,11 @@
     outline: none;
   }
 
+  .tab-input:focus-visible {
+    outline: 2px solid var(--color-primary-fixed);
+    outline-offset: 2px;
+  }
+
   .tab-add {
     color: var(--color-outline);
     padding: var(--space-1) var(--space-2);

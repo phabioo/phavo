@@ -134,8 +134,8 @@ body{font-family:var(--font-ui);background:var(--bg);color:var(--text);font-size
 
 <div class="progress-bar">
   <span class="progress-label">Overall progress</span>
-  <div class="progress-track"><div class="progress-fill" style="width:55%"></div></div>
-  <span class="progress-label"><b>~55%</b> to v1.0 &nbsp;·&nbsp; S0–S9 + Audit + Infra complete &nbsp;·&nbsp; MA–MC remaining</span>
+  <div class="progress-track"><div class="progress-fill" style="width:65%"></div></div>
+  <span class="progress-label">~65% to v1.0 &nbsp;·&nbsp; MA ~75% done &nbsp;·&nbsp; MB + MC remaining</span>
 </div>
 
 <div class="main">
@@ -283,12 +283,12 @@ body{font-family:var(--font-ui);background:var(--bg);color:var(--text);font-size
   <div class="session-body">
   <div class="callout gold" style="margin-bottom:12px">Design milestone. All visual work must be complete before MB begins. MA produces the hero screenshot — the primary marketing asset.</div>
   <div class="tasks">
-    <div class="task"><div class="task-icon">⬜</div><div class="task-text">L-size differentiation for Network, Disk, Uptime, Temperature widgets — meaningful content beyond M size</div><span class="task-tag tag-ui">ui</span></div>
-    <div class="task"><div class="task-icon">⬜</div><div class="task-text">WidgetCard active state — explicit visual treatment (pulsing border or subtle glow)</div><span class="task-tag tag-design">design</span></div>
-    <div class="task"><div class="task-icon">⬜</div><div class="task-text">DB-persisted notifications — add <code>notifications</code> table migration; replace in-memory queue that clears on restart</div><span class="task-tag tag-db">db</span></div>
-    <div class="task"><div class="task-icon">⬜</div><div class="task-text">Notification panel (right-side slide-in) — Celestial Wish surface, filter tabs, bell badge</div><span class="task-tag tag-ui">ui</span></div>
-    <div class="task"><div class="task-icon">⬜</div><div class="task-text">Notification categories: update, widget-error, widget-warning, system-alert, info</div><span class="task-tag tag-ux">ux</span></div>
-    <div class="task"><div class="task-icon">⬜</div><div class="task-text">Mark-read / clear-all / deep-link to widget</div><span class="task-tag tag-ux">ux</span></div>
+    <div class="task task-done"><div class="task-icon">✅</div><div class="task-text">L-size differentiation for Network, Disk, Uptime, Temperature widgets — meaningful content beyond M size</div><span class="task-tag tag-ui">ui</span></div>
+    <div class="task task-done"><div class="task-icon">✅</div><div class="task-text">WidgetCard active state — explicit visual treatment (pulsing border or subtle glow)</div><span class="task-tag tag-design">design</span></div>
+    <div class="task task-done"><div class="task-icon">✅</div><div class="task-text">DB-persisted notifications — add <code>notifications</code> table migration (0004); replace in-memory queue that clears on restart</div><span class="task-tag tag-db">db</span></div>
+    <div class="task task-done"><div class="task-icon">✅</div><div class="task-text">Notification panel (right-side slide-in) — Celestial Wish surface, filter tabs, bell badge</div><span class="task-tag tag-ui">ui</span></div>
+    <div class="task task-done"><div class="task-icon">✅</div><div class="task-text">Notification categories: update, security, widget-error, widget-warning, task, info</div><span class="task-tag tag-ux">ux</span></div>
+    <div class="task task-done"><div class="task-icon">✅</div><div class="task-text">Mark-read / clear-all / deep-link to widget</div><span class="task-tag tag-ux">ux</span></div>
     <div class="task"><div class="task-icon">⬜</div><div class="task-text">Final visual consistency pass — every component checked against <code>docs/design.md</code></div><span class="task-tag tag-design">design</span></div>
     <div class="task"><div class="task-icon">⬜</div><div class="task-text">BentoGrid — fix any remaining snap/layout edge cases</div><span class="task-tag tag-ux">ux</span></div>
     <div class="task"><div class="task-icon">⬜</div><div class="task-text">Header glassmorphism on scroll (IntersectionObserver, Pi fallback)</div><span class="task-tag tag-design">design</span></div>
@@ -305,13 +305,13 @@ body{font-family:var(--font-ui);background:var(--bg);color:var(--text);font-size
   <div class="session-body">
   <div class="callout" style="margin-bottom:12px">Backend milestone. Activates the Celestial tier commercially. All API work, license flow, and database migrations live here.</div>
   <div class="tasks">
-    <div class="task"><div class="task-icon">⬜</div><div class="task-text">DB migration 0004 — rename tier values: <code>free→stellar</code>, <code>standard→celestial</code>, <code>local→celestial</code>; remove legacy columns</div><span class="task-tag tag-db">db</span></div>
+    <div class="task"><div class="task-icon">⬜</div><div class="task-text">DB migration 0005 — rename tier values: <code>free→stellar</code>, <code>standard→celestial</code>, <code>local→celestial</code>; remove legacy columns</div><span class="task-tag tag-db">db</span></div>
     <div class="task"><div class="task-icon">⬜</div><div class="task-text">Update Drizzle schema — sessions.tier enum: <code>'stellar' | 'celestial'</code>; remove phavo-net authMode</div><span class="task-tag tag-db">db</span></div>
     <div class="task"><div class="task-icon">⬜</div><div class="task-text">Register Docker widget — wire <code>GET /api/v1/integrations/docker</code> handler (container list, CPU/RAM, restart)</div><span class="task-tag tag-api">api</span></div>
     <div class="task"><div class="task-icon">⬜</div><div class="task-text">Register Service Health widget — wire <code>GET /api/v1/integrations/service-health</code> handler</div><span class="task-tag tag-api">api</span></div>
     <div class="task"><div class="task-icon">⬜</div><div class="task-text">Register Speedtest widget — wire <code>POST /api/v1/integrations/speedtest</code>; rate-limit 1/5min; 30-result history</div><span class="task-tag tag-api">api</span></div>
     <div class="task"><div class="task-icon">⬜</div><div class="task-text">Register Calendar widget — wire CalDAV handler; credentials in credentials table</div><span class="task-tag tag-api">api</span></div>
-    <div class="task"><div class="task-icon">⬜</div><div class="task-text">DB migration 0005 — add <code>plugin_data</code> table (required for Speedtest history)</div><span class="task-tag tag-db">db</span></div>
+    <div class="task"><div class="task-icon">⬜</div><div class="task-text">DB migration 0006 — add <code>plugin_data</code> table (required for Speedtest history)</div><span class="task-tag tag-db">db</span></div>
     <div class="task"><div class="task-icon">⬜</div><div class="task-text">Ed25519 key generation — private key in GitHub Actions Secrets; two public keys embedded in binary</div><span class="task-tag tag-security">security</span></div>
     <div class="task"><div class="task-icon">⬜</div><div class="task-text"><code>POST /api/v1/license/activate</code> — offline Ed25519 verification, no network call</div><span class="task-tag tag-api">api</span></div>
     <div class="task"><div class="task-icon">⬜</div><div class="task-text"><code>POST /api/v1/license/deactivate</code></div><span class="task-tag tag-api">api</span></div>
@@ -351,7 +351,7 @@ body{font-family:var(--font-ui);background:var(--bg);color:var(--text);font-size
   <div class="launch-item done">GitHub Org — getphavo/phavo</div>
   <div class="launch-item done">Version management — release scripts + Docker CI working</div>
   <div class="launch-item">MA–MC milestones complete</div>
-  <div class="launch-item"><code>bun run release:minor</code> → v1.0.0 → Docker CI → getphavo/phavo:1.0.0 on Docker Hub</div>
+  <div class="launch-item"><code>bun run release:minor</code> → v0.8.0 → Docker CI → getphavo/phavo:0.8.0 on Docker Hub</div>
   <div class="launch-item">Raspberry Pi 4/5 arm64 smoke test — fresh docker compose up, all 14 widgets, full setup</div>
   <div class="launch-item">phavo.net landing page live — hero screenshot, Stellar/Celestial pricing</div>
   <div class="launch-item">Gumroad product live — Celestial €16.99 launch price, 14-day refund visible</div>

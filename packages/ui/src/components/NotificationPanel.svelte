@@ -161,7 +161,7 @@
     flex-direction: column;
     padding: var(--space-8);
     transform: translateX(100%);
-    transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+    transition: transform var(--motion-component);
   }
 
   .notif-panel-open {
@@ -209,7 +209,7 @@
     background: none;
     border: none;
     cursor: pointer;
-    transition: color 0.15s;
+    transition: color var(--motion-micro);
   }
 
   .notif-clear-btn:hover {
@@ -250,10 +250,29 @@
     border-radius: 1.5rem;
     background: color-mix(in srgb, var(--color-surface-high) 60%, transparent);
     border: 1px solid color-mix(in srgb, var(--color-outline-variant) 8%, transparent);
-    transition: background 0.15s;
+    transition: background var(--motion-micro);
     height: auto;
     overflow: visible;
+    animation: notif-card-enter var(--motion-component) both;
   }
+
+  @keyframes notif-card-enter {
+    from {
+      opacity: 0;
+      transform: translateX(12px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  /* Stagger each card */
+  .notif-card:nth-child(1) { animation-delay: 50ms; }
+  .notif-card:nth-child(2) { animation-delay: 100ms; }
+  .notif-card:nth-child(3) { animation-delay: 150ms; }
+  .notif-card:nth-child(4) { animation-delay: 200ms; }
+  .notif-card:nth-child(5) { animation-delay: 250ms; }
 
   .notif-card:hover {
     background: var(--color-surface-high);
@@ -387,11 +406,15 @@
     text-transform: uppercase;
     border: none;
     cursor: pointer;
-    transition: opacity 0.15s;
+    transition: opacity var(--motion-micro);
   }
 
   .notif-action-btn:hover {
     opacity: 0.9;
+  }
+
+  .notif-action-btn:active {
+    transform: scale(0.97);
   }
 
   /* Dismiss */
@@ -410,7 +433,7 @@
     align-items: center;
     justify-content: center;
     opacity: 0;
-    transition: opacity 0.15s, background 0.15s;
+    transition: opacity var(--motion-micro), background var(--motion-micro);
   }
 
   .notif-card:hover .notif-dismiss {
@@ -446,7 +469,7 @@
     letter-spacing: 0.1em;
     text-transform: uppercase;
     cursor: pointer;
-    transition: background 0.15s, color 0.15s;
+    transition: background var(--motion-micro), color var(--motion-micro);
   }
 
   .notif-mute-btn:hover {

@@ -429,13 +429,14 @@
       <div class="widgets-detail-top">
         <div class="settings-preview-card">
           <span class="settings-card-label">LIVE PREVIEW</span>
-          <div class="settings-preview-content">
             <div class="wt-preview-scale">
               <WidgetCard
                 title={widget.def.name}
                 size={widget.def.defaultSize.w >= 6 ? 'L' : 'M'}
                 loading={previewLoading}
                 error={widget.status === 'unconfigured' ? null : previewError || null}
+                showControls={false}
+                draggable={false}
               >
                 {#if widget.status === 'unconfigured'}
                   <div class="wt-preview-empty">Configure this widget to see a live preview.</div>
@@ -464,7 +465,6 @@
                 {/if}
               </WidgetCard>
             </div>
-          </div>
         </div>
 
         <div class="settings-hero-card">
@@ -602,6 +602,10 @@
     transform: scale(0.8);
     transform-origin: top left;
     width: 125%;
+  }
+
+  .wt-preview-scale :global(.widget-controls) {
+    display: none !important;
   }
 
   .wt-preview-empty,

@@ -510,6 +510,11 @@
     background: var(--color-surface-high);
   }
 
+  .drawer-filter-btn:focus-visible {
+    outline: 2px solid var(--color-primary-fixed);
+    outline-offset: 2px;
+  }
+
   .drawer-content {
     flex: 1;
     overflow-y: auto;

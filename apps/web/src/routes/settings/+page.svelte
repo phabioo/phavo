@@ -2,6 +2,7 @@
 import { goto } from '$app/navigation';
 import { page } from '$app/state';
 import { onMount } from 'svelte';
+import { fade } from 'svelte/transition';
   import { Badge, Icon, Input, Select, Tooltip } from '@phavo/ui';
 import en from '$lib/i18n/en.json';
 import ImportExportTab from '$lib/components/settings/ImportExportTab.svelte';
@@ -114,9 +115,6 @@ const sessionTimeoutOptions = [
 
 const DOCS_URL = 'https://docs.phavo.net';
 const GITHUB_URL = 'https://github.com/getphavo/phavo';
-const DISCORD_URL = 'https://discord.gg/phavo';
-const PHAVO_ACCOUNT_URL = 'https://phavo.net/account';
-const PHAVO_LICENSE_URL = 'https://phavo.net/account/license';
 
 const validTabs = new Set<TabId>(['general', 'widgets', 'import-export', 'license', 'account', 'plugins', 'about']);
 const activeTab = $derived.by(() => {
@@ -137,7 +135,7 @@ let geoTimer: ReturnType<typeof setTimeout> | null = null;
 
 let sessionTimeout = $state<'1d' | '7d' | '30d' | 'never'>('7d');
 let sessionInfo = $state<SessionInfo>(null);
-let aboutInfo = $state<AboutInfo>({ version: '1.0.0', tier: 'stellar', licenseKeyMasked: null });
+let aboutInfo = $state<AboutInfo>({ version: '0.8.0', tier: 'stellar', licenseKeyMasked: null });
 let updateInfo = $state<UpdateInfo | null>(null);
 let checkingUpdates = $state(false);
 let applying = $state(false);
@@ -161,7 +159,7 @@ let ollamaUrl = $state('');
 let ollamaModel = $state('');
 let openaiKey = $state('');
 let anthropicKey = $state('');
-let ollamaTestResult = $state<'idle' | 'testing' | 'ok' | 'fail'>('idle');
+let ollamaTestResult = $state<'idle' | 'testing' | 'ok' | 'fail' | 'empty'>('idle');
 let aiSettingsLoaded = $state(false);
 
 let aiInitial = $state({
@@ -381,7 +379,11 @@ async function saveAiSettings() {
 }
 
 async function testOllamaConnection() {
-  if (!ollamaUrl.trim()) return;
+  if (!ollamaUrl.trim()) {
+    ollamaTestResult = 'empty';
+    setTimeout(() => (ollamaTestResult = 'idle'), 3000);
+    return;
+  }
   ollamaTestResult = 'testing';
   try {
     let tagUrl: URL;
@@ -667,8 +669,11 @@ function formatReleaseDate(iso: string): string {
     <div class="settings-alert settings-alert-danger">{loadError}</div>
   {/if}
 
+  {#key activeTab}
+  <div class="settings-tab-content" in:fade={{ duration: 150 }}>
   {#if activeTab === 'general'}
-    <div class="settings-hero-card">
+    <div class="settings-cards-grid">
+    <div class="settings-hero-card settings-card-full">
       <span class="settings-card-label">DASHBOARD</span>
       <h2 class="settings-hero-value">{dashboardName || 'My Dashboard'}</h2>
       <p class="settings-hero-sub">{locationName || 'No location set'}</p>
@@ -732,8 +737,8 @@ function formatReleaseDate(iso: string): string {
           <label class="settings-field-label">Ollama URL</label>
           <div class="settings-inline-action">
             <Input placeholder="http://localhost:11434" bind:value={ollamaUrl} />
-            <button class="settings-btn-ghost" type="button" onclick={testOllamaConnection} disabled={!ollamaUrl.trim() || ollamaTestResult === 'testing'}>
-              {ollamaTestResult === 'testing' ? 'Testing…' : ollamaTestResult === 'ok' ? '✓ OK' : ollamaTestResult === 'fail' ? '✗ Fail' : 'Test'}
+            <button class="settings-btn-ghost" type="button" onclick={testOllamaConnection} disabled={ollamaTestResult === 'testing'}>
+              {ollamaTestResult === 'testing' ? 'Testing…' : ollamaTestResult === 'ok' ? '✓ OK' : ollamaTestResult === 'fail' ? '✗ Fail' : ollamaTestResult === 'empty' ? '✗ Enter URL' : 'Test'}
             </button>
           </div>
         </div>
@@ -744,10 +749,16 @@ function formatReleaseDate(iso: string): string {
         <div>
           <label class="settings-field-label">OpenAI API Key</label>
           <Input type="password" placeholder="sk-…" bind:value={openaiKey} />
+          {#if openaiKey && !openaiKey.startsWith('sk-')}
+            <p class="settings-field-error">Key should start with sk-</p>
+          {/if}
         </div>
         <div>
           <label class="settings-field-label">Anthropic API Key</label>
           <Input type="password" placeholder="sk-ant-…" bind:value={anthropicKey} />
+          {#if anthropicKey && !anthropicKey.startsWith('sk-ant-')}
+            <p class="settings-field-error">Key should start with sk-ant-</p>
+          {/if}
         </div>
       </div>
     </div>
@@ -758,6 +769,7 @@ function formatReleaseDate(iso: string): string {
         Re-open guided setup to rebuild the onboarding baseline.
       </p>
       <button class="settings-btn-ghost" type="button" onclick={reRunSetup}>Re-run Setup</button>
+    </div>
     </div>
 
     {#if tabErrors.general}
@@ -780,23 +792,16 @@ function formatReleaseDate(iso: string): string {
   {:else if activeTab === 'license'}
     <LicenceTab
       tier={sessionInfo?.tier ?? aboutInfo.tier}
-      authMode={sessionInfo?.authMode ?? null}
       licenseKeyMasked={aboutInfo.licenseKeyMasked}
-      manageUrl={PHAVO_LICENSE_URL}
     />
 
   {:else if activeTab === 'account'}
-    <div class="settings-hero-card">
+    <div class="settings-cards-grid">
+    <div class="settings-hero-card settings-card-full">
       <span class="settings-card-label">ACCOUNT</span>
-      <h2 class="settings-hero-value">
-        {#if sessionInfo}
-          {sessionInfo.authMode === 'phavo-net' ? 'phavo.net' : 'Local'}
-        {:else}
-          —
-        {/if}
-      </h2>
+      <h2 class="settings-hero-value">Local</h2>
       <p class="settings-hero-sub">
-        {sessionInfo?.email ?? 'Local authentication mode'}
+        Local authentication mode
       </p>
     </div>
 
@@ -805,17 +810,7 @@ function formatReleaseDate(iso: string): string {
       <div class="settings-meta-grid">
         <div class="settings-meta-item">
           <span class="settings-field-label">Auth Mode</span>
-          <span class="settings-meta-value">
-            {#if sessionInfo}
-              {sessionInfo.authMode === 'phavo-net' ? 'phavo.net' : 'Local'}
-            {:else}
-              —
-            {/if}
-          </span>
-        </div>
-        <div class="settings-meta-item">
-          <span class="settings-field-label">Email</span>
-          <span class="settings-meta-value">{sessionInfo?.email ?? '—'}</span>
+          <span class="settings-meta-value">Local</span>
         </div>
         <div class="settings-meta-item">
           <span class="settings-field-label">Tier</span>
@@ -826,17 +821,11 @@ function formatReleaseDate(iso: string): string {
           </div>
         </div>
       </div>
-
-      {#if sessionInfo?.authMode === 'phavo-net'}
-        <a class="settings-help-link" href={PHAVO_ACCOUNT_URL} target="_blank" rel="noreferrer">
-          Manage account on phavo.net
-        </a>
-      {/if}
     </div>
 
     {#if canChangePassword}
       <div class="settings-form-card">
-        <h3 class="settings-form-title">Local Password</h3>
+        <h3 class="settings-form-title">Password</h3>
         <div class="settings-form-fields">
           <div>
             <label class="settings-field-label">New Password</label>
@@ -884,6 +873,7 @@ function formatReleaseDate(iso: string): string {
         <button class="settings-btn-ghost" type="button" onclick={signOutAllSessions}>Sign out all sessions</button>
       </div>
     </div>
+    </div>
 
     {#if tabErrors.account}
       <div class="settings-alert settings-alert-danger">{tabErrors.account}</div>
@@ -897,77 +887,85 @@ function formatReleaseDate(iso: string): string {
     </div>
 
   {:else if activeTab === 'plugins'}
-    <div class="settings-hero-card">
+    <div class="settings-cards-grid">
+    <div class="settings-hero-card settings-card-full">
       <span class="settings-card-label">PLUGIN PIPELINE</span>
       <h2 class="settings-hero-value">Coming Soon</h2>
-      <p class="settings-hero-sub">Plugin support arrives in v1.1</p>
+      <p class="settings-hero-sub">Plugin support is coming in a future release.</p>
     </div>
 
     <div class="settings-form-card">
       <h3 class="settings-form-title">Plugin Upload</h3>
       <p class="settings-hero-sub" style="color: var(--color-on-surface-variant);">
-        Upload <code class="settings-code">.phwidget</code> or <code class="settings-code">.phtheme</code> files to install plugins.
+        Upload <code class="settings-code">.phwidget</code> files to install plugins.
       </p>
       <div class="settings-dropzone">
         <Icon name="upload" size={32} />
         <p class="settings-dropzone-text">Drag & drop plugin files here</p>
-        <p class="settings-dropzone-hint">Plugin support coming in v1.1</p>
+        <p class="settings-dropzone-hint">Plugin support coming in a future release</p>
       </div>
+    </div>
     </div>
 
   {:else if activeTab === 'about'}
+    <div class="settings-cards-grid">
     <div class="settings-hero-card">
       <span class="settings-card-label">VERSION</span>
       <h2 class="settings-hero-value">v{aboutInfo.version}</h2>
       <p class="settings-hero-sub">
         {aboutInfo.tier === 'celestial' ? 'Celestial Edition' : 'Stellar Edition'}
       </p>
-      <button class="settings-hero-btn" type="button" onclick={checkForUpdates} disabled={checkingUpdates}>
+    </div>
+
+    <div class="settings-form-card">
+      <span class="settings-card-label">UPDATES</span>
+      {#if updateInfo !== null && !updateInfo.updateAvailable}
+        <div class="settings-update-ok-row">
+          <Icon name="check" size={16} />
+          <span>Up to date</span>
+        </div>
+      {:else if updateInfo !== null && updateInfo.updateAvailable}
+        <h3 class="settings-form-title">Update Available</h3>
+        <p class="settings-meta-value">{en.settings.updateBanner.replace('{version}', updateInfo.latestVersion)}</p>
+        {#if updateInfo.publishedAt}
+          <p class="settings-field-hint">Released {formatReleaseDate(updateInfo.publishedAt)}</p>
+        {/if}
+      {:else}
+        <p class="settings-hero-sub" style="color: var(--color-on-surface-variant);">
+          Check for the latest version.
+        </p>
+      {/if}
+      <button class="settings-btn-ghost" type="button" style="display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2);" onclick={checkForUpdates} disabled={checkingUpdates}>
         <Icon name="refresh-cw" size={14} />
         {checkingUpdates ? 'Checking…' : 'Check Updates'}
       </button>
     </div>
 
-    {#if updateInfo !== null}
-      {#if updateInfo.updateAvailable}
-        <div class="settings-form-card">
-          <h3 class="settings-form-title">Update Available</h3>
-          <p class="settings-meta-value">{en.settings.updateBanner.replace('{version}', updateInfo.latestVersion)}</p>
-          {#if updateInfo.publishedAt}
-            <p class="settings-field-hint">Released {formatReleaseDate(updateInfo.publishedAt)}</p>
-          {/if}
-
-          {#if updateInfo.changelog}
-            <div class="settings-changelog">
-              {@html renderMarkdown(updateInfo.changelog)}
-            </div>
-          {/if}
-
-          {#if applyResult?.started}
-            <p class="settings-update-ok">{en.settings.updateStarted}</p>
-          {:else if applyResult && !applyResult.started}
-            <p class="settings-field-hint">{en.settings.updateRunManually}</p>
-            <div class="settings-cmd-row">
-              <code class="settings-code settings-code-block">{updateInfo.updateCommand}</code>
-              <button class="settings-btn-ghost" type="button" onclick={copyUpdateCommand}>
-                {cmdCopied ? 'Copied' : 'Copy'}
-              </button>
-            </div>
-          {:else}
-            <div class="settings-actions-row">
-              <button class="settings-btn-primary" type="button" onclick={applyUpdate} disabled={applying}>{en.settings.updateNow}</button>
-              <button class="settings-btn-ghost" type="button" onclick={copyUpdateCommand}>{cmdCopied ? 'Copied' : 'Copy command'}</button>
-            </div>
-          {/if}
-        </div>
-      {:else}
-        <div class="settings-form-card">
-          <div class="settings-update-ok-row">
-            <Icon name="check" size={16} />
-            <span>Up to date</span>
+    {#if updateInfo !== null && updateInfo.updateAvailable}
+      <div class="settings-form-card settings-card-full">
+        {#if updateInfo.changelog}
+          <div class="settings-changelog">
+            {@html renderMarkdown(updateInfo.changelog)}
           </div>
-        </div>
-      {/if}
+        {/if}
+
+        {#if applyResult?.started}
+          <p class="settings-update-ok">{en.settings.updateStarted}</p>
+        {:else if applyResult && !applyResult.started}
+          <p class="settings-field-hint">{en.settings.updateRunManually}</p>
+          <div class="settings-cmd-row">
+            <code class="settings-code settings-code-block">{updateInfo.updateCommand}</code>
+            <button class="settings-btn-ghost" type="button" onclick={copyUpdateCommand}>
+              {cmdCopied ? 'Copied' : 'Copy'}
+            </button>
+          </div>
+        {:else}
+          <div class="settings-actions-row">
+            <button class="settings-btn-primary" type="button" onclick={applyUpdate} disabled={applying}>{en.settings.updateNow}</button>
+            <button class="settings-btn-ghost" type="button" onclick={copyUpdateCommand}>{cmdCopied ? 'Copied' : 'Copy command'}</button>
+          </div>
+        {/if}
+      </div>
     {/if}
 
     <div class="settings-help-card">
@@ -991,22 +989,14 @@ function formatReleaseDate(iso: string): string {
       </div>
       <a class="settings-help-link" href={GITHUB_URL} target="_blank" rel="noreferrer">Open</a>
     </div>
-
-    <div class="settings-help-card">
-      <div class="settings-help-icon">
-        <Icon name="message-circle" size={20} />
-      </div>
-      <div class="settings-help-text">
-        <span class="settings-help-title">Discord</span>
-        <p class="settings-help-description">Community support and chat</p>
-      </div>
-      <a class="settings-help-link" href={DISCORD_URL} target="_blank" rel="noreferrer">Open</a>
     </div>
 
     {#if tabErrors.about}
       <div class="settings-alert settings-alert-danger">{tabErrors.about}</div>
     {/if}
   {/if}
+  </div>
+  {/key}
 </SettingsLayout>
 
 <style>

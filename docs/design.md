@@ -351,3 +351,88 @@ Must NOT conflict with the card's `background` (use `background-image` only).
 9. Ambient glows: always present in layout, fixed positioned, z:0
 10. `svelte.config.js` must never have `compilerOptions: { runes: true }`
 11. Tier identifiers in code: `stellar` / `celestial` only
+
+---
+
+## 9. Motion System
+
+Defined in `:root` of `packages/ui/src/theme.css` (outside `@theme` — not tree-shaken).
+
+| Token | Value | Use |
+|---|---|---|
+| `--motion-micro` | `150ms ease` | Hover highlights, focus rings, icon transitions |
+| `--motion-component` | `300ms cubic-bezier(0.32, 0.72, 0, 1)` | Drawer open/close, panel slide-in, card entrance |
+| `--motion-page` | `200ms ease` | Route transitions, view switches |
+
+All three collapse to `0ms` under `prefers-reduced-motion: reduce`.
+**Never hardcode duration values** — always use `var(--motion-*)` tokens.
+
+### Animation Conventions
+
+- **Entrance stagger:** WidgetCard `staggerIndex * 60ms` delay for sequential card pop-in.
+- **Hover scale:** Cards use `transform: scale(1.02)` with `transition: transform var(--motion-component)`.
+- **Panel transitions:** NotificationPanel and WidgetDrawer slide with `var(--motion-component)`.
+- **Focus transitions:** Input focus rings animate with `var(--motion-micro)`.
+
+---
+
+## 10. Gold vs Teal Usage Rules
+
+| Color | Role | Used for | Examples |
+|---|---|---|---|
+| **Gold** (`--color-primary-fixed`) | Editorial | Hero stat numbers, wordmark, CTA buttons, active calendar date, category labels, WishStar | `72%` hero stat, `PHAVO` wordmark, upgrade CTA |
+| **Teal** (`--color-secondary`) | Data visualization | Charts, progress bars, sparklines, donut fills, focus rings, active nav indicator | Disk usage bar, swap donut, network chart, input focus |
+| **Purple** (`--color-tertiary`) | Decorative / ambient | Nebula glows, gradient accents, ambient cosmic glow | Background glow, card gradient accent |
+
+**Rule:** Hero stat numbers are always gold. Charts and progress fills are always teal. Never mix.
+
+---
+
+## 11. Component Patterns
+
+### WidgetCard Two-Layer Architecture
+
+WidgetCard uses an outer wrapper (handles grid placement, stagger animation) and
+an inner wrapper (handles background, border-radius, padding, clip, hover scale).
+The inner layer clips content; the outer layer allows glow bleed.
+
+Props: `size`, `colSpan`, `rowSpan`, `glowColor`, `showControls`, `clipContent`,
+`staggerIndex`, `draggable`, `availableSizes`, `loading`, `error`.
+
+**Non-dashboard contexts:** Always pass `showControls={false} clipContent={false}`
+when using WidgetCard outside the BentoGrid (e.g. WidgetDrawer previews, Settings).
+
+### Sidebar Card Navigation
+
+Sidebar uses card-based nav items with `--color-surface-card` background.
+Expanded mode (240px) shows text labels; collapsed mode (64px) shows icon-only with tooltips.
+
+Callbacks: `onsettingsnav` (navigate to settings tab), `ondeletepage` (remove a page).
+Status dots on top-level items indicate widget/integration health.
+
+### Settings Master-Detail Layout
+
+Settings uses a two-column layout: 280px master panel + full-width detail panel.
+
+**CSS classes:**
+- `.settings-shell` — grid container (`280px 1fr`)
+- `.settings-master` — left nav panel with `.settings-item` cards
+- `.settings-detail` — right content area
+- `.settings-cards-grid` — two-column card grid for detail content
+- `.settings-hero-card` — gold background accent card (status/overview)
+- `.settings-form-card` — dark card for configuration forms
+- `.settings-preview-card` — dark glass card for widget previews
+- `.settings-card-full` — full-width card in the grid (`grid-column: 1`)
+
+**Input fields:** `--color-surface-dim` background, teal focus ring
+(`--color-secondary` border + 3px box-shadow).
+
+### NotificationPanel
+
+Right-side 380px slide-in panel. Type-colored icon badges:
+- Gold: `update` notifications
+- Red: `security` and `widget-error`
+- Teal: `task` notifications
+- Grey: `info` notifications
+
+Supports muted state and deep-link to the source widget.

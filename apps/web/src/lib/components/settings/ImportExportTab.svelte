@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Button, Icon, Input, Switch } from '@phavo/ui';
+  import { Button, Icon, Input } from '@phavo/ui';
   import en from '$lib/i18n/en.json';
   import { fetchWithCsrf } from '$lib/utils/api';
 
@@ -219,10 +219,10 @@
   }
 </script>
 
-<div class="ie-layout">
-  <div class="settings-hero-card">
+<div class="settings-cards-grid">
+  <div class="settings-hero-card settings-card-full">
     <span class="settings-card-label">BACKUP</span>
-    <h2 class="settings-hero-value">Export & Import</h2>
+    <h2 class="settings-hero-value">Backup & Export</h2>
     <p class="settings-hero-sub">Create portable backups and restore configurations</p>
   </div>
 
@@ -231,7 +231,15 @@
     <p class="ie-description">{en.settings.exportDescription}</p>
 
     <div class="ie-toggle-row">
-      <Switch bind:checked={includeCredentials} label={en.settings.includeCredentials} />
+      <button
+        class="settings-toggle-pill"
+        class:settings-toggle-pill-active={includeCredentials}
+        type="button"
+        onclick={() => (includeCredentials = !includeCredentials)}
+      >
+        <Icon name={includeCredentials ? 'check' : 'x'} size={12} />
+        {en.settings.includeCredentials}
+      </button>
     </div>
 
     {#if includeCredentials}
@@ -351,11 +359,7 @@
 </div>
 
 <style>
-  .ie-layout {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-4);
-  }
+  /* ie-layout replaced by settings-cards-grid from theme.css */
 
   .ie-description {
     font-size: 13px;

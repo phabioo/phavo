@@ -122,7 +122,7 @@
 
   .cpu-bar {
     flex: 1;
-    background: var(--color-primary-fixed);
+    background: var(--color-secondary);
     border-radius: 9999px;
   }
 

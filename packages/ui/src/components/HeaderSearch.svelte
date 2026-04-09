@@ -437,9 +437,8 @@
     border-radius: var(--radius-full);
     background: color-mix(in srgb, var(--color-surface-bright) 70%, transparent);
     backdrop-filter: blur(20px);
-    overflow: visible;
     transition:
-      border-radius 0.1s ease,
+      border-radius 0.15s ease,
       border-color 0.15s ease;
   }
 
@@ -448,7 +447,7 @@
   }
 
   .hs-container.open {
-    border-radius: 1.5rem 1.5rem 0 0;
+    border-radius: 1.25rem 1.25rem 0 0;
     border-bottom-color: transparent;
   }
 
@@ -498,7 +497,7 @@
     justify-content: center;
     min-height: 24px;
     padding: 0 var(--space-2);
-    border-radius: 999px;
+    border-radius: var(--radius-full);
     border: 1px solid color-mix(in srgb, var(--color-outline-variant) 10%, transparent);
     background: color-mix(in srgb, var(--color-surface-dim) 76%, transparent);
     color: var(--color-outline);
@@ -517,7 +516,7 @@
     height: 24px;
     flex-shrink: 0;
     border: none;
-    border-radius: 999px;
+    border-radius: var(--radius-full);
     background: transparent;
     color: var(--color-outline);
     cursor: pointer;
@@ -534,6 +533,7 @@
     top: 100%;
     left: -1px;
     right: -1px;
+    margin-top: -2px;
     display: flex;
     flex-direction: column;
     gap: 2px;
@@ -542,12 +542,11 @@
     pointer-events: none;
     overflow: hidden;
     padding: 0 var(--space-3);
-    background: color-mix(in srgb, var(--color-surface-bright) 70%, transparent);
-    backdrop-filter: blur(20px);
     border: 1px solid color-mix(in srgb, var(--color-outline-variant) 20%, transparent);
     border-top: none;
-    border-radius: 0 0 1.5rem 1.5rem;
-    box-shadow: 0 18px 34px color-mix(in srgb, var(--color-surface-dim) 38%, transparent);
+    border-radius: 0 0 1.25rem 1.25rem;
+    background: color-mix(in srgb, var(--color-surface-bright) 70%, transparent);
+    backdrop-filter: blur(20px);
     z-index: 50;
     scrollbar-width: thin;
     transition:
@@ -631,7 +630,7 @@
     width: 30px;
     height: 30px;
     flex-shrink: 0;
-    border-radius: 10px;
+    border-radius: var(--radius-md);
     background: color-mix(in srgb, var(--color-surface-dim) 52%, transparent);
     color: var(--color-primary);
   }
@@ -662,7 +661,7 @@
     justify-content: center;
     min-height: 30px;
     padding: 0 var(--space-3);
-    border-radius: 999px;
+    border-radius: var(--radius-full);
     border: 1px solid color-mix(in srgb, var(--color-primary) 24%, transparent);
     background: color-mix(in srgb, var(--color-surface-dim) 64%, transparent);
     color: var(--color-primary);
@@ -722,7 +721,7 @@
   .hs-ai-dot {
     width: 6px;
     height: 6px;
-    border-radius: 999px;
+    border-radius: var(--radius-full);
     background: var(--color-primary);
     animation: hs-pulse 1.2s ease-in-out infinite;
   }

@@ -42,21 +42,33 @@ inner wrapper level.
 
 Every widget is rendered inside `<WidgetCard>` from `@phavo/ui`.
 WidgetCard handles: background, border-radius, hover scale, drag handle
-(WishStar), S/M/L/XL resize controls, all 5 widget states.
+(WishStar), S/M/L resize controls, all 5 widget states.
 
-| Prop | Type | Description |
-|---|---|---|
-| `instanceId` | `string` | Required. The widget instance ID from the store. |
-| `size` | `WidgetSize` | `'S' \| 'M' \| 'L' \| 'XL'` |
-| `availableSizes` | `WidgetSize[]` | Which sizes this widget supports. |
-| `glowColor` | `'gold' \| 'teal'` | Always `'gold'` — sets `--widget-glow` CSS variable. |
-| `loading` | `boolean` | Shows skeleton state. |
-| `error` | `string \| null` | Shows error state with message. |
-| `draggable` | `boolean` | Enables WishStar drag handle. |
-| `onSizeChange` | `(size) => void` | Called when user clicks a resize button. |
-| `onRemove` | `(id) => void` | Called when user removes the widget. |
-| `onSwapDrop` | `(id) => void` | Called when another widget is dropped on this one. |
-| `children` | `Snippet` | The widget content rendered inside the card. |
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `instanceId` | `string` | — | Required. The widget instance ID from the store. |
+| `size` | `WidgetSize` | — | `'S' \| 'M' \| 'L' \| 'XL'` |
+| `colSpan` | `number` | from size | Grid column span |
+| `rowSpan` | `number` | from size | Grid row span |
+| `availableSizes` | `WidgetSize[]` | — | Which sizes this widget supports. |
+| `glowColor` | `'gold' \| 'teal'` | `'gold'` | Sets `--widget-glow` CSS variable. |
+| `showControls` | `boolean` | `true` | Resize/remove buttons. Set `false` in Drawer & Settings. |
+| `clipContent` | `boolean` | `true` | Clips overflow. Set `false` in Drawer for glow bleed. |
+| `staggerIndex` | `number` | — | Entrance animation delay: `staggerIndex * 60ms`. |
+| `loading` | `boolean` | `false` | Shows skeleton state. |
+| `error` | `string \| null` | `null` | Shows error state with message. |
+| `draggable` | `boolean` | `false` | Enables WishStar drag handle. |
+| `onSizeChange` | `(size) => void` | — | Called when user clicks a resize button. |
+| `onRemove` | `(id) => void` | — | Called when user removes the widget. |
+| `onSwapDrop` | `(id) => void` | — | Called when another widget is dropped on this one. |
+| `children` | `Snippet` | — | The widget content rendered inside the card. |
+
+**`staggerIndex` usage:** When rendering multiple widgets in the BentoGrid,
+pass `staggerIndex={i}` (loop index) for sequential card pop-in animation.
+Each card delays by `staggerIndex * 60ms`.
+
+**Non-dashboard contexts:** Always pass `showControls={false} clipContent={false}`
+when using WidgetCard outside the BentoGrid (e.g. WidgetDrawer previews, Settings).
 
 **In +page.svelte, always pass:**
 ```svelte
@@ -95,23 +107,36 @@ interface Props {
 
 Use exclusive `{#if}/{:else if}/{:else}` blocks. Never CSS display:none.
 
+> **Note:** XL exists in the `WidgetSize` type but is intentionally inactive —
+> no widget currently registers it. Only implement S/M/L branches.
+
 ```svelte
 {#if size === 'S'}
   <!-- Compact: category label + single stat only -->
 {:else if size === 'M'}
   <!-- Standard: header + hero stat + one secondary element -->
-{:else if size === 'L'}
-  <!-- Extended: header + hero stat + chart or list -->
 {:else}
-  <!-- XL: full data story — same as L plus more detail -->
+  <!-- L: Extended — header + hero stat + chart or list -->
 {/if}
 ```
 
 Each branch is completely self-contained. No shared markup between branches.
 
-### Widget header (M/L/XL only)
+### L-size differentiation
 
-All M/L/XL branches must start with a header:
+L-size must have **meaningful content beyond M** — not just the same content in more space.
+Examples of correct L-size differentiation:
+
+| Widget | M-size | L-size (added content) |
+|---|---|---|
+| Network | Speed stat + single bar | Speed stat + bandwidth bars (upload/download) |
+| Disk | Usage % + single progress | Usage % + per-mount breakdown list |
+| Uptime | Single value + label | 4-column unit breakdown (days/hours/min/sec) |
+| Temperature | CPU temp value | CPU temp + per-sensor list |
+
+### Widget header (M/L only)
+
+All M/L branches must start with a header:
 
 ```svelte
 <div class="widget-header">
@@ -126,7 +151,7 @@ All M/L/XL branches must start with a header:
 Category label is always ALL CAPS. It describes the data type, not the
 widget name (e.g., "PROCESSOR UNIT", not "CPU Widget").
 
-### Hero stat (M/L/XL)
+### Hero stat (M/L)
 
 The primary value always gets `hero-glow` and gold color:
 
@@ -138,7 +163,7 @@ The primary value always gets `hero-glow` and gold color:
 
 ```css
 .your-hero-class {
-  font-size: 72px;         /* M/L/XL: 72px. XL can go larger. */
+  font-size: 72px;         /* M/L: 72px */
   font-weight: 700;
   color: var(--color-primary-fixed);   /* always gold */
   letter-spacing: -0.03em;
@@ -364,13 +389,17 @@ A widget is complete when ALL of these are true:
 
 - [ ] `bun run typecheck` exits 0
 - [ ] `bun run lint` exits 0
-- [ ] S/M/L/XL branches use `{#if}/{:else if}/{:else}` — no CSS display:none
+- [ ] S/M/L branches use `{#if}/{:else if}/{:else}` — no CSS display:none
 - [ ] S branch shows only: category label + stat with `hero-glow`
-- [ ] M/L/XL branches have `.widget-header` with category label + `<Icon>`
+- [ ] M/L branches have `.widget-header` with category label + `<Icon>`
+- [ ] L-size has meaningful content differentiation from M (chart, list, or breakdown)
 - [ ] Hero numbers use `color: var(--color-primary-fixed)` + `hero-glow` class
 - [ ] Data visualizations use `color: var(--color-secondary)` (teal)
 - [ ] No `overflow: hidden` on widget root or layout wrappers
 - [ ] Zero hardcoded hex/rgb/rgba values
 - [ ] No legacy Svelte patterns (`export let`, `$:`, `writable()`)
 - [ ] Registry entry added with correct `tier` ('stellar' or 'celestial')
+- [ ] No XL in `availableSizes` array (reserved, inactive)
 - [ ] Registered in `+page.svelte` widget render switch
+
+**Widget template:** `apps/web/src/lib/widgets/_widget-template.svelte`

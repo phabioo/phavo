@@ -208,8 +208,8 @@
     text-transform: uppercase;
     color: var(--color-secondary);
     background: color-mix(in srgb, var(--color-secondary) 10%, transparent);
-    padding: 4px 8px;
-    border-radius: 4px;
+    padding: var(--space-1) var(--space-2);
+    border-radius: var(--radius-sm);
   }
 
   /* ── L-size layout ──────────────────────────────────────────────────── */

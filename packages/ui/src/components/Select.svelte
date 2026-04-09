@@ -51,7 +51,7 @@ function handleBackdropClick() {
 }
 </script>
 
-<div class="relative flex flex-col gap-1">
+<div class="flex flex-col gap-1" style={open ? 'position: relative; z-index: 100;' : 'position: relative;'}>
   {#if label}
     <span class="text-xs text-text-muted uppercase tracking-widest mb-1">{label}</span>
   {/if}
@@ -60,8 +60,8 @@ function handleBackdropClick() {
     bind:this={triggerEl}
     id={selectId}
     type="button"
-    class="flex items-center justify-between bg-elevated border border-border rounded-md px-3 py-2 text-sm font-mono text-text outline-none transition-colors
-      hover:border-border-strong focus:border-accent focus:ring-1 focus:ring-accent/30 cursor-pointer"
+    class="phavo-select-trigger flex items-center justify-between bg-surface-card border border-border rounded-md px-3 py-2 text-sm font-mono text-text outline-none transition-colors
+      hover:bg-surface-high hover:border-outline-variant/40 focus:border-accent focus:ring-1 focus:ring-accent/30 cursor-pointer"
     aria-haspopup="listbox"
     aria-expanded={open}
     onclick={toggle}
@@ -73,9 +73,9 @@ function handleBackdropClick() {
 
   {#if open}
     <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
-    <div class="fixed inset-0 z-40" onclick={handleBackdropClick} aria-hidden="true"></div>
+    <div class="fixed inset-0 z-[90]" onclick={handleBackdropClick} aria-hidden="true"></div>
     <ul
-      class="absolute top-full left-0 right-0 mt-1 bg-elevated border border-border rounded-md shadow-lg z-50 py-1 max-h-60 overflow-auto"
+      class="absolute top-full left-0 right-0 mt-1 bg-elevated border border-border rounded-md shadow-lg z-[100] py-1 max-h-60 overflow-auto"
       role="listbox"
       aria-labelledby={selectId}
     >
