@@ -1,9 +1,9 @@
 <script lang="ts">
 import { onMount } from 'svelte';
+import { page } from '$app/state';
 import {
   type CalendarMetrics,
   type CpuMetrics,
-  type DashboardConfig,
   type DiskMetrics,
   type DockerMetrics,
   isWidgetDefinition,
@@ -44,7 +44,6 @@ import {
   retryWidget,
   setDrawerOpen,
   swapWidgets,
-  updateTab,
   updateInstance,
 } from '$lib/stores/widgets.svelte';
 import CalendarWidget from '$lib/widgets/CalendarWidget.svelte';
@@ -72,21 +71,14 @@ type LinksMetrics = {
 let telemetryOpen = $state(false);
 let gridDragOver = $state(false);
 let isDrawerDragging = $state(false);
-let heroEditor = $state<'title' | 'subtitle' | null>(null);
-let heroTitleDraft = $state('');
-let heroSubtitleDraft = $state('');
-let heroError = $state('');
-let heroSaving = $state<'title' | 'subtitle' | null>(null);
 
 const config = $derived(getConfig());
 const session = $derived(getSession());
 
 const sessionTierLabel = $derived(
-  session?.tier === 'local'
-    ? 'Local Edition'
-    : session?.tier === 'standard'
-      ? 'Standard Edition'
-      : 'Free Edition',
+  session?.tier === 'celestial'
+    ? 'CELESTIAL'
+    : 'STELLAR',
 );
 
 async function handleTelemetryChoice(enabled: boolean) {
@@ -104,11 +96,15 @@ function getDef(widgetId: string): WidgetDefinition | undefined {
   return entry && isWidgetDefinition(entry) ? entry : undefined;
 }
 
-function colSpanFor(widgetId: string, size: WidgetSize): number {
-  if (widgetId === 'cpu') return 8;
-  if (size === 'XL') return 12;
-  if (size === 'L') return 8;
-  return 4;
+const COL_SPAN_MAP: Record<WidgetSize, number> = { S: 3, M: 4, L: 6, XL: 8 };
+const ROW_SPAN_MAP: Record<WidgetSize, number> = { S: 1, M: 2, L: 2, XL: 3 };
+
+function colSpanFor(size: WidgetSize): number {
+  return COL_SPAN_MAP[size] ?? 4;
+}
+
+function rowSpanFor(size: WidgetSize): number {
+  return ROW_SPAN_MAP[size] ?? 2;
 }
 
 const widgetHeadings: Record<string, { title: string; subtitle: string; icon: string }> = {
@@ -205,82 +201,13 @@ const sortedInstances = $derived(
   ),
 );
 
+const deviceName = $derived(
+  ((page.data as Record<string, unknown>).hostname as string | undefined) ?? '',
+);
+
 const activePage = $derived(getTabs().find((tab) => tab.id === getCurrentTabId()) ?? getTabs()[0]);
 
-const dashboardSubtitle = $derived(
-  config.dashboardSubtitle?.trim() || 'System overview & performance',
-);
-
-const configuredWidgetCount = $derived(
-  sortedInstances.filter((instance) => getWidgetState(instance.id) !== 'unconfigured').length,
-);
-
-function openHeroEditor(field: 'title' | 'subtitle') {
-  heroError = '';
-  heroEditor = field;
-
-  if (field === 'title') {
-    heroTitleDraft = activePage?.label ?? 'Home';
-    return;
-  }
-
-  heroSubtitleDraft = dashboardSubtitle;
-}
-
-function closeHeroEditor() {
-  heroEditor = null;
-  heroError = '';
-  heroSaving = null;
-}
-
-async function saveHeroTitle() {
-  if (!activePage) {
-    closeHeroEditor();
-    return;
-  }
-
-  const nextTitle = heroTitleDraft.trim() || 'Home';
-  heroSaving = 'title';
-  heroError = '';
-
-  const result = await updateTab(activePage.id, { label: nextTitle });
-  if (!result.ok) {
-    heroError = result.error ?? 'Unable to rename page';
-    heroSaving = null;
-    return;
-  }
-
-  closeHeroEditor();
-}
-
-async function saveHeroSubtitle() {
-  const nextSubtitle = heroSubtitleDraft.trim() || 'System overview & performance';
-  heroSaving = 'subtitle';
-  heroError = '';
-
-  try {
-    const response = await fetchWithCsrf('/api/v1/config', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ dashboardSubtitle: nextSubtitle }),
-    });
-    const payload = (await response.json()) as {
-      ok: boolean;
-      data?: DashboardConfig;
-      error?: string;
-    };
-
-    if (!payload.ok || !payload.data) {
-      throw new Error(payload.error ?? 'Unable to update page subtitle');
-    }
-
-    updateConfig(payload.data);
-    closeHeroEditor();
-  } catch (error) {
-    heroError = error instanceof Error ? error.message : 'Unable to update page subtitle';
-    heroSaving = null;
-  }
-}
+const isHomePage = $derived(activePage?.order === 0);
 
 onMount(() => {
   return $effect.root(() => {
@@ -288,7 +215,7 @@ onMount(() => {
       if (
         config.setupComplete &&
         !config.telemetryAsked &&
-        session?.tier !== 'local'
+        session?.tier !== 'celestial'
       ) {
         telemetryOpen = true;
       }
@@ -307,103 +234,22 @@ onMount(() => {
   ondrop={handleGridDrop}
 >
   <div class="grid-shell">
-    <section class="dashboard-hero">
-      <div class="hero-copy">
-        {#if heroEditor === 'title'}
-          <form
-            class="hero-editor"
-            onsubmit={(event) => {
-              event.preventDefault();
-              void saveHeroTitle();
-            }}
-          >
-            <label class="hero-label" for="dashboard-page-title">Page name</label>
-            <input
-              id="dashboard-page-title"
-              class="hero-input hero-input-title"
-              bind:value={heroTitleDraft}
-              maxlength="100"
-              autofocus
-            />
-            <div class="hero-editor-actions">
-              <Button
-                variant="secondary"
-                size="sm"
-                type="button"
-                disabled={heroSaving === 'title'}
-                onclick={closeHeroEditor}
-              >
-                Cancel
-              </Button>
-              <Button size="sm" type="submit" disabled={heroSaving === 'title'}>
-                {heroSaving === 'title' ? 'Saving…' : 'Save'}
-              </Button>
-            </div>
-          </form>
-        {:else}
-          <button class="hero-editable hero-title" onclick={() => openHeroEditor('title')}>
-            <span>{activePage?.label ?? 'Home'}</span>
-            <span class="hero-edit-icon" aria-hidden="true">
-              <Icon name="pencil-line" size={18} />
-            </span>
-          </button>
-        {/if}
-
-        {#if heroEditor === 'subtitle'}
-          <form
-            class="hero-editor hero-editor-subtitle"
-            onsubmit={(event) => {
-              event.preventDefault();
-              void saveHeroSubtitle();
-            }}
-          >
-            <label class="hero-label" for="dashboard-page-subtitle">Page subtitle</label>
-            <input
-              id="dashboard-page-subtitle"
-              class="hero-input hero-input-subtitle"
-              bind:value={heroSubtitleDraft}
-              maxlength="120"
-              autofocus
-            />
-            <div class="hero-editor-actions">
-              <Button
-                variant="secondary"
-                size="sm"
-                type="button"
-                disabled={heroSaving === 'subtitle'}
-                onclick={closeHeroEditor}
-              >
-                Cancel
-              </Button>
-              <Button size="sm" type="submit" disabled={heroSaving === 'subtitle'}>
-                {heroSaving === 'subtitle' ? 'Saving…' : 'Save'}
-              </Button>
-            </div>
-          </form>
-        {:else}
-          <button class="hero-editable hero-subtitle" onclick={() => openHeroEditor('subtitle')}>
-            <span>{dashboardSubtitle}</span>
-            <span class="hero-edit-icon" aria-hidden="true">
-              <Icon name="pencil-line" size={14} />
-            </span>
-          </button>
-        {/if}
-
-        {#if heroError}
-          <p class="hero-error">{heroError}</p>
-        {/if}
+    {#if isHomePage}
+      <div class="welcome-section">
+        <div class="welcome-copy">
+          <h1 class="welcome-heading">
+            Welcome Back, <span class="welcome-name">{session?.userId ?? ''}</span>
+          </h1>
+          <p class="welcome-sub">{config.dashboardName} is humming quietly.</p>
+        </div>
+        <button class="add-widget-hero-btn" onclick={() => setDrawerOpen(true)}>
+          <Icon name="plus" size={15} />
+          <span>{en.dashboard.addWidget}</span>
+        </button>
       </div>
-
-      <div class="hero-meta-strip" aria-label="Dashboard summary">
-        <span class="meta-item"><span class="meta-value">{getTabs().length}</span> Pages</span>
-        <span class="meta-sep" aria-hidden="true">·</span>
-        <span class="meta-item"><span class="meta-value">{sortedInstances.length}</span> Widgets</span>
-        <span class="meta-sep" aria-hidden="true">·</span>
-        <span class="meta-item"><span class="meta-value">{configuredWidgetCount}</span> Ready</span>
-        <span class="meta-sep" aria-hidden="true">·</span>
-        <span class="meta-item meta-edition">{sessionTierLabel}</span>
-      </div>
-    </section>
+    {:else}
+      <p class="page-label">{(activePage?.label ?? '').toUpperCase()}</p>
+    {/if}
 
     {#if sortedInstances.length === 0}
       <button class="dashboard-empty" type="button" onclick={() => setDrawerOpen(true)}>
@@ -437,12 +283,15 @@ onMount(() => {
                 subtitle={heading.subtitle}
                 icon={heading.icon}
                 size={instance.size}
-                colSpan={colSpanFor(instance.widgetId, instance.size)}
+                colSpan={colSpanFor(instance.size)}
+                rowSpan={rowSpanFor(instance.size)}
                 loading={state === 'loading'}
                 error={null}
                 availableSizes={def.sizes}
                 instanceId={instance.id}
                 draggable={true}
+                starField={instance.widgetId === 'cpu'}
+                glowColor="gold"
                 onSizeChange={(size) => handleSizeChange(instance.id, size)}
                 onSwapDrop={(draggedId) => handleSwapDrop(instance.id, draggedId)}
                 onRemove={handleWidgetRemove}
@@ -481,6 +330,7 @@ onMount(() => {
                     </div>
                   {/if}
 
+                  {#key instance.size}
                   {#if instance.widgetId === 'cpu' && data}
                     <CpuWidget data={data as CpuMetrics} size={instance.size} />
                   {:else if instance.widgetId === 'memory' && data}
@@ -526,6 +376,7 @@ onMount(() => {
                       </p>
                     </div>
                   {/if}
+                  {/key}
                 {/if}
               </WidgetCard>
             {/if}
@@ -534,16 +385,20 @@ onMount(() => {
       </section>
     {/if}
 
-    <footer class="dashboard-footer">
-      <div class="footer-brandline">
-        <span class="footer-kicker">Powered by</span>
-        <span class="footer-brand">PHAVO</span>
+    <div class="footer-wrap">
+      <div class="footer-pill">
+        <span class="f-dim">POWERED BY</span>
+        <span class="f-brand">PHAVO</span>
+        <span class="f-dot"></span>
+        <span class="f-dim">{sessionTierLabel} EDITION</span>
+        <span class="f-dot"></span>
+        <span class="f-dim">VERSION {PHAVO_VERSION}</span>
+        {#if deviceName}
+          <span class="f-dot"></span>
+          <span class="f-dim">{deviceName}</span>
+        {/if}
       </div>
-      <div class="footer-meta">
-        <span class="footer-edition">{sessionTierLabel}</span>
-        <span class="footer-version">Version {PHAVO_VERSION}</span>
-      </div>
-    </footer>
+    </div>
   </div>
 </div>
 
@@ -697,6 +552,7 @@ onMount(() => {
   .dashboard-content {
     flex: 1;
     min-height: 0;
+    overflow: visible;
   }
 
   .drag-over {
@@ -710,158 +566,76 @@ onMount(() => {
   .grid-shell {
     width: 100%;
     padding: 0 var(--space-8) var(--space-10);
+    overflow: visible; /* Allow nebula gradient to bleed into widget grid */
   }
 
-  .dashboard-hero {
+  .welcome-section {
+    position: relative;
+    min-height: 80px;
+    padding: var(--space-6) 0 var(--space-12);
+    margin-bottom: calc(-1 * var(--space-6));
     display: flex;
-    flex-direction: column;
-    gap: var(--space-3);
-    margin-bottom: var(--space-8);
+    justify-content: space-between;
+    align-items: center;
+    gap: var(--space-6);
   }
 
-  .hero-copy {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-2);
+  .welcome-copy {
     min-width: 0;
   }
 
-  .hero-editable {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--space-3);
-    width: fit-content;
-    max-width: 100%;
-    padding: 0;
-    background: none;
-    border: none;
-    color: inherit;
-    cursor: pointer;
-    text-align: left;
-  }
-
-  .hero-title {
-    font-size: clamp(2.5rem, 6vw, 3.6rem);
-    font-weight: 800;
-    letter-spacing: -0.05em;
-    line-height: 0.96;
-    color: var(--color-text-primary);
-  }
-
-  .hero-subtitle {
-    font-size: 0.78rem;
-    font-weight: 700;
-    letter-spacing: 0.24em;
-    text-transform: uppercase;
-    color: var(--color-text-muted);
-  }
-
-  .hero-edit-icon {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--color-accent-text);
-    opacity: 0;
-    transition: opacity 0.2s ease;
-    flex-shrink: 0;
-  }
-
-  .hero-editable:hover .hero-edit-icon,
-  .hero-editable:focus-visible .hero-edit-icon {
-    opacity: 1;
-  }
-
-  .hero-editor {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-3);
-    max-width: min(40rem, 100%);
-  }
-
-  .hero-editor-subtitle {
-    max-width: min(36rem, 100%);
-  }
-
-  .hero-label {
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
-    color: var(--color-text-muted);
-  }
-
-  .hero-input {
-    width: 100%;
-    padding: var(--space-3) var(--space-4);
-    border-radius: var(--radius-xl);
-    border: 1px solid color-mix(in srgb, var(--color-accent) 24%, var(--color-border));
-    background: color-mix(in srgb, var(--color-bg-elevated) 92%, transparent);
-    color: var(--color-text-primary);
-    font-family: var(--font-ui);
-    outline: none;
-  }
-
-  .hero-input:focus {
-    border-color: color-mix(in srgb, var(--color-accent) 48%, transparent);
-    box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-accent) 24%, transparent);
-  }
-
-  .hero-input-title {
-    font-size: clamp(2rem, 5vw, 3.2rem);
-    font-weight: 800;
-    letter-spacing: -0.05em;
-    line-height: 1;
-  }
-
-  .hero-input-subtitle {
-    font-size: 0.85rem;
-    font-weight: 700;
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
-  }
-
-  .hero-editor-actions {
-    display: flex;
-    align-items: center;
-    gap: var(--space-3);
-  }
-
-  .hero-error {
-    font-size: 0.85rem;
-    color: var(--color-danger);
+  .welcome-heading {
+    font-size: var(--font-size-3xl);
+    font-weight: 300;
+    letter-spacing: -0.02em;
+    color: var(--color-on-surface);
+    line-height: 1.2;
     margin: 0;
   }
 
-  .hero-meta-strip {
-    display: flex;
+  .welcome-name {
+    color: var(--color-primary-fixed);
+    font-weight: 400;
+  }
+
+  .welcome-sub {
+    font-size: var(--font-size-md);
+    color: var(--color-on-surface-variant);
+    margin-top: var(--space-2);
+    margin-bottom: 0;
+  }
+
+  .add-widget-hero-btn {
+    display: inline-flex;
     align-items: center;
-    gap: var(--space-3);
-    flex-wrap: wrap;
-  }
-
-  .meta-item {
-    font-size: 0.75rem;
-    font-weight: 600;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: var(--color-text-muted);
-  }
-
-  .meta-value {
-    color: var(--color-text-secondary);
+    gap: var(--space-2);
+    flex-shrink: 0;
+    padding: 8px 20px;
+    border-radius: var(--radius-full);
+    border: 1px solid color-mix(in srgb, var(--color-primary) 18%, transparent);
+    background: color-mix(in srgb, var(--color-surface-highest) 60%, transparent);
+    color: var(--color-on-surface-variant);
     font-family: var(--font-mono);
+    font-size: 11px;
     font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: color 0.15s, background 0.15s, border-color 0.15s;
   }
 
-  .meta-sep {
-    color: var(--color-text-muted);
-    opacity: 0.4;
-    font-size: 0.85rem;
+  .add-widget-hero-btn:hover {
+    color: var(--color-primary-fixed);
+    background: color-mix(in srgb, var(--color-primary) 8%, transparent);
+    border-color: color-mix(in srgb, var(--color-primary) 32%, transparent);
   }
 
-  .meta-edition {
-    color: var(--color-accent-text);
-    font-weight: 700;
+  .page-label {
+    font-family: var(--font-mono);
+    font-size: var(--font-size-xs);
+    letter-spacing: 0.1em;
+    color: var(--color-outline);
+    margin: 0 0 var(--space-4);
   }
 
   .dashboard-stage {
@@ -900,7 +674,7 @@ onMount(() => {
         transparent 78%
       ),
       color-mix(in srgb, var(--color-bg-elevated) 96%, transparent);
-    box-shadow: 0 24px 52px rgba(0, 0, 0, 0.28);
+    box-shadow: 0 24px 52px color-mix(in srgb, var(--color-surface-dim) 28%, transparent);
     transform: translateY(-1px);
   }
 
@@ -1099,58 +873,41 @@ onMount(() => {
     font-size: 0.75rem;
   }
 
-  .dashboard-footer {
+  .footer-wrap {
     display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: var(--space-3);
-    margin-top: var(--space-10);
-    padding-top: var(--space-8);
-    border-top: 1px solid var(--color-border-subtle);
-    text-align: center;
+    justify-content: center;
+    padding: 48px 0 32px;
   }
 
-  .footer-brandline {
+  .footer-pill {
     display: inline-flex;
     align-items: center;
-    gap: var(--space-2);
-  }
-
-  .footer-kicker {
-    font-size: 10px;
+    gap: 24px;
+    padding: 12px 32px;
+    border-radius: 9999px;
+    background: var(--color-surface-highest);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    font-family: var(--font-mono);
+    font-size: 11px;
     font-weight: 700;
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
-    color: var(--color-text-muted);
-  }
-
-  .footer-brand {
-    font-size: 0.95rem;
-    font-weight: 800;
-    letter-spacing: -0.04em;
-    color: var(--color-accent-text);
-  }
-
-  .footer-meta {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-1);
-  }
-
-  .footer-edition,
-  .footer-version {
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 0.16em;
+    letter-spacing: 0.1em;
     text-transform: uppercase;
   }
 
-  .footer-edition {
-    color: var(--color-text-muted);
+  .f-brand {
+    color: var(--color-primary-fixed);
   }
 
-  .footer-version {
-    color: var(--color-text-secondary);
+  .f-dim {
+    color: var(--color-on-surface);
+  }
+
+  .f-dot {
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: color-mix(in srgb, var(--color-primary-fixed) 40%, transparent);
+    flex-shrink: 0;
   }
 
   .telemetry-modal {
@@ -1188,24 +945,6 @@ onMount(() => {
       padding: 0 var(--space-4) calc(var(--space-8) + env(safe-area-inset-bottom));
     }
 
-    .dashboard-hero {
-      gap: var(--space-2);
-      margin-bottom: var(--space-6);
-    }
-
-    .hero-title {
-      font-size: 2.4rem;
-    }
-
-    .hero-subtitle {
-      font-size: 0.72rem;
-      letter-spacing: 0.2em;
-    }
-
-    .hero-meta-strip {
-      gap: var(--space-2);
-    }
-
     .dashboard-empty {
       flex-direction: column;
       align-items: flex-start;
@@ -1223,12 +962,6 @@ onMount(() => {
     .telemetry-actions {
       width: 100%;
       flex-direction: column;
-    }
-  }
-
-  @media (min-width: 640px) and (max-width: 1023px) {
-    .dashboard-hero {
-      gap: var(--space-3);
     }
   }
 </style>

@@ -14,7 +14,14 @@ import {
   getUnreadCount,
   markAllRead,
   markRead,
+  clearAll,
   clearHistory,
+  dismiss,
+  togglePanel,
+  getPanelOpen,
+  setPanelOpen,
+  getMuted,
+  toggleMute,
   syncFromServer,
 } from '$lib/stores/notifications.svelte';
 import {
@@ -38,6 +45,8 @@ interface Props {
     dashboardName?: string;
     setupComplete?: boolean;
     session?: Session | null;
+    hostname?: string;
+    username?: string;
   };
   children: Snippet;
 }
@@ -45,22 +54,21 @@ interface Props {
 let { data, children }: Props = $props();
 
 let sidebarCollapsed = $state(false);
-let panelOpen = $state(false);
-let updateAvailable = $state(false);
-let latestUpdateVersion = $state('');
 let currentPathname = $state('/');
 let currentHash = $state('');
+let currentSearch = $state('');
 let tabLimitModalOpen = $state(false);
 let headerWeatherFallback = $state<{ temp: number; condition: string } | undefined>(undefined);
+let systemOnline = $state<boolean | null>(null);
 
 const sidebarItems = [
-  { id: 'general', label: 'General', icon: 'settings-2' },
-  { id: 'widgets', label: 'Widgets', icon: 'puzzle' },
-  { id: 'import-export', label: 'Backup & Export', icon: 'archive' },
-  { id: 'license', label: 'Licence', icon: 'shield-check' },
-  { id: 'account', label: 'Account', icon: 'user' },
-  { id: 'plugins', label: 'Plugins', icon: 'plug' },
-  { id: 'about', label: 'About', icon: 'info' },
+  { id: 'general', label: 'General', icon: 'settings-2', status: { type: 'active' as const, label: 'Configured' } },
+  { id: 'widgets', label: 'Widgets', icon: 'puzzle', status: { type: 'active' as const, label: 'Active' } },
+  { id: 'import-export', label: 'Backup & Export', icon: 'archive', status: { type: 'active' as const, label: 'Ready' } },
+  { id: 'license', label: 'Licence', icon: 'shield-check', status: { type: 'active' as const, label: 'Active' } },
+  { id: 'account', label: 'Account', icon: 'user', status: { type: 'active' as const, label: 'Secured' } },
+  { id: 'plugins', label: 'Plugins', icon: 'plug', status: { type: 'inactive' as const, label: 'Coming Soon' } },
+  { id: 'about', label: 'About', icon: 'info', status: { type: 'active' as const, label: 'Up to Date' } },
 ];
 
 /**
@@ -74,20 +82,19 @@ const isDashboard = $derived(
 const SETTINGS_TAB_IDS = new Set(sidebarItems.map((i) => i.id));
 
 const activeSidebarItem = $derived.by(() => {
-  if (currentPathname !== '/settings') return 'home';
-  const hashTab = currentHash.replace(/^#/, '').split('/')[0] ?? '';
-  return SETTINGS_TAB_IDS.has(hashTab) ? hashTab : 'general';
+  if (!currentPathname.startsWith('/settings')) return 'home';
+  const params = new URLSearchParams(currentSearch.replace(/^\?/, ''));
+  const tab = params.get('tab') ?? 'general';
+  return SETTINGS_TAB_IDS.has(tab) ? tab : 'general';
 });
 
-const headerTitle = $derived(
-  data.dashboardName || getConfig().dashboardName || en.dashboard.brandName,
-);
+const shellTier = $derived(data.session?.tier ?? 'stellar');
 
-const shellTier = $derived(data.session?.tier ?? 'free');
-
-const headerBrandingLabel = $derived(
-  getSession()?.tier === 'free' ? en.dashboard.poweredBy : undefined,
-);
+const shellTierLabel = $derived.by(() => {
+  const t = shellTier;
+  if (t === 'celestial') return 'CELESTIAL';
+  return 'STELLAR';
+});
 
 const aiStatus = $derived(getAiStatus());
 
@@ -129,8 +136,18 @@ async function refreshHeaderWeather(): Promise<void> {
   }
 }
 
+async function checkSystemHealth(): Promise<void> {
+  try {
+    const resp = await fetch('/api/v1/system/health');
+    const json = (await resp.json()) as { ok: boolean };
+    systemOnline = json.ok === true;
+  } catch {
+    systemOnline = false;
+  }
+}
+
 function navigate(id: string) {
-  panelOpen = false;
+  setPanelOpen(false);
   setDrawerOpen(false);
 
   if (id === 'home') {
@@ -147,22 +164,15 @@ function navigate(id: string) {
   void goto(`/${id}`);
 }
 
-function navigateToSettings(hash?: string) {
-  panelOpen = false;
+function navigateToSettings(tab?: string) {
+  setPanelOpen(false);
   setDrawerOpen(false);
 
-  if (typeof window !== 'undefined' && window.location.pathname === '/settings') {
-    const nextHash = hash ?? 'general';
-    window.location.hash = nextHash;
-    window.dispatchEvent(new HashChangeEvent('hashchange'));
-    return;
-  }
-
-  void goto(hash ? `/settings#${hash}` : '/settings');
+  void goto(`/settings?tab=${tab ?? 'general'}`, { replaceState: true, noScroll: true });
 }
 
 async function handleDashboardTabSelect(tabId: string): Promise<void> {
-  panelOpen = false;
+  setPanelOpen(false);
   setDrawerOpen(false);
 
   if (currentPathname !== '/') {
@@ -172,7 +182,7 @@ async function handleDashboardTabSelect(tabId: string): Promise<void> {
 }
 
 async function handleSidebarNewTab(): Promise<void> {
-  if (shellTier === 'free' && getTabs().length >= 1) {
+  if (shellTier === 'stellar' && getTabs().length >= 1) {
     tabLimitModalOpen = true;
     return;
   }
@@ -274,7 +284,7 @@ const searchIndex = $derived.by((): SearchEntry[] => {
     label: 'View Notifications',
     category: 'action',
     action: () => {
-      panelOpen = true;
+      setPanelOpen(true);
     },
   });
 
@@ -317,6 +327,7 @@ onMount(() => {
   const syncLocation = () => {
     currentPathname = window.location.pathname;
     currentHash = window.location.hash;
+    currentSearch = window.location.search;
   };
 
   syncLocation();
@@ -363,13 +374,6 @@ onMount(() => {
 
     $effect(() => {
       if (!isDashboard) return;
-      void checkForUpdate();
-      const updateInterval = setInterval(checkForUpdate, 60 * 60 * 1000);
-      return () => clearInterval(updateInterval);
-    });
-
-    $effect(() => {
-      if (!isDashboard) return;
       syncFromServer();
       const interval = setInterval(syncFromServer, 60_000);
       return () => clearInterval(interval);
@@ -386,6 +390,13 @@ onMount(() => {
       const interval = setInterval(() => void refreshHeaderWeather(), 300_000);
       return () => clearInterval(interval);
     });
+
+    $effect(() => {
+      if (!isDashboard) return;
+      void checkSystemHealth();
+      const interval = setInterval(() => void checkSystemHealth(), 60_000);
+      return () => clearInterval(interval);
+    });
   });
 
   return () => {
@@ -397,81 +408,62 @@ onMount(() => {
   };
 });
 
-async function checkForUpdate() {
-  try {
-    const resp = await fetch('/api/v1/update/check');
-    const json = (await resp.json()) as {
-      ok: boolean;
-      data?: { updateAvailable: boolean; latestVersion: string };
-    };
-    if (json.ok && json.data) {
-      updateAvailable = json.data.updateAvailable;
-      if (json.data.latestVersion) latestUpdateVersion = json.data.latestVersion;
-    }
-  } catch { /* ignore, runs silently in the background */ }
-}
-
 function handleNotificationClick(n: Notification) {
   markRead(n.id);
-  panelOpen = false;
-  if (n.settingsTab) {
-    navigateToSettings(n.settingsTab);
-  } else if (n.widgetId) {
-    // Navigate to dashboard and scroll to widget by id
+  setPanelOpen(false);
+  if (n.actionUrl) {
+    goto(n.actionUrl);
+  } else if (n.type === 'widget-error' && n.widgetId) {
     goto('/');
     setTimeout(() => {
-      document.getElementById(`widget-${n.widgetId}`)?.scrollIntoView({ behavior: 'smooth' });
+      const el = document.querySelector(`[data-widget-id="${n.widgetId}"]`);
+      el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      el?.classList.add('widget-highlight');
+      setTimeout(() => el?.classList.remove('widget-highlight'), 2000);
     }, 100);
   }
 }
 </script>
 
 <svelte:head>
-  <meta name="theme-color" content="#000000" />
+  <meta name="theme-color" content="#0a0e1a" />
 </svelte:head>
 
 {#if isDashboard}
   <div class="dashboard-layout">
+    <!-- Fixed ambient cosmic glows — z:0, behind all content -->
+    <div class="ambient-glow ambient-glow-purple" style="position: fixed; pointer-events: none; z-index: 0;"></div>
+    <div class="ambient-glow ambient-glow-teal" style="position: fixed; pointer-events: none; z-index: 0;"></div>
     <Sidebar
       bind:collapsed={sidebarCollapsed}
       tier={shellTier}
+      deviceName={data.hostname ?? ''}
       tabs={getTabs()}
       activeTab={getCurrentTabId()}
       items={sidebarItems}
       activeItem={activeSidebarItem}
+      onsettingsnav={(tab) => navigateToSettings(tab)}
       onTabSelect={(tabId) => void handleDashboardTabSelect(tabId)}
       onNewTab={() => void handleSidebarNewTab()}
       ontoggle={() => (sidebarCollapsed = !sidebarCollapsed)}
       onnavigate={navigate}
     />
     <main class="main-content" class:sidebar-collapsed={sidebarCollapsed}>
-      {#snippet updateBadge()}
-        {#if updateAvailable}
-          <button
-            class="update-badge"
-            onclick={() => navigateToSettings('about')}
-            aria-label="Update available: {latestUpdateVersion}"
-          >
-            Update
-          </button>
-        {/if}
-      {/snippet}
       <Header
-        dashboardName={currentPathname === '/' || currentPathname === '/settings' ? '' : headerTitle}
-        brandingLabel={headerBrandingLabel}
+        dashboardName={data.dashboardName ?? 'PHAVO'}
+        tierLabel={shellTierLabel}
         weather={headerWeather}
         unreadCount={getUnreadCount()}
+        {systemOnline}
         onBellClick={() => {
           setDrawerOpen(false);
-          panelOpen = !panelOpen;
+          togglePanel();
         }}
         onAddWidgetClick={currentPathname === '/' ? () => {
-          panelOpen = false;
+          setPanelOpen(false);
           setDrawerOpen(!getIsDrawerOpen());
         } : undefined}
         addWidgetLabel={en.dashboard.addWidget}
-        {updateAvailable}
-        {updateBadge}
         {searchIndex}
         searchEngineUrl={aiStatus.searchEngineUrl}
         aiProviders={aiStatus.providers}
@@ -481,12 +473,14 @@ function handleNotificationClick(n: Notification) {
       {@render children()}
     </main>
     <NotificationPanel
-      open={panelOpen}
+      open={getPanelOpen()}
       notifications={getNotifications()}
-      onClose={() => (panelOpen = false)}
-      onMarkAllRead={markAllRead}
-      onClear={clearHistory}
-      onNotificationClick={handleNotificationClick}
+      muted={getMuted()}
+      onclose={() => setPanelOpen(false)}
+      onclearall={() => clearAll()}
+      ondismiss={(id) => dismiss(id)}
+      onaction={(n) => handleNotificationClick(n)}
+      onmuteall={() => toggleMute()}
     />
     <Modal bind:open={tabLimitModalOpen}>
       <div class="flex flex-col items-center gap-4 text-center p-4">
@@ -515,6 +509,8 @@ function handleNotificationClick(n: Notification) {
     display: flex;
     min-height: 100dvh;
     width: 100%;
+    position: relative;
+    background: transparent;
   }
 
   .main-content {
@@ -523,52 +519,19 @@ function handleNotificationClick(n: Notification) {
     display: flex;
     flex-direction: column;
     min-height: 100dvh;
-    max-height: 100dvh;
-    overflow-y: auto;
+    overflow: visible;
     min-width: 0;
     width: 100%;
     padding-left: var(--shell-sidebar-offset);
     box-sizing: border-box;
     transition: padding-left 0.3s ease;
-    background:
-      radial-gradient(
-        ellipse 60% 40% at 80% 0%,
-        color-mix(in srgb, var(--color-accent-t) 50%, transparent) 0%,
-        transparent 100%
-      ),
-      var(--color-bg-base);
+    position: relative;
+    z-index: 10;
+    background: transparent;
   }
 
   .main-content.sidebar-collapsed {
     --shell-sidebar-offset: var(--sidebar-collapsed-width);
-  }
-
-  .update-badge {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 34px;
-    padding: 0 var(--space-4);
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    background: color-mix(in srgb, var(--color-bg-elevated) 94%, transparent);
-    color: var(--color-accent-text);
-    border: 1px solid color-mix(in srgb, var(--color-accent) 24%, var(--color-border-subtle));
-    border-radius: 999px;
-    cursor: pointer;
-    transition:
-      color 0.15s ease,
-      border-color 0.15s ease,
-      background 0.15s ease,
-      transform 0.15s ease;
-  }
-
-  .update-badge:hover {
-    border-color: color-mix(in srgb, var(--color-accent) 34%, var(--color-border-subtle));
-    background: color-mix(in srgb, var(--color-bg-hover) 88%, transparent);
-    transform: translateY(-1px);
   }
 
   /* ── TABLET (640px–1023px): fixed icon-only rail, no collapse toggle ── */

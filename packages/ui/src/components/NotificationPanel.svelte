@@ -1,151 +1,480 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
-  import { fade, fly } from 'svelte/transition';
   import type { Notification } from '@phavo/types';
   import Icon from './Icon.svelte';
+  import WishStar from './WishStar.svelte';
 
   interface Props {
     open: boolean;
     notifications: Notification[];
-    onClose: () => void;
-    onMarkAllRead: () => void;
-    onClear: () => void;
-    onNotificationClick: (n: Notification) => void;
+    muted?: boolean;
+    onclose: () => void;
+    onclearall: () => void;
+    ondismiss: (id: string) => void;
+    onaction: (notification: Notification) => void;
+    onmuteall?: () => void;
   }
 
   let {
     open,
     notifications,
-    onClose,
-    onMarkAllRead,
-    onClear,
-    onNotificationClick,
+    muted = false,
+    onclose,
+    onclearall,
+    ondismiss,
+    onaction,
+    onmuteall,
   }: Props = $props();
 
-  let isDesktop = $state(false);
-
-  onMount(() => {
-    const syncViewport = () => {
-      isDesktop = window.innerWidth >= 640;
-    };
-
-    syncViewport();
-    window.addEventListener('resize', syncViewport);
-
-    return () => {
-      window.removeEventListener('resize', syncViewport);
-    };
-  });
-
-  function typeIconName(type: Notification['type']): string {
-    switch (type) {
-      case 'update':
-        return 'download';
-      case 'system-alert':
-      case 'widget-error':
-        return 'alert-triangle';
-      case 'widget-warning':
-        return 'alert-triangle';
-      case 'info':
-      default:
-        return 'info';
-    }
-  }
-
-  function typeIconClasses(type: Notification['type']): string {
-    switch (type) {
-      case 'update':
-      case 'info':
-        return 'text-accent bg-accent/15';
-      case 'widget-warning':
-        return 'text-warning bg-warning/15';
-      case 'system-alert':
-      case 'widget-error':
-        return 'text-danger bg-danger/15';
-      default:
-        return 'text-accent bg-accent/15';
-    }
-  }
-
   function timeAgo(ts: number): string {
-    const diff = Date.now() - ts;
-    if (diff < 60_000) return 'just now';
-    const mins = Math.floor(diff / 60_000);
-    if (mins < 60) return `${mins}m ago`;
-    const hours = Math.floor(mins / 60);
-    if (hours < 24) return `${hours}h ago`;
-    return new Date(ts).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+    const diff = Math.floor((Date.now() / 1000) - (ts / 1000));
+    if (diff < 60) return 'Just now';
+    if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+    if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+    return `${Math.floor(diff / 86400)}d ago`;
   }
 
-  function handleRowClick(n: Notification) {
-    onNotificationClick(n);
-  }
-
-  function handleBackdropClick(e: MouseEvent) {
-    if (e.target === e.currentTarget) {
-      onClose();
+  function iconFor(type: string): string {
+    switch (type) {
+      case 'update':       return 'arrow-up-circle';
+      case 'security':     return 'shield-alert';
+      case 'widget-error': return 'alert-triangle';
+      case 'task':         return 'loader-2';
+      default:             return 'info';
     }
   }
 </script>
 
 {#if open}
-  <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
-  <div
-    class="fixed inset-0 z-[200] bg-black/30 backdrop-blur-[1px]"
-    onclick={handleBackdropClick}
-    aria-hidden="true"
-    transition:fade={{ duration: 140 }}
-  ></div>
-
-  <aside
-    class="notification-panel fixed z-[205] flex flex-col bg-surface border-border
-      bottom-[calc(56px+env(safe-area-inset-bottom))] left-0 right-0 w-full max-h-[85dvh] border-t rounded-t-xl
-      sm:top-0 sm:right-0 sm:bottom-0 sm:left-auto sm:w-[380px] sm:h-dvh sm:max-h-none sm:border-t-0 sm:border-l sm:rounded-t-none"
-    aria-label="Notifications"
-    transition:fly={{ x: isDesktop ? 420 : 0, y: isDesktop ? 0 : 420, duration: 220 }}
-  >
-    <!-- Header -->
-    <div class="flex items-center justify-between px-4 pt-4 pb-3 border-b border-border-subtle shrink-0">
-      <span class="text-sm font-semibold text-text">Notifications</span>
-      <div class="flex items-center gap-1">
-        {#if notifications.length > 0}
-          <button class="px-2 py-0.5 text-[11px] text-text-muted bg-transparent border border-border rounded cursor-pointer transition-colors hover:text-text hover:border-text-muted sm:min-h-0 min-h-[44px] sm:py-0.5" onclick={onMarkAllRead}>Mark all read</button>
-          <button class="px-2 py-0.5 text-[11px] text-text-muted bg-transparent border border-border rounded cursor-pointer transition-colors hover:text-text hover:border-text-muted sm:min-h-0 min-h-[44px] sm:py-0.5" onclick={onClear}>Clear</button>
-        {/if}
-        <button class="flex items-center justify-center w-7 h-7 sm:w-7 sm:h-7 min-w-[44px] min-h-[44px] sm:min-w-0 sm:min-h-0 text-text-muted bg-transparent border-none rounded cursor-pointer transition-colors hover:text-text hover:bg-hover" onclick={onClose} aria-label="Close notifications">
-          <Icon name="x" size={16} />
-        </button>
-      </div>
-    </div>
-
-    <!-- Notification list -->
-    <div class="flex-1 overflow-y-auto flex flex-col">
-      {#if notifications.length === 0}
-        <div class="flex flex-col items-center justify-center gap-3 px-4 py-8 flex-1 text-text-muted">
-          <span class="opacity-40"><Icon name="bell" size={24} /></span>
-          <p class="text-sm">No notifications yet</p>
-        </div>
-      {:else}
-        {#each notifications as n (n.id)}
-          <button
-            class="relative flex items-start gap-3 w-full px-4 py-3 bg-transparent border-none border-b border-border-subtle text-left cursor-pointer transition-colors hover:bg-hover last:border-b-0"
-            onclick={() => handleRowClick(n)}
-          >
-            {#if !n.read}
-              <div class="absolute left-0 top-0 bottom-0 w-[3px] bg-accent rounded-r-sm"></div>
-            {/if}
-            <span
-              class="shrink-0 flex items-center justify-center w-7 h-7 rounded-full mt-0.5 {typeIconClasses(n.type)}"
-              aria-hidden="true"
-            ><Icon name={typeIconName(n.type)} size={14} /></span>
-            <div class="flex flex-col gap-0.5 min-w-0">
-              <span class="text-sm font-semibold text-text leading-snug">{n.title}</span>
-              <span class="text-xs text-text-muted leading-relaxed">{n.body}</span>
-              <span class="text-[11px] text-text-muted mt-0.5">{timeAgo(n.timestamp)}</span>
-            </div>
-          </button>
-        {/each}
-      {/if}
-    </div>
-  </aside>
+<!-- Backdrop -->
+<!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
+<div
+  class="notif-backdrop"
+  role="presentation"
+  onclick={onclose}
+></div>
 {/if}
+
+<aside class="notif-panel" class:notif-panel-open={open} aria-label="Notifications">
+  <!-- Header -->
+  <div class="notif-header">
+    <div class="notif-header-left">
+      <WishStar size={14} />
+      <span class="notif-title">NOTIFICATIONS</span>
+    </div>
+    <button class="notif-clear-btn" onclick={onclearall}>
+      CLEAR ALL
+    </button>
+  </div>
+
+  <!-- Notification list -->
+  <div class="notif-list">
+    {#if notifications.length === 0}
+      <div class="notif-empty">
+        <Icon name="bell-off" size={32} />
+        <span>No notifications</span>
+      </div>
+    {:else}
+      {#each notifications as notif (notif.id)}
+        <div
+          class="notif-card notif-card-{notif.type}"
+          class:notif-card-read={notif.read}
+        >
+          <!-- Icon circle -->
+          <div class="notif-icon notif-icon-{notif.type}">
+            <Icon name={iconFor(notif.type)} size={16} />
+          </div>
+
+          <!-- Content -->
+          <div class="notif-content">
+            <div class="notif-meta">
+              <span class="notif-category notif-category-{notif.type}">
+                {notif.title}
+              </span>
+              <span class="notif-time">{timeAgo(notif.createdAt)}</span>
+            </div>
+            <p class="notif-message">{notif.message}</p>
+
+            <!-- Progress bar (task type) -->
+            {#if notif.type === 'task' && notif.progress !== undefined}
+              <div class="notif-progress-row">
+                <div class="notif-progress-track">
+                  <div
+                    class="notif-progress-fill"
+                    style="width: {notif.progress}%"
+                  ></div>
+                </div>
+                <span class="notif-progress-label">{notif.progress}%</span>
+              </div>
+            {/if}
+
+            <!-- Action button -->
+            {#if notif.actionLabel}
+              <button
+                class="notif-action-btn"
+                onclick={() => onaction(notif)}
+              >
+                {notif.actionLabel}
+              </button>
+            {/if}
+          </div>
+
+          <!-- Dismiss button -->
+          <button
+            class="notif-dismiss"
+            onclick={() => ondismiss(notif.id)}
+            aria-label="Dismiss"
+          >
+            <Icon name="x" size={12} />
+          </button>
+        </div>
+      {/each}
+    {/if}
+  </div>
+
+  <!-- Footer -->
+  <div class="notif-footer">
+    <button
+      class="notif-mute-btn"
+      class:notif-mute-btn-active={muted}
+      onclick={onmuteall}
+      aria-label={muted ? 'Unmute notifications' : 'Mute all notifications'}
+    >
+      <Icon name={muted ? 'bell-off' : 'bell'} size={14} />
+      <span>{muted ? 'MUTED' : 'MUTE ALL'}</span>
+    </button>
+  </div>
+</aside>
+
+<style>
+  /* Panel */
+  .notif-panel {
+    position: fixed;
+    top: 0;
+    right: 0;
+    height: 100vh;
+    width: 380px;
+    background: color-mix(in srgb, var(--color-surface-dim) 70%, transparent);
+    backdrop-filter: blur(20px);
+    border-left: 1px solid color-mix(in srgb, var(--color-outline-variant) 10%, transparent);
+    z-index: 60;
+    display: flex;
+    flex-direction: column;
+    padding: var(--space-8);
+    transform: translateX(100%);
+    transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+  }
+
+  .notif-panel-open {
+    transform: translateX(0);
+  }
+
+  /* Backdrop */
+  .notif-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 59;
+    background: transparent;
+  }
+
+  /* Header */
+  .notif-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--space-8);
+  }
+
+  .notif-header-left {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+  }
+
+  .notif-title {
+    font-size: 12px;
+    font-weight: 700;
+    font-family: var(--font-mono);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--color-on-surface);
+  }
+
+  .notif-clear-btn {
+    font-size: 10px;
+    font-weight: 700;
+    font-family: var(--font-mono);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--color-outline);
+    background: none;
+    border: none;
+    cursor: pointer;
+    transition: color 0.15s;
+  }
+
+  .notif-clear-btn:hover {
+    color: var(--color-secondary);
+  }
+
+  /* List */
+  .notif-list {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+    padding-right: var(--space-2);
+    margin-right: calc(-1 * var(--space-2));
+  }
+
+  /* Empty state */
+  .notif-empty {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-3);
+    color: var(--color-outline);
+    font-size: 13px;
+  }
+
+  /* Card */
+  .notif-card {
+    position: relative;
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-4);
+    padding: var(--space-5);
+    border-radius: 1.5rem;
+    background: color-mix(in srgb, var(--color-surface-high) 60%, transparent);
+    border: 1px solid color-mix(in srgb, var(--color-outline-variant) 8%, transparent);
+    transition: background 0.15s;
+    height: auto;
+    overflow: visible;
+  }
+
+  .notif-card:hover {
+    background: var(--color-surface-high);
+  }
+
+  .notif-card-read {
+    opacity: 0.6;
+  }
+
+  /* Icon circle — colored by type */
+  .notif-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .notif-icon-update {
+    background: color-mix(in srgb, var(--color-primary-fixed) 10%, transparent);
+    color: var(--color-primary-fixed);
+  }
+
+  .notif-icon-security,
+  .notif-icon-widget-error {
+    background: color-mix(in srgb, var(--color-error) 10%, transparent);
+    color: var(--color-error);
+  }
+
+  .notif-icon-task {
+    background: color-mix(in srgb, var(--color-secondary) 10%, transparent);
+    color: var(--color-secondary);
+  }
+
+  .notif-icon-info {
+    background: color-mix(in srgb, var(--color-outline) 15%, transparent);
+    color: var(--color-on-surface-variant);
+  }
+
+  /* Content */
+  .notif-content {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .notif-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--space-2);
+  }
+
+  .notif-category {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    font-family: var(--font-mono);
+  }
+
+  .notif-category-update       { color: var(--color-primary-fixed); }
+  .notif-category-security,
+  .notif-category-widget-error  { color: var(--color-error); }
+  .notif-category-task          { color: var(--color-secondary); }
+  .notif-category-info          { color: var(--color-on-surface-variant); }
+
+  .notif-time {
+    font-size: 10px;
+    color: var(--color-outline);
+    font-family: var(--font-mono);
+    white-space: nowrap;
+  }
+
+  .notif-message {
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--color-on-surface-variant);
+    margin: 0;
+    white-space: normal;
+    word-break: break-word;
+    overflow-wrap: break-word;
+    overflow: visible;
+  }
+
+  /* Progress bar */
+  .notif-progress-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    margin-top: var(--space-3);
+  }
+
+  .notif-progress-track {
+    flex: 1;
+    height: 4px;
+    background: color-mix(in srgb, var(--color-primary) 5%, transparent);
+    border-radius: 9999px;
+    overflow: hidden;
+  }
+
+  .notif-progress-fill {
+    height: 100%;
+    background: var(--color-secondary);
+    border-radius: 9999px;
+    transition: width 0.5s ease;
+  }
+
+  .notif-progress-label {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--color-secondary);
+    font-family: var(--font-mono);
+    min-width: 28px;
+    text-align: right;
+  }
+
+  /* Action button */
+  .notif-action-btn {
+    margin-top: var(--space-4);
+    width: 100%;
+    padding: var(--space-2) var(--space-4);
+    border-radius: var(--radius-full);
+    background: var(--color-primary-fixed);
+    color: var(--color-on-primary-fixed);
+    font-size: 10px;
+    font-weight: 700;
+    font-family: var(--font-mono);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    border: none;
+    cursor: pointer;
+    transition: opacity 0.15s;
+  }
+
+  .notif-action-btn:hover {
+    opacity: 0.9;
+  }
+
+  /* Dismiss */
+  .notif-dismiss {
+    position: absolute;
+    top: var(--space-3);
+    right: var(--space-3);
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: none;
+    border: none;
+    color: var(--color-outline);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.15s, background 0.15s;
+  }
+
+  .notif-card:hover .notif-dismiss {
+    opacity: 1;
+  }
+
+  .notif-dismiss:hover {
+    background: color-mix(in srgb, var(--color-outline) 15%, transparent);
+    color: var(--color-on-surface);
+  }
+
+  /* Footer */
+  .notif-footer {
+    margin-top: var(--space-6);
+    padding-top: var(--space-6);
+    border-top: 1px solid color-mix(in srgb, var(--color-outline-variant) 10%, transparent);
+  }
+
+  .notif-mute-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+    width: 100%;
+    padding: var(--space-3);
+    border-radius: 1rem;
+    background: color-mix(in srgb, var(--color-surface-bright) 30%, transparent);
+    border: 1px solid color-mix(in srgb, var(--color-outline-variant) 10%, transparent);
+    color: var(--color-outline);
+    font-size: 10px;
+    font-weight: 700;
+    font-family: var(--font-mono);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+  }
+
+  .notif-mute-btn:hover {
+    background: color-mix(in srgb, var(--color-surface-high) 60%, transparent);
+    color: var(--color-on-surface-variant);
+  }
+
+  .notif-mute-btn-active {
+    background: color-mix(in srgb, var(--color-error) 10%, transparent);
+    border-color: color-mix(in srgb, var(--color-error) 20%, transparent);
+    color: var(--color-error);
+  }
+
+  .notif-mute-btn-active:hover {
+    background: color-mix(in srgb, var(--color-error) 18%, transparent);
+    color: var(--color-error);
+  }
+
+  /* Scrollbar */
+  .notif-list::-webkit-scrollbar { width: 3px; }
+  .notif-list::-webkit-scrollbar-track { background: transparent; }
+  .notif-list::-webkit-scrollbar-thumb {
+    background: color-mix(in srgb, var(--color-outline) 30%, transparent);
+    border-radius: 9999px;
+  }
+
+  /* Animation: respects prefers-reduced-motion */
+  @media (prefers-reduced-motion: reduce) {
+    .notif-panel { transition: none; }
+  }
+</style>

@@ -8,7 +8,6 @@ export function parseConfigEntries(rows: Array<{ key: string; value: string }>) 
   return {
     setupComplete: entries.setup_complete === 'true',
     dashboardName: entries.dashboard_name ?? 'My Dashboard',
-    dashboardSubtitle: entries.dashboard_subtitle ?? 'System overview & performance',
     tabs: [],
     sessionTimeout: (entries.session_timeout as '1d' | '7d' | '30d' | 'never' | undefined) ?? '7d',
     location:

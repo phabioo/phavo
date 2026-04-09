@@ -1,8 +1,8 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { untrack } from 'svelte';
   import type { NetworkMetrics, WidgetSize } from '@phavo/types';
   import { Icon } from '@phavo/ui';
-  import { formatBytes, formatSpeed } from '$lib/utils/format';
+  import { formatSpeed } from '$lib/utils/format';
 
   interface Props {
     data: NetworkMetrics;
@@ -11,174 +11,252 @@
 
   let { data, size = 'M' }: Props = $props();
 
-  // Track the max seen speed for a mini spark-like visual proportion
-  let maxSpeed = $state(1);
-  
-  onMount(() => {
-    $effect.root(() => {
-      $effect(() => {
-        const peak = Math.max(data.uploadSpeed, data.downloadSpeed, 1);
-        if (peak > maxSpeed) maxSpeed = peak;
-      });
-    });
+  let speedHistory = $state<number[]>(
+    Array.from({ length: 14 }, (_, i) => 50000 + Math.random() * 200000)
+  );
+
+  $effect(() => {
+    const speed = data?.downloadSpeed;
+    if (speed !== undefined) {
+      // Use untrack to read speedHistory without subscribing — prevents an
+      // infinite reactive loop where mutating the array re-triggers this effect.
+      speedHistory = [...untrack(() => speedHistory), speed].slice(-14);
+    }
   });
 
-  const downPct = $derived(Math.min(100, (data.downloadSpeed / maxSpeed) * 100));
-  const upPct   = $derived(Math.min(100, (data.uploadSpeed   / maxSpeed) * 100));
+  const maxSpeed = $derived(Math.max(...speedHistory, 1));
+  const sparkBars = $derived(
+    speedHistory.map((s) => Math.max(8, (s / maxSpeed) * 100)),
+  );
+
+  const downSpeed = $derived(formatSpeed(data?.downloadSpeed ?? 0));
+  const upSpeed = $derived(formatSpeed(data?.uploadSpeed ?? 0));
+
+  const maxObserved = $derived(Math.max(...speedHistory, 1));
+  const downPct = $derived(Math.min(100, ((data?.downloadSpeed ?? 0) / maxObserved) * 100));
+  const upPct = $derived(Math.min(100, ((data?.uploadSpeed ?? 0) / maxObserved) * 100));
 </script>
 
-<div class="network-widget">
-  {#if size === 'S'}
-    <div class="s-row">
-      <Icon name="globe" size={16} class="text-accent" />
-      <span class="speed-value mono">{formatSpeed(data.downloadSpeed)}</span>
-    </div>
-  {:else}
-    <div class="speed-blocks">
-      <div class="speed-block">
-        <div class="speed-direction">
-          <span class="arrow down">↓</span>
-          <span class="speed-label">Download</span>
-        </div>
-        <span class="speed-value mono">{formatSpeed(data.downloadSpeed)}</span>
+{#if size === 'S'}
+  <div class="net-s">
+    <span class="widget-category-label">NETWORK</span>
+    <span class="net-value-s hero-glow">{downSpeed}</span>
+  </div>
+{:else if size === 'M'}
+  <div class="net-m">
+    <div class="net-header widget-header">
+      <div>
+        <span class="widget-category-label">LIVE TRAFFIC</span>
+        <h3 class="net-title">Network Throughput</h3>
       </div>
-
-      <div class="speed-divider"></div>
-
-      <div class="speed-block">
-        <div class="speed-direction">
-          <span class="arrow up">↑</span>
-          <span class="speed-label">Upload</span>
-        </div>
-        <span class="speed-value mono">{formatSpeed(data.uploadSpeed)}</span>
-      </div>
+      <Icon name="activity" size={18} class="widget-icon" />
     </div>
 
-    <div class="online-row">
-      <span class="online-dot"></span>
-      <span class="online-label">Online</span>
+    <div class="net-chart">
+      {#each sparkBars as bar}
+        <div class="net-bar" style="height: {bar}%"></div>
+      {/each}
     </div>
 
-    {#if (size === 'L' || size === 'XL')}
-      <div class="totals-row">
-        <div class="total-stat">
-          <span class="total-label">Total Received</span>
-          <span class="total-value mono">{formatBytes(data.totalReceived)}</span>
+    <div class="net-stats">
+      <div class="net-stat-group">
+        <div class="net-stat">
+          <span class="widget-meta-label">DOWN</span>
+          <span class="net-stat-value hero-glow">{downSpeed}</span>
         </div>
-        <div class="total-stat">
-          <span class="total-label">Total Sent</span>
-          <span class="total-value mono">{formatBytes(data.totalSent)}</span>
+        <div class="net-stat">
+          <span class="widget-meta-label">UP</span>
+          <span class="net-stat-value hero-glow">{upSpeed}</span>
         </div>
       </div>
-    {/if}
-  {/if}
-</div>
+      <span class="net-stable-badge">STABLE</span>
+    </div>
+  </div>
+{:else}
+  <div class="net-l">
+    <div class="net-header widget-header">
+      <div>
+        <span class="widget-category-label">LIVE TRAFFIC</span>
+        <h3 class="net-title">Network Throughput</h3>
+      </div>
+      <Icon name="activity" size={18} class="widget-icon" />
+    </div>
+
+    <div class="net-chart">
+      {#each sparkBars as bar}
+        <div class="net-bar" style="height: {bar}%"></div>
+      {/each}
+    </div>
+
+    <div class="net-stats">
+      <div class="net-stat-group">
+        <div class="net-stat">
+          <span class="widget-meta-label">DOWN</span>
+          <span class="net-stat-value hero-glow">{downSpeed}</span>
+        </div>
+        <div class="net-stat">
+          <span class="widget-meta-label">UP</span>
+          <span class="net-stat-value hero-glow">{upSpeed}</span>
+        </div>
+      </div>
+      <span class="net-stable-badge">STABLE</span>
+    </div>
+
+    <!-- L-only: bandwidth bars -->
+    <div class="net-bars-section">
+      <div class="net-bar-row">
+        <span class="widget-meta-label">DOWNLOAD</span>
+        <div class="net-bandwidth-track">
+          <div class="net-bandwidth-fill" style="width: {downPct}%"></div>
+        </div>
+        <span class="net-bar-value">{downSpeed}</span>
+      </div>
+      <div class="net-bar-row">
+        <span class="widget-meta-label">UPLOAD</span>
+        <div class="net-bandwidth-track">
+          <div class="net-bandwidth-fill" style="width: {upPct}%"></div>
+        </div>
+        <span class="net-bar-value">{upSpeed}</span>
+      </div>
+    </div>
+  </div>
+{/if}
 
 <style>
-  .network-widget {
+  .net-s {
     display: flex;
     flex-direction: column;
-    gap: var(--space-4);
-  }
-
-  .s-row {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
-  }
-
-  .speed-blocks {
-    display: flex;
-    gap: var(--space-4);
-    align-items: stretch;
-  }
-
-  .speed-block {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-2);
-  }
-
-  .speed-direction {
-    display: flex;
-    align-items: center;
+    justify-content: center;
+    align-items: flex-start;
+    height: 100%;
     gap: var(--space-1);
   }
 
-  .arrow {
-    font-size: 14px;
-    line-height: 1;
+  .net-value-s {
+    font-size: 24px;
     font-weight: 700;
+    color: var(--color-secondary);
+    letter-spacing: -0.02em;
+    font-family: var(--font-mono);
   }
 
-  .down { color: var(--color-accent); }
-  .up   { color: var(--color-accent-text); }
-
-  .speed-label {
-    font-size: 11px;
-    color: var(--color-text-muted);
-    text-transform: uppercase;
-    letter-spacing: 0.4px;
-  }
-
-  .speed-value {
-    font-size: 22px;
-    font-weight: 700;
-    color: var(--color-text-primary);
-    line-height: 1;
-  }
-
-  .s-row .speed-value {
-    font-size: 20px;
-  }
-
-  .speed-divider {
-    width: 1px;
-    background: var(--color-border-subtle);
-    align-self: stretch;
-  }
-
-  .online-row {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
-  }
-
-  .online-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: var(--color-success);
-  }
-
-  .online-label {
-    font-size: 12px;
-    color: var(--color-text-secondary);
-  }
-
-  .totals-row {
-    display: flex;
-    justify-content: space-between;
-    padding-top: var(--space-2);
-    border-top: 1px solid var(--color-border-subtle);
-  }
-
-  .total-stat {
+  .net-m {
     display: flex;
     flex-direction: column;
-    gap: 2px;
+    justify-content: space-between;
+    height: 100%;
   }
 
-  .total-label {
-    font-size: 10px;
-    color: var(--color-text-muted);
+  .net-title {
+    font-size: var(--font-size-xl);
+    font-weight: 600;
+    color: var(--color-on-surface);
+    margin-top: var(--space-2);
+    margin-bottom: 0;
+  }
+
+  .net-chart {
+    display: flex;
+    align-items: flex-end;
+    gap: 3px;
+    height: 96px;
+    width: 100%;
+    flex: 1;
+    margin: var(--space-4) 0;
+    overflow: hidden;
+  }
+
+  .net-bar {
+    flex: 1;
+    min-width: 0;
+    background: linear-gradient(
+      to top,
+      color-mix(in srgb, var(--color-secondary) 15%, transparent),
+      var(--color-secondary)
+    );
+    border-radius: 4px 4px 0 0;
+    transition: height 0.5s ease;
+  }
+
+  .net-stats {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+  }
+
+  .net-stat-group { display: flex; gap: var(--space-6); }
+
+  .net-stat {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+  }
+
+  .net-stat-value {
+    font-size: var(--font-size-lg);
+    font-weight: 700;
+    color: var(--color-on-surface);
+    display: block;
+    font-family: var(--font-mono);
+  }
+
+  .net-stable-badge {
+    font-size: var(--font-size-xs);
+    font-weight: 700;
+    font-family: var(--font-mono);
+    letter-spacing: 0.08em;
     text-transform: uppercase;
-    letter-spacing: 0.4px;
+    color: var(--color-secondary);
+    background: color-mix(in srgb, var(--color-secondary) 10%, transparent);
+    padding: 4px 8px;
+    border-radius: 4px;
   }
 
-  .total-value {
-    font-size: 13px;
-    color: var(--color-text-secondary);
+  /* ── L-size layout ──────────────────────────────────────────────────── */
+  .net-l {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    height: 100%;
+  }
+
+  .net-bars-section {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    margin-top: var(--space-4);
+    padding-top: var(--space-4);
+    border-top: 1px solid color-mix(in srgb, var(--color-outline-variant) 15%, transparent);
+  }
+
+  .net-bar-row {
+    display: grid;
+    grid-template-columns: 64px 1fr auto;
+    align-items: center;
+    gap: var(--space-3);
+  }
+
+  .net-bandwidth-track {
+    height: 4px;
+    background: color-mix(in srgb, var(--color-primary) 5%, transparent);
+    border-radius: 9999px;
+    overflow: hidden;
+  }
+
+  .net-bandwidth-fill {
+    height: 100%;
+    background: var(--color-secondary);
+    border-radius: 9999px;
+    transition: width 0.5s ease;
+  }
+
+  .net-bar-value {
+    font-size: 11px;
+    font-weight: 700;
+    font-family: var(--font-mono);
+    color: var(--color-on-surface-variant);
+    white-space: nowrap;
+    min-width: 64px;
+    text-align: right;
   }
 </style>

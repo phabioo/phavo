@@ -5,7 +5,7 @@ export type AuthMode = z.infer<typeof AuthMode>;
 
 export const SessionSchema = z.object({
   userId: z.string(),
-  tier: z.enum(['free', 'standard', 'local']),
+  tier: z.enum(['stellar', 'celestial']),
   authMode: AuthMode,
   validatedAt: z.number(),
   graceUntil: z.number().optional(),

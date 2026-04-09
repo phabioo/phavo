@@ -24,115 +24,195 @@
   }
 </script>
 
-<div class="cal-widget">
+{#if size === 'S'}
   {#if !next}
-    <div class="empty">
-      <Icon name="calendar" size={20} />
-      <span>No upcoming events</span>
-    </div>
-  {:else if size === 'S'}
-    <div class="s-row">
-      <Icon name="calendar" size={16} class="text-accent" />
-      <span class="s-title">{next.title}</span>
+    <div class="cal-s">
+      <span class="widget-category-label">CALENDAR</span>
+      <span class="cal-s-empty">No upcoming events</span>
     </div>
   {:else}
-    <div class="event-list">
-      {#each data.events.slice(0, size === 'M' ? 5 : 10) as evt (evt.title + evt.startTime)}
-        <div class="event-row">
-          <div class="event-dot"></div>
-          <div class="event-info">
-            <span class="event-title">{evt.title}</span>
-            <div class="event-meta">
-              <span class="event-time">{fmtDate(evt.startTime)}</span>
-              {#if evt.calendarName}
-                <span class="event-cal">{evt.calendarName}</span>
-              {/if}
-            </div>
-          </div>
-        </div>
-      {/each}
+    <div class="cal-s">
+      <span class="widget-category-label">CALENDAR</span>
+      <span class="cal-s-title hero-glow">{next.title}</span>
     </div>
   {/if}
-</div>
+{:else if size === 'M'}
+  <div class="cal-m">
+    <div class="widget-header">
+      <span class="widget-category-label">CALENDAR</span>
+      <Icon name="calendar" size={18} class="widget-icon" />
+    </div>
+
+    {#if !next}
+      <div class="cal-empty">
+        <Icon name="calendar" size={20} />
+        <span>No upcoming events</span>
+      </div>
+    {:else}
+      <div class="cal-next">
+        <span class="cal-next-title hero-glow">{next.title}</span>
+        <span class="cal-next-time">{fmtDate(next.startTime)}</span>
+      </div>
+
+      {#if data.events.length > 1}
+        <div class="cal-list">
+          {#each data.events.slice(1, 4) as evt (evt.title + evt.startTime)}
+            <div class="cal-row">
+              <div class="cal-dot"></div>
+              <div class="cal-row-info">
+                <span class="cal-event-title">{evt.title}</span>
+                <span class="cal-event-time">{fmtDate(evt.startTime)}</span>
+              </div>
+            </div>
+          {/each}
+        </div>
+      {/if}
+    {/if}
+  </div>
+{:else}
+  <div class="cal-l">
+    <div class="widget-header">
+      <span class="widget-category-label">CALENDAR</span>
+      <Icon name="calendar" size={18} class="widget-icon" />
+    </div>
+
+    {#if !next}
+      <div class="cal-empty">
+        <Icon name="calendar" size={20} />
+        <span>No upcoming events</span>
+      </div>
+    {:else}
+      <div class="cal-next">
+        <span class="cal-next-title hero-glow">{next.title}</span>
+        <span class="cal-next-time">{fmtDate(next.startTime)}</span>
+      </div>
+
+      {#if data.events.length > 1}
+        <div class="cal-list">
+          {#each data.events.slice(1, size === 'XL' ? 9 : 8) as evt (evt.title + evt.startTime)}
+            <div class="cal-row">
+              <div class="cal-dot"></div>
+              <div class="cal-row-info">
+                <span class="cal-event-title">{evt.title}</span>
+                <span class="cal-event-time">{fmtDate(evt.startTime)}</span>
+              </div>
+            </div>
+          {/each}
+        </div>
+      {/if}
+    {/if}
+  </div>
+{/if}
 
 <style>
-  .cal-widget {
+  /* ── S size ─────────────────────────────────────────── */
+  .cal-s {
     display: flex;
     flex-direction: column;
-    gap: var(--space-3);
+    justify-content: center;
+    height: 100%;
+    padding: var(--space-4);
+    gap: var(--space-1);
   }
 
-  .empty {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: var(--space-2);
-    padding: var(--space-4) 0;
-    color: var(--color-text-muted);
-    font-size: 13px;
-  }
-
-  .s-row {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
-  }
-
-  .s-title {
-    font-size: 13px;
-    color: var(--color-text-primary);
+  .cal-s-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--color-primary-fixed);
+    letter-spacing: -0.02em;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
 
-  .event-list {
+  .cal-s-empty {
+    font-size: 14px;
+    color: var(--color-outline);
+  }
+
+  /* ── M/L/XL shared ──────────────────────────────────── */
+  .cal-m,
+  .cal-l {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    height: 100%;
+    gap: var(--space-4);
+  }
+
+  /* ── Next event (prominent) ─────────────────────────── */
+  .cal-next {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+  }
+
+  .cal-next-title {
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--color-primary-fixed);
+    letter-spacing: -0.02em;
+    line-height: 1.2;
+  }
+
+  .cal-next-time {
+    font-size: 14px;
+    color: var(--color-secondary);
+    font-family: var(--font-mono);
+  }
+
+  /* ── Empty state ────────────────────────────────────── */
+  .cal-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-4) 0;
+    color: var(--color-outline);
+    font-size: 13px;
+    flex: 1;
+    justify-content: center;
+  }
+
+  /* ── Event list ─────────────────────────────────────── */
+  .cal-list {
     display: flex;
     flex-direction: column;
     gap: var(--space-2);
   }
 
-  .event-row {
+  .cal-row {
     display: flex;
     align-items: flex-start;
     gap: var(--space-2);
   }
 
-  .event-dot {
+  .cal-dot {
     width: 8px;
     height: 8px;
     border-radius: 50%;
-    background: var(--color-accent);
+    background: var(--color-primary-fixed);
     flex-shrink: 0;
     margin-top: 4px;
   }
 
-  .event-info {
+  .cal-row-info {
     display: flex;
     flex-direction: column;
     gap: 2px;
     min-width: 0;
   }
 
-  .event-title {
+  .cal-event-title {
     font-size: 13px;
-    color: var(--color-text-primary);
+    color: var(--color-on-surface);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
 
-  .event-meta {
-    display: flex;
-    gap: var(--space-2);
+  .cal-event-time {
     font-size: 11px;
-  }
-
-  .event-time {
-    color: var(--color-text-muted);
-  }
-
-  .event-cal {
-    color: var(--color-accent-text);
+    color: var(--color-secondary);
   }
 </style>

@@ -1,12 +1,14 @@
 export interface Notification {
   id: string;
-  type: 'update' | 'widget-error' | 'widget-warning' | 'system-alert' | 'info';
+  type: 'update' | 'security' | 'widget-error' | 'task' | 'info';
   title: string;
-  body: string;
-  widgetId?: string;
-  settingsTab?: string;
-  timestamp: number;
+  message: string;
   read: boolean;
+  actionLabel?: string;
+  actionUrl?: string;
+  widgetId?: string;
+  progress?: number;
+  createdAt: number;
 }
 
-export type NotifyFn = (n: Omit<Notification, 'id' | 'timestamp' | 'read'>) => void;
+export type NotifyFn = (n: Omit<Notification, 'id' | 'createdAt' | 'read'>) => void;

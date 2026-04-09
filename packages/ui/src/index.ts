@@ -30,6 +30,7 @@ export { default as Tooltip } from './components/Tooltip.svelte';
 export { default as UpgradeBanner } from './components/UpgradeBanner.svelte';
 export { default as WidgetCard } from './components/WidgetCard.svelte';
 export { default as WidgetDrawer } from './components/WidgetDrawer.svelte';
+export { default as WishStar } from './components/WishStar.svelte';
 
 // Icons
 export * as icons from './icons/icons.js';

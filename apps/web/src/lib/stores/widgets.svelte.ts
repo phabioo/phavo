@@ -177,9 +177,9 @@ function checkThresholds(widgetId: string, data: unknown): void {
         const last = diskThrottleMap.get(disk.mount) ?? 0;
         if (Date.now() - last > 3_600_000) {
           notify({
-            type: 'widget-warning',
+            type: 'info',
             title: en.notifications.diskAlmostFull,
-            body: `${disk.mount} at ${Math.round(disk.usePercent)}%`,
+            message: `${disk.mount} at ${Math.round(disk.usePercent)}%`,
             widgetId: 'disk',
           });
           diskThrottleMap.set(disk.mount, Date.now());
@@ -193,9 +193,9 @@ function checkThresholds(widgetId: string, data: unknown): void {
     if (temp.cpuTemp !== null && temp.cpuTemp > 80) {
       if (Date.now() - tempLastNotified > 1_800_000) {
         notify({
-          type: 'system-alert',
+          type: 'security',
           title: en.notifications.highCpuTemp,
-          body: `${temp.cpuTemp}°C detected`,
+          message: `${temp.cpuTemp}°C detected`,
           widgetId: 'temperature',
         });
         tempLastNotified = Date.now();
@@ -211,9 +211,9 @@ function trackPiholeFailure(widgetId: string): void {
     notify({
       type: 'widget-error',
       title: en.notifications.piholeUnreachable,
-      body: en.notifications.piholeUnreachableBody,
+      message: en.notifications.piholeUnreachableBody,
       widgetId: 'pihole',
-      settingsTab: 'general',
+      actionUrl: '/settings?tab=general',
     });
     piholeFailStreak = 0;
   }
@@ -427,12 +427,49 @@ export async function deleteTab(id: string): Promise<void> {
 }
 
 // ── Widget instances ───────────────────────────────────────────────────
+// ── Dev-only default size migration ───────────────────────────────────
+// Upgrades any instance that was saved at 'S' before M became the default.
+// Safe to run on every load: only touches instances still at 'S'.
+const PREFERS_M_WIDGETS = new Set([
+  'cpu',
+  'memory',
+  'disk',
+  'network',
+  'weather',
+  'pihole',
+  'links',
+  'docker',
+  'service-health',
+  'speedtest',
+  'calendar',
+  'rss',
+]);
+
+async function upgradeDefaultSizeIfNeeded(instances: WidgetInstance[]): Promise<WidgetInstance[]> {
+  const staleS = instances.filter((i) => i.size === 'S' && PREFERS_M_WIDGETS.has(i.widgetId));
+  if (staleS.length === 0) return instances;
+
+  await Promise.allSettled(
+    staleS.map((i) =>
+      fetchWithCsrf(`/api/v1/widget-instances/${encodeURIComponent(i.id)}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ size: 'M' }),
+      }),
+    ),
+  );
+
+  return instances.map((i) =>
+    i.size === 'S' && PREFERS_M_WIDGETS.has(i.widgetId) ? { ...i, size: 'M' as WidgetSize } : i,
+  );
+}
+
 async function loadWidgetInstances(tabId: string): Promise<void> {
   try {
     const res = await fetchWithCsrf(`/api/v1/tabs/${encodeURIComponent(tabId)}/widgets`);
     const json = (await res.json()) as { ok: boolean; data: WidgetInstance[] };
     if (json.ok) {
-      widgetInstances = json.data;
+      widgetInstances = await upgradeDefaultSizeIfNeeded(json.data);
       reconcileWidgetRuntime();
     }
   } catch {

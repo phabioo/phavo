@@ -36,7 +36,12 @@ export function registerWidgetRoutes(app: Hono<{ Variables: AppVariables }>): vo
       const def = registry.getById(body.widgetId);
       if (!def) return c.json(err('Unknown widget'), 400);
 
-      const size = (body.size && def.sizes.includes(body.size) ? body.size : def.sizes[0]) ?? 'M';
+      const size =
+        (body.size && def.sizes.includes(body.size)
+          ? body.size
+          : def.sizes.includes('M')
+            ? 'M'
+            : def.sizes[0]) ?? 'M';
 
       // Calculate next position: place after last widget on this tab
       const existing = await db
@@ -153,7 +158,7 @@ export function registerWidgetRoutes(app: Hono<{ Variables: AppVariables }>): vo
         return c.json(err('Unknown widget'), 404);
       }
 
-      if (widget.tier === 'standard' && session.tier === 'free') {
+      if (widget.tier === 'celestial' && session.tier === 'stellar') {
         return c.json(err('Upgrade required'), 403);
       }
 

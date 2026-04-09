@@ -21,7 +21,7 @@
     searchIndex?: SearchEntry[];
     searchEngineUrl?: string | undefined;
     aiProviders?: AiProviders | undefined;
-    tier?: 'free' | 'standard' | 'pro' | 'local';
+    tier?: 'stellar' | 'celestial';
     onAction?: ((entry: SearchEntry) => void) | undefined;
     onAiChat?:
       | ((
@@ -35,7 +35,7 @@
     searchIndex = [],
     searchEngineUrl = 'https://duckduckgo.com/?q={query}',
     aiProviders = { ollama: false, openai: false, anthropic: false },
-    tier = 'free',
+    tier = 'stellar',
     onAction,
     onAiChat,
   }: Props = $props();
@@ -128,7 +128,7 @@
   const webSearchIndex = $derived(results.length);
   const aiStartIndex = $derived(results.length + (webSearchEntry ? 1 : 0));
   const totalResults = $derived(
-    results.length + (webSearchEntry ? 1 : 0) + (tier !== 'free' ? aiEntries.length : 0),
+    results.length + (webSearchEntry ? 1 : 0) + (tier !== 'stellar' ? aiEntries.length : 0),
   );
 
   function clickOutside(node: HTMLElement, callback: () => void) {
@@ -260,17 +260,17 @@
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div class="hs-wrap" use:clickOutside={() => (open = false)}>
-  <div class="hs-shell" class:open={open}>
+  <div class="hs-container" class:open={open}>
     <!-- svelte-ignore a11y_click_events_have_key_events -->
     <div
-      class="hs-bar"
+      class="hs-input-row"
       onclick={() => {
         open = true;
         requestAnimationFrame(() => inputEl?.focus());
       }}
     >
       <span class="hs-leading" aria-hidden="true">
-        <Icon name="search" size={15} />
+        <Icon name="search" size={20} />
       </span>
 
       <input
@@ -299,7 +299,6 @@
     <!-- svelte-ignore a11y_no_static_element_interactions -->
     <div
       class="hs-dropdown"
-      class:open={open}
       aria-hidden={!open}
       inert={!open}
       onmousedown={(event) => event.preventDefault()}
@@ -358,7 +357,7 @@
           </div>
         {/if}
 
-        {#if tier !== 'free' && aiEntries.length > 0}
+        {#if tier !== 'stellar' && aiEntries.length > 0}
           <div class="hs-group-label">Ask AI</div>
           {#each aiEntries as aiEntry, index}
             <!-- svelte-ignore a11y_click_events_have_key_events -->
@@ -378,7 +377,7 @@
           {/each}
         {/if}
 
-        {#if tier === 'free'}
+        {#if tier === 'stellar'}
           <div class="hs-group-label">Ask AI</div>
           <div class="hs-item hs-item--locked">
             <span class="hs-item-icon">
@@ -430,55 +429,47 @@
     z-index: 5;
   }
 
-  .hs-shell {
+  .hs-container {
     position: relative;
-    display: flex;
-    flex-direction: column;
     width: 100%;
     min-width: 0;
-    border: 1px solid color-mix(in srgb, var(--color-accent) 18%, var(--color-border-subtle));
-    border-radius: 999px;
-    background: color-mix(in srgb, var(--color-bg-elevated) 94%, transparent);
-    box-shadow: 0 8px 22px rgba(0, 0, 0, 0.16);
+    border: 1px solid color-mix(in srgb, var(--color-outline-variant) 20%, transparent);
+    border-radius: var(--radius-full);
+    background: color-mix(in srgb, var(--color-surface-bright) 70%, transparent);
+    backdrop-filter: blur(20px);
     overflow: visible;
     transition:
-      border-color 0.15s ease,
-      background 0.15s ease,
-      box-shadow 0.15s ease,
-      border-radius 0s linear;
+      border-radius 0.1s ease,
+      border-color 0.15s ease;
   }
 
-  .hs-shell:hover {
-    border-color: color-mix(in srgb, var(--color-accent) 28%, var(--color-border-subtle));
+  .hs-container:hover {
+    border-color: color-mix(in srgb, var(--color-outline-variant) 35%, transparent);
   }
 
-  .hs-shell.open {
-    border-color: color-mix(in srgb, var(--color-accent) 34%, var(--color-border-subtle));
-    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
-    box-shadow: 0 18px 34px rgba(0, 0, 0, 0.38);
+  .hs-container.open {
+    border-radius: 1.5rem 1.5rem 0 0;
+    border-bottom-color: transparent;
   }
 
-  .hs-bar {
+  .hs-input-row {
     position: relative;
     display: flex;
     align-items: center;
     gap: var(--space-3);
     min-height: 40px;
-    padding: 0 var(--space-3) 0 calc(var(--space-4) + 14px);
-    background: transparent;
-    border: none;
-    border-radius: 0;
+    padding: 4px 16px 4px 0;
     cursor: text;
   }
 
   .hs-leading {
     position: absolute;
-    left: var(--space-4);
+    left: 16px;
     top: 50%;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    color: var(--color-text-muted);
+    color: var(--color-primary-fixed);
     pointer-events: none;
     transform: translateY(-50%);
   }
@@ -486,18 +477,19 @@
   .hs-input {
     flex: 1;
     min-width: 0;
-    padding: 0;
+    padding: 4px 16px 4px 48px;
     background: transparent;
     border: none;
     outline: none;
-    color: var(--color-text-primary);
+    box-shadow: none;
+    color: var(--color-on-surface);
     font-family: var(--font-ui);
-    font-size: 13px;
+    font-size: 14px;
     line-height: 1.2;
   }
 
   .hs-input::placeholder {
-    color: var(--color-text-muted);
+    color: var(--color-outline);
   }
 
   .hs-kbd {
@@ -507,9 +499,9 @@
     min-height: 24px;
     padding: 0 var(--space-2);
     border-radius: 999px;
-    border: 1px solid var(--color-border-subtle);
-    background: color-mix(in srgb, var(--color-bg-base) 76%, transparent);
-    color: var(--color-text-muted);
+    border: 1px solid color-mix(in srgb, var(--color-outline-variant) 10%, transparent);
+    background: color-mix(in srgb, var(--color-surface-dim) 76%, transparent);
+    color: var(--color-outline);
     font-family: var(--font-mono);
     font-size: 10px;
     letter-spacing: 0.04em;
@@ -527,51 +519,49 @@
     border: none;
     border-radius: 999px;
     background: transparent;
-    color: var(--color-text-muted);
+    color: var(--color-outline);
     cursor: pointer;
     transition: color 0.15s ease, background 0.15s ease;
   }
 
   .hs-clear:hover {
-    color: var(--color-text-primary);
-    background: color-mix(in srgb, var(--color-bg-hover) 84%, transparent);
+    color: var(--color-on-surface);
+    background: color-mix(in srgb, var(--color-surface-high) 84%, transparent);
   }
 
   .hs-dropdown {
     position: absolute;
-    top: calc(100% - 1px);
-    left: 0;
-    right: 0;
+    top: 100%;
+    left: -1px;
+    right: -1px;
     display: flex;
     flex-direction: column;
     gap: 2px;
-    max-height: min(460px, 72dvh);
-    overflow-y: auto;
-    padding: var(--space-3);
-    background: color-mix(in srgb, var(--color-bg-elevated) 96%, transparent);
-    border: 1px solid color-mix(in srgb, var(--color-accent) 34%, var(--color-border-subtle));
-    border-top: none;
-    border-radius: 0 0 var(--radius-xl) var(--radius-xl);
-    box-shadow: 0 18px 34px rgba(0, 0, 0, 0.38);
-    z-index: 999;
-    scrollbar-width: thin;
+    max-height: 0;
     opacity: 0;
-    visibility: hidden;
     pointer-events: none;
-    transform: translateY(-8px) scale(0.985);
-    transform-origin: top center;
+    overflow: hidden;
+    padding: 0 var(--space-3);
+    background: color-mix(in srgb, var(--color-surface-bright) 70%, transparent);
+    backdrop-filter: blur(20px);
+    border: 1px solid color-mix(in srgb, var(--color-outline-variant) 20%, transparent);
+    border-top: none;
+    border-radius: 0 0 1.5rem 1.5rem;
+    box-shadow: 0 18px 34px color-mix(in srgb, var(--color-surface-dim) 38%, transparent);
+    z-index: 50;
+    scrollbar-width: thin;
     transition:
-      opacity 0.18s ease,
-      transform 0.18s ease,
-      visibility 0s linear 0.18s;
+      max-height 0.2s ease,
+      opacity 0.15s ease,
+      padding 0.2s ease;
   }
 
-  .hs-dropdown.open {
+  .hs-container.open .hs-dropdown {
+    max-height: min(480px, 72dvh);
     opacity: 1;
-    visibility: visible;
     pointer-events: auto;
-    transform: translateY(0) scale(1);
-    transition-delay: 0s;
+    overflow-y: auto;
+    padding: var(--space-3);
   }
 
   .hs-hint {
@@ -580,8 +570,8 @@
     gap: var(--space-2);
     padding: var(--space-4);
     border-radius: calc(var(--radius-xl) - 4px);
-    background: color-mix(in srgb, var(--color-bg-base) 28%, transparent);
-    border: 1px solid var(--color-border-subtle);
+    background: color-mix(in srgb, var(--color-surface-dim) 28%, transparent);
+    border: 1px solid color-mix(in srgb, var(--color-outline-variant) 10%, transparent);
   }
 
   .hs-hint-title {
@@ -589,14 +579,14 @@
     font-weight: 700;
     letter-spacing: 0.2em;
     text-transform: uppercase;
-    color: var(--color-accent-text);
+    color: var(--color-primary);
   }
 
   .hs-hint-copy {
     margin: 0;
     font-size: var(--font-size-sm);
     line-height: 1.6;
-    color: var(--color-text-secondary);
+    color: var(--color-on-surface-variant);
   }
 
   .hs-group-label {
@@ -605,7 +595,7 @@
     font-weight: 700;
     letter-spacing: 0.2em;
     text-transform: uppercase;
-    color: var(--color-text-muted);
+    color: var(--color-outline);
   }
 
   .hs-item {
@@ -621,8 +611,8 @@
 
   .hs-item:hover,
   .hs-item--active {
-    background: color-mix(in srgb, var(--color-accent-t) 84%, transparent);
-    border-color: color-mix(in srgb, var(--color-accent) 16%, transparent);
+    background: color-mix(in srgb, color-mix(in srgb, var(--color-primary) 10%, transparent) 84%, transparent);
+    border-color: color-mix(in srgb, var(--color-primary) 16%, transparent);
   }
 
   .hs-item--locked {
@@ -630,7 +620,7 @@
   }
 
   .hs-item--locked:hover {
-    background: color-mix(in srgb, var(--color-bg-base) 28%, transparent);
+    background: color-mix(in srgb, var(--color-surface-dim) 28%, transparent);
     border-color: transparent;
   }
 
@@ -642,8 +632,8 @@
     height: 30px;
     flex-shrink: 0;
     border-radius: 10px;
-    background: color-mix(in srgb, var(--color-bg-base) 52%, transparent);
-    color: var(--color-accent-text);
+    background: color-mix(in srgb, var(--color-surface-dim) 52%, transparent);
+    color: var(--color-primary);
   }
 
   .hs-item-copy {
@@ -655,13 +645,13 @@
   }
 
   .hs-item-label {
-    color: var(--color-text-primary);
+    color: var(--color-on-surface);
     font-size: 13px;
     line-height: 1.35;
   }
 
   .hs-item-sub {
-    color: var(--color-text-muted);
+    color: var(--color-outline);
     font-size: 11px;
     line-height: 1.4;
   }
@@ -673,9 +663,9 @@
     min-height: 30px;
     padding: 0 var(--space-3);
     border-radius: 999px;
-    border: 1px solid color-mix(in srgb, var(--color-accent) 24%, transparent);
-    background: color-mix(in srgb, var(--color-bg-base) 64%, transparent);
-    color: var(--color-accent-text);
+    border: 1px solid color-mix(in srgb, var(--color-primary) 24%, transparent);
+    background: color-mix(in srgb, var(--color-surface-dim) 64%, transparent);
+    color: var(--color-primary);
     font-size: 11px;
     font-weight: 700;
     text-decoration: none;
@@ -688,7 +678,7 @@
     gap: var(--space-3);
     margin-top: var(--space-2);
     padding: var(--space-4);
-    border-top: 1px solid var(--color-border-subtle);
+    border-top: 1px solid color-mix(in srgb, var(--color-outline-variant) 10%, transparent);
   }
 
   .hs-ai-meta {
@@ -703,13 +693,13 @@
     font-weight: 700;
     letter-spacing: 0.2em;
     text-transform: uppercase;
-    color: var(--color-accent-text);
+    color: var(--color-primary);
   }
 
   .hs-ai-text {
     font-size: 13px;
     line-height: 1.65;
-    color: var(--color-text-primary);
+    color: var(--color-on-surface);
     white-space: pre-wrap;
     word-break: break-word;
   }
@@ -717,7 +707,7 @@
   .hs-back {
     border: none;
     background: transparent;
-    color: var(--color-text-secondary);
+    color: var(--color-on-surface-variant);
     cursor: pointer;
     font-size: 12px;
     font-weight: 600;
@@ -733,7 +723,7 @@
     width: 6px;
     height: 6px;
     border-radius: 999px;
-    background: var(--color-accent);
+    background: var(--color-primary);
     animation: hs-pulse 1.2s ease-in-out infinite;
   }
 
@@ -760,7 +750,7 @@
   }
 
   @media (max-width: 639px) {
-    .hs-bar {
+    .hs-input-row {
       min-height: 38px;
       padding-right: var(--space-2);
     }
@@ -769,7 +759,7 @@
       display: none;
     }
 
-    .hs-dropdown {
+    .hs-container.open .hs-dropdown {
       max-height: min(60dvh, 420px);
     }
   }

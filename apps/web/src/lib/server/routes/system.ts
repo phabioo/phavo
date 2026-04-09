@@ -53,8 +53,8 @@ function maskLicenseKey(licenseKey?: string | null): string | null {
 }
 
 export function registerSystemRoutes(app: Hono<{ Variables: AppVariables }>): void {
-  // Health check — always public, no auth. Polled by Tauri sidecar on startup.
-  app.get('/health', async (c) => {
+  // Health check — always public, no auth. Polled by the frontend status pill.
+  app.get('/system/health', async (c) => {
     try {
       await db.run(sql`SELECT 1`);
     } catch {
@@ -77,7 +77,7 @@ export function registerSystemRoutes(app: Hono<{ Variables: AppVariables }>): vo
         }),
       );
     } catch {
-      return c.json(ok({ version: PHAVO_VERSION, tier: 'free', licenseKeyMasked: null }));
+      return c.json(ok({ version: PHAVO_VERSION, tier: 'stellar', licenseKeyMasked: null }));
     }
   });
 
@@ -122,8 +122,9 @@ export function registerSystemRoutes(app: Hono<{ Variables: AppVariables }>): vo
         serverNotify({
           type: 'update',
           title: `Phavo ${data.latestVersion} available`,
-          body: 'Click to see changelog',
-          settingsTab: 'about',
+          message: 'Click to see changelog',
+          actionLabel: 'UPDATE NOW',
+          actionUrl: '/settings?tab=about',
         });
       }
 

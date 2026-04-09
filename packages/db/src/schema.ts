@@ -28,7 +28,7 @@ export const sessions = sqliteTable('sessions', {
     .notNull()
     .references(() => users.id),
   // Single source of truth for tier enforcement. Set by server on login only.
-  tier: text('tier', { enum: ['free', 'standard', 'local'] }).notNull(),
+  tier: text('tier', { enum: ['stellar', 'celestial'] }).notNull(),
   authMode: text('auth_mode', { enum: ['phavo-net', 'local'] }).notNull(),
   // Unix ms. Last successful phavo.net validation.
   validatedAt: integer('validated_at').notNull(),
@@ -97,11 +97,31 @@ export const licenseActivation = sqliteTable('license_activation', {
     .$defaultFn(() => crypto.randomUUID()),
   // Gumroad licence key.
   licenseKey: text('license_key').notNull(),
-  // Only 'local' tier activates here — see arch spec.
-  tier: text('tier', { enum: ['local'] }).notNull(),
+  // Only 'celestial' tier activates here — see arch spec.
+  tier: text('tier', { enum: ['celestial'] }).notNull(),
   // RS256-signed JWT from phavo.net. Payload: { instanceId, tier, activatedAt }.
   activationJwt: text('activation_jwt').notNull(),
   // Stable UUID bound to Docker volume (generated once, stored in instance.id).
   instanceIdentifier: text('instance_identifier').notNull(),
   activatedAt: integer('activated_at').notNull().default(nowMs),
+});
+
+export const notifications = sqliteTable('notifications', {
+  id: text('id')
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
+  // 'update' | 'security' | 'widget-error' | 'task' | 'info'
+  type: text('type').notNull(),
+  title: text('title').notNull(),
+  message: text('message').notNull(),
+  read: integer('read').notNull().default(0),
+  // Optional CTA button label.
+  actionLabel: text('action_label'),
+  // Optional CTA target URL.
+  actionUrl: text('action_url'),
+  // For widget-error deep-links.
+  widgetId: text('widget_id'),
+  // 0–100 for task type, null otherwise.
+  progress: integer('progress'),
+  createdAt: integer('created_at').notNull().default(nowMs),
 });

@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { ServiceHealthMetrics, WidgetSize } from '@phavo/types';
-  import { Icon, Badge } from '@phavo/ui';
+  import { Icon } from '@phavo/ui';
 
   interface Props {
     data: ServiceHealthMetrics;
@@ -10,119 +10,173 @@
   let { data, size = 'M' }: Props = $props();
 
   const up = $derived(data.services.filter(s => s.status === 'up').length);
-  const down = $derived(data.services.filter(s => s.status === 'down').length);
-
-  function statusVariant(status: string) {
-    if (status === 'up') return 'success' as const;
-    if (status === 'timeout') return 'warning' as const;
-    return 'danger' as const;
-  }
+  const total = $derived(data.services.length);
 </script>
 
-<div class="sh-widget">
-  {#if size === 'S'}
-    <div class="s-row">
-      <Icon name="heart-pulse" size={16} class="text-accent" />
-      <span class="metric-value mono">{up}</span>
-      <span class="s-label">up</span>
-      {#if down > 0}
-        <span class="s-down mono">{down} down</span>
-      {/if}
-    </div>
-  {:else}
-    <div class="summary">
-      <span class="metric-value mono">{up}</span>
-      <span class="metric-label">/ {data.services.length} healthy</span>
+{#if size === 'S'}
+  <div class="sh-s">
+    <span class="widget-category-label">SERVICES</span>
+    <span class="sh-s-value hero-glow">
+      {up}<span class="sh-s-unit">/{total} UP</span>
+    </span>
+  </div>
+{:else if size === 'M'}
+  <div class="sh-m">
+    <div class="widget-header">
+      <span class="widget-category-label">SERVICES</span>
+      <Icon name="shield" size={18} class="widget-icon" />
     </div>
 
-    <div class="service-list">
-      {#each data.services.slice(0, size === 'M' ? 6 : 12) as svc (svc.name)}
-        <div class="svc-row">
-          <div class="svc-info">
-            <Badge variant={statusVariant(svc.status)}>{svc.status}</Badge>
-            <span class="svc-name">{svc.name}</span>
+    <div class="sh-hero-wrap">
+      <span class="sh-hero hero-glow">
+        {up}<span class="sh-hero-unit">/{total}</span>
+      </span>
+    </div>
+
+    <div class="sh-list">
+      {#each data.services.slice(0, 6) as svc (svc.name)}
+        <div class="sh-row">
+          <div class="sh-row-info">
+            <span class="sh-status-dot" class:sh-status-up={svc.status === 'up'} class:sh-status-down={svc.status === 'down' || svc.status === 'timeout'}></span>
+            <span class="sh-svc-name">{svc.name}</span>
           </div>
-          {#if svc.responseTimeMs != null && (size === 'L' || size === 'XL')}
-            <span class="svc-latency mono">{svc.responseTimeMs}ms</span>
+        </div>
+      {/each}
+    </div>
+  </div>
+{:else}
+  <div class="sh-l">
+    <div class="widget-header">
+      <span class="widget-category-label">SERVICES</span>
+      <Icon name="shield" size={18} class="widget-icon" />
+    </div>
+
+    <div class="sh-hero-wrap">
+      <span class="sh-hero hero-glow">
+        {up}<span class="sh-hero-unit">/{total}</span>
+      </span>
+    </div>
+
+    <div class="sh-list">
+      {#each data.services.slice(0, size === 'XL' ? 12 : 8) as svc (svc.name)}
+        <div class="sh-row">
+          <div class="sh-row-info">
+            <span class="sh-status-dot" class:sh-status-up={svc.status === 'up'} class:sh-status-down={svc.status === 'down' || svc.status === 'timeout'}></span>
+            <span class="sh-svc-name">{svc.name}</span>
+          </div>
+          {#if svc.responseTimeMs != null}
+            <span class="sh-latency">{svc.responseTimeMs}ms</span>
           {/if}
         </div>
       {/each}
     </div>
-  {/if}
-</div>
+  </div>
+{/if}
 
 <style>
-  .sh-widget {
+  /* ── S size ─────────────────────────────────────────── */
+  .sh-s {
     display: flex;
     flex-direction: column;
-    gap: var(--space-3);
+    justify-content: center;
+    height: 100%;
+    padding: var(--space-4);
+    gap: var(--space-1);
   }
 
-  .s-row {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
-  }
-
-  .s-down {
-    font-size: 12px;
-    color: var(--color-danger);
-  }
-
-  .summary {
-    display: flex;
-    align-items: baseline;
-    gap: var(--space-2);
-  }
-
-  .metric-value {
-    font-size: 28px;
+  .sh-s-value {
+    font-size: 32px;
     font-weight: 700;
-    color: var(--color-text-primary);
+    color: var(--color-primary-fixed);
+    letter-spacing: -0.02em;
+  }
+
+  .sh-s-unit {
+    font-size: 16px;
+    font-weight: 300;
+    color: var(--color-on-surface-variant);
+  }
+
+  /* ── M/L/XL shared ──────────────────────────────────── */
+  .sh-m,
+  .sh-l {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    height: 100%;
+    gap: var(--space-4);
+  }
+
+  /* ── Hero stat ──────────────────────────────────────── */
+  .sh-hero-wrap {
+    flex: 1;
+    display: flex;
+    align-items: flex-start;
+  }
+
+  .sh-hero {
+    font-size: 72px;
+    font-weight: 700;
+    color: var(--color-primary-fixed);
+    letter-spacing: -0.03em;
     line-height: 1;
   }
 
-  .metric-label {
-    font-size: 13px;
-    color: var(--color-text-muted);
+  .sh-hero-unit {
+    font-size: 30px;
+    font-weight: 300;
+    color: var(--color-on-surface-variant);
   }
 
-  .s-label {
-    font-size: 12px;
-    color: var(--color-text-muted);
-  }
-
-  .service-list {
+  /* ── Service list ───────────────────────────────────── */
+  .sh-list {
     display: flex;
     flex-direction: column;
     gap: var(--space-2);
   }
 
-  .svc-row {
+  .sh-row {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: var(--space-2);
   }
 
-  .svc-info {
+  .sh-row-info {
     display: flex;
     align-items: center;
     gap: var(--space-2);
     min-width: 0;
   }
 
-  .svc-name {
+  .sh-status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    background: var(--color-outline);
+  }
+
+  .sh-status-up {
+    background: var(--color-secondary);
+  }
+
+  .sh-status-down {
+    background: var(--color-error);
+  }
+
+  .sh-svc-name {
     font-size: 13px;
-    color: var(--color-text-primary);
+    color: var(--color-on-surface);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
 
-  .svc-latency {
+  .sh-latency {
     font-size: 12px;
-    color: var(--color-text-muted);
+    color: var(--color-outline);
+    font-family: var(--font-mono);
     flex-shrink: 0;
   }
 </style>

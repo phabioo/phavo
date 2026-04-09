@@ -1,6 +1,8 @@
 import type { Notification, NotifyFn } from '@phavo/types';
 
 let _notifications = $state<Notification[]>([]);
+let _panelOpen = $state(false);
+let _muted = $state(false);
 
 export function getNotifications(): Notification[] {
   return _notifications;
@@ -10,11 +12,27 @@ export function getUnreadCount(): number {
   return _notifications.filter((n) => !n.read).length;
 }
 
+export function getPanelOpen(): boolean {
+  return _panelOpen;
+}
+
+export function setPanelOpen(open: boolean): void {
+  _panelOpen = open;
+}
+
+export function togglePanel(): void {
+  _panelOpen = !_panelOpen;
+  if (_panelOpen) {
+    // Mark all as read on open
+    markAllRead();
+  }
+}
+
 export const notify: NotifyFn = (n) => {
   const notification: Notification = {
     ...n,
     id: crypto.randomUUID(),
-    timestamp: Date.now(),
+    createdAt: Date.now(),
     read: false,
   };
   _notifications = [notification, ..._notifications];
@@ -22,28 +40,59 @@ export const notify: NotifyFn = (n) => {
 
 export function markRead(id: string): void {
   _notifications = _notifications.map((n) => (n.id === id ? { ...n, read: true } : n));
+  void fetch(`/api/v1/notifications/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ read: true }),
+  });
 }
 
 export function markAllRead(): void {
   _notifications = _notifications.map((n) => ({ ...n, read: true }));
+  void fetch('/api/v1/notifications', {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ readAll: true }),
+  });
+}
+
+export function dismiss(id: string): void {
+  _notifications = _notifications.filter((n) => n.id !== id);
+  void fetch(`/api/v1/notifications/${id}`, { method: 'DELETE' });
+}
+
+export function clearAll(): void {
+  _notifications = [];
+  void fetch('/api/v1/notifications', { method: 'DELETE' });
 }
 
 export function clearHistory(): void {
-  _notifications = [];
+  clearAll();
+}
+
+export function getMuted(): boolean {
+  return _muted;
+}
+
+export function toggleMute(): void {
+  _muted = !_muted;
+  void fetch('/api/v1/notifications/mute', {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ muted: _muted }),
+  });
 }
 
 /**
- * Fetches server-generated notifications (update checks, etc.) and
- * prepends any new ones to the local in-memory list.
- * Server drains its queue on each successful GET, so duplicates are avoided.
+ * Fetches all notifications from the server and replaces the local list.
  */
 export async function syncFromServer(): Promise<void> {
   try {
     const res = await fetch('/api/v1/notifications');
     if (!res.ok) return;
     const json = (await res.json()) as { ok: boolean; data: Notification[] };
-    if (json.ok && Array.isArray(json.data) && json.data.length > 0) {
-      _notifications = [...json.data, ..._notifications];
+    if (json.ok && Array.isArray(json.data)) {
+      _notifications = json.data;
     }
   } catch {
     // silently fail — no network connectivity or server down

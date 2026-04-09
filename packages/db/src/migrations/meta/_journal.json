@@ -29,6 +29,13 @@
       "when": 1774732800000,
       "tag": "0003_auth_mode_rename",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1775865600000,
+      "tag": "0004_notifications",
+      "breakpoints": true
     }
   ]
 }

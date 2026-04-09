@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { DiskMetrics, WidgetSize } from '@phavo/types';
-  import { Icon, ProgressBar } from '@phavo/ui';
-  import { formatBytes, formatPercentage, formatSpeed } from '$lib/utils/format';
+  import { Icon } from '@phavo/ui';
+  import { formatBytes } from '$lib/utils/format';
 
   interface Props {
     data: DiskMetrics[];
@@ -10,7 +10,6 @@
 
   let { data, size = 'M' }: Props = $props();
 
-  // Show only real mounts: /  and /Volumes/*, exclude system internals
   const visibleDisks = $derived(
     data.filter(
       (d) =>
@@ -21,180 +20,226 @@
     ),
   );
 
-  function diskColor(pct: number): 'accent' | 'warning' | 'danger' {
-    if (pct >= 90) return 'danger';
-    if (pct >= 75) return 'warning';
-    return 'accent';
-  }
+  const primary = $derived(visibleDisks[0] as DiskMetrics | undefined);
+  const primaryUsed = $derived(formatBytes(primary?.used ?? 0, 1));
+  const primaryTotal = $derived(formatBytes(primary?.total ?? 0, 1));
+  const primaryPercent = $derived(Math.round(primary?.usePercent ?? 0));
 
-  // Aggregate totals across all physical disks
-  const totalUsed = $derived(data.reduce((sum, d) => sum + d.used, 0));
-  const totalSize = $derived(data.reduce((sum, d) => sum + d.total, 0));
-  const totalPct = $derived(totalSize > 0 ? (totalUsed / totalSize) * 100 : 0);
-
-  // I/O from any disk (all share same stats from agent)
-  const ioRead = $derived(data[0]?.readSpeed ?? 0);
-  const ioWrite = $derived(data[0]?.writeSpeed ?? 0);
+  const mounts = $derived(
+    visibleDisks.slice(1, 4).map((d) => ({
+      path: d.mount,
+      used: formatBytes(d.used, 1),
+      total: formatBytes(d.total, 1),
+      percent: d.total ? Math.round((d.used / d.total) * 100) : 0,
+    })),
+  );
 </script>
 
-<div class="disk-widget">
-  {#if size === 'S'}
-    <div class="s-row">
-      <Icon name="hard-drive" size={16} class="text-accent" />
-      <span class="metric-value mono">{formatPercentage(totalPct, 0)}</span>
+{#if size === 'S'}
+  <div class="disk-s">
+    <span class="widget-category-label">STORAGE</span>
+    <span class="disk-value-s hero-glow">{primaryUsed}</span>
+  </div>
+{:else if size === 'M'}
+  <div class="disk-m">
+    <div class="disk-header widget-header">
+      <span class="widget-category-label">STORAGE LIBRARY</span>
+      <Icon name="hard-drive" size={18} class="widget-icon" />
     </div>
-  {:else}
-    {@const primary = visibleDisks[0]}
-    {#if primary}
-      <div class="primary-metric">
-        <span class="metric-value mono">{formatBytes(primary.used)}</span>
-        <span class="metric-label">of {formatBytes(primary.total)}</span>
-      </div>
 
-      <div class="health-label">{diskColor(primary.usePercent) === 'danger' ? 'Critical' : diskColor(primary.usePercent) === 'warning' ? 'Warning' : 'Healthy'}</div>
-
-      <div class="progress-labeled">
-        <div class="progress-header">
-          <span class="progress-title">{primary.mount}</span>
-          <span class="progress-pct mono">{formatPercentage(primary.usePercent)}</span>
+    <div class="disk-body">
+      <div class="disk-stat-row">
+        <div class="disk-hero-wrap">
+          <span class="disk-hero hero-glow">{primaryUsed}</span>
+          <span class="disk-unit">/ {primaryTotal}</span>
         </div>
-        <ProgressBar value={primary.usePercent} color={diskColor(primary.usePercent)} />
+        <span class="disk-capacity">{primaryPercent}% Capacity</span>
       </div>
-    {/if}
 
-    {#if (size === 'L' || size === 'XL') && visibleDisks.length > 1}
-      <div class="disk-list">
-        {#each visibleDisks.slice(1) as disk}
-          <div class="disk-row">
-            <div class="disk-info">
-              <span class="disk-mount">{disk.mount}</span>
-              <span class="disk-sizes mono">{formatBytes(disk.used)} / {formatBytes(disk.total)}</span>
-            </div>
-            <div class="disk-progress">
-              <ProgressBar value={disk.usePercent} color={diskColor(disk.usePercent)} />
-            </div>
-            <span class="disk-pct mono">{formatPercentage(disk.usePercent, 0)}</span>
-          </div>
-        {/each}
+      <div class="disk-bar-track">
+        <div class="disk-bar-fill" style="width: {primaryPercent}%; min-width: 12px;"></div>
       </div>
+    </div>
+  </div>
+{:else}
+  <div class="disk-l">
+    <div class="disk-header widget-header">
+      <span class="widget-category-label">STORAGE LIBRARY</span>
+      <Icon name="hard-drive" size={18} class="widget-icon" />
+    </div>
+
+    <div class="disk-body">
+      <div class="disk-stat-row">
+        <div class="disk-hero-wrap">
+          <span class="disk-hero hero-glow">{primaryUsed}</span>
+          <span class="disk-unit">/ {primaryTotal}</span>
+        </div>
+        <span class="disk-capacity">{primaryPercent}% Capacity</span>
+      </div>
+
+      <div class="disk-bar-track">
+        <div class="disk-bar-fill" style="width: {primaryPercent}%; min-width: 12px;"></div>
+      </div>
+    </div>
+
+    <!-- L-only: per-mount breakdown -->
+    {#if mounts.length > 0}
+    <div class="disk-mounts">
+      {#each mounts as mount}
+      <div class="disk-mount-row">
+        <span class="disk-mount-path">{mount.path}</span>
+        <div class="disk-mount-bar-track">
+          <div class="disk-mount-bar-fill" style="width: {mount.percent}%"></div>
+        </div>
+        <span class="disk-mount-value">{mount.used}/{mount.total}</span>
+      </div>
+      {/each}
+    </div>
     {/if}
-  {/if}
-</div>
+  </div>
+{/if}
 
 <style>
-  .disk-widget {
+  .disk-s {
     display: flex;
     flex-direction: column;
-    gap: var(--space-3);
-  }
-
-  .s-row {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
-  }
-
-  .primary-metric {
-    display: flex;
-    align-items: baseline;
-    gap: var(--space-2);
-  }
-
-  .metric-value {
-    font-size: 28px;
-    font-weight: 700;
-    color: var(--color-text-primary);
-    line-height: 1;
-  }
-
-  .s-row .metric-value {
-    font-size: 20px;
-  }
-
-  .metric-label {
-    font-size: 12px;
-    color: var(--color-text-muted);
-  }
-
-  .health-label {
-    font-size: 11px;
-    font-weight: 600;
-    color: var(--color-accent-text);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-  }
-
-  .progress-labeled {
-    display: flex;
-    flex-direction: column;
+    justify-content: center;
+    align-items: flex-start;
+    height: 100%;
     gap: var(--space-1);
   }
 
-  .progress-header {
+  .disk-value-s {
+    font-size: 32px;
+    font-weight: 700;
+    color: var(--color-primary-fixed);
+    letter-spacing: -0.02em;
+  }
+
+  .disk-m {
     display: flex;
+    flex-direction: column;
     justify-content: space-between;
-    align-items: center;
+    height: 100%;
+    position: relative;
   }
 
-  .progress-title {
-    font-size: 11px;
-    color: var(--color-text-muted);
-    text-transform: uppercase;
-    letter-spacing: 0.4px;
+  .disk-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
   }
 
-  .progress-pct {
-    font-size: 11px;
-    color: var(--color-text-secondary);
+  .disk-hero-wrap {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-2);
+    min-width: 0;
   }
 
-  .disk-list {
+  .disk-hero {
+    font-size: var(--font-size-4xl);
+    font-weight: 700;
+    color: var(--color-primary-fixed);
+    letter-spacing: -0.02em;
+    line-height: 1;
+    white-space: nowrap;
+  }
+
+  .disk-unit {
+    font-size: var(--font-size-xl);
+    font-weight: 300;
+    color: var(--color-on-surface-variant);
+    white-space: nowrap;
+  }
+
+  .disk-capacity {
+    font-size: var(--font-size-sm);
+    font-weight: 700;
+    color: var(--color-secondary);
+    white-space: nowrap;
+    justify-self: end;
+  }
+
+  .disk-stat-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: baseline;
+    gap: var(--space-2);
+    width: 100%;
+    margin-bottom: var(--space-4);
+  }
+
+  .disk-bar-track {
+    height: 6px;
+    background: color-mix(in srgb, var(--color-on-surface) 5%, transparent);
+    border-radius: 9999px;
+    overflow: hidden;
+    width: 100%;
+    margin: var(--space-4) 0;
+  }
+
+  .disk-bar-fill {
+    height: 100%;
+    min-width: 6px;
+    background: linear-gradient(90deg, var(--color-secondary), var(--color-primary-fixed));
+    border-radius: 0 9999px 9999px 0;
+    transition: width 0.5s ease;
+  }
+
+  /* ── L-size layout ──────────────────────────────────────────────────── */
+  .disk-l {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    height: 100%;
+    position: relative;
+  }
+
+  .disk-mounts {
     display: flex;
     flex-direction: column;
     gap: var(--space-2);
-    padding-top: var(--space-2);
-    border-top: 1px solid var(--color-border-subtle);
+    margin-top: var(--space-4);
+    padding-top: var(--space-4);
+    border-top: 1px solid color-mix(in srgb, var(--color-outline-variant) 15%, transparent);
   }
 
-  .disk-row {
+  .disk-mount-row {
     display: grid;
-    grid-template-columns: 1fr auto;
-    grid-template-rows: auto auto;
-    gap: 2px var(--space-2);
+    grid-template-columns: 80px 1fr auto;
     align-items: center;
+    gap: var(--space-3);
   }
 
-  .disk-info {
-    display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-    grid-column: 1 / 2;
-  }
-
-  .disk-mount {
-    font-size: 12px;
-    color: var(--color-text-secondary);
+  .disk-mount-path {
+    font-size: 11px;
+    font-family: var(--font-mono);
+    color: var(--color-on-surface-variant);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    max-width: 140px;
   }
 
-  .disk-sizes {
+  .disk-mount-bar-track {
+    height: 3px;
+    background: color-mix(in srgb, var(--color-primary) 5%, transparent);
+    border-radius: 9999px;
+    overflow: hidden;
+  }
+
+  .disk-mount-bar-fill {
+    height: 100%;
+    background: var(--color-secondary);
+    border-radius: 9999px;
+  }
+
+  .disk-mount-value {
     font-size: 10px;
-    color: var(--color-text-muted);
-    flex-shrink: 0;
-  }
-
-  .disk-progress {
-    grid-column: 1 / 2;
-  }
-
-  .disk-pct {
-    font-size: 11px;
-    color: var(--color-text-muted);
-    grid-row: 2;
-    grid-column: 2 / 3;
+    font-family: var(--font-mono);
+    color: var(--color-outline);
+    white-space: nowrap;
     text-align: right;
   }
 </style>

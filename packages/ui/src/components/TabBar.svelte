@@ -241,8 +241,8 @@
     gap: var(--space-1);
     padding: 0 var(--space-6);
     height: 40px;
-    background: var(--color-bg-surface);
-    border-bottom: 1px solid var(--color-border-subtle);
+    background: var(--color-surface);
+    border-bottom: 1px solid color-mix(in srgb, var(--color-outline-variant) 10%, transparent);
     overflow-x: auto;
     flex-shrink: 0;
   }
@@ -254,7 +254,7 @@
     padding: var(--space-1) var(--space-3);
     font-size: 13px;
     font-weight: 500;
-    color: var(--color-text-muted);
+    color: var(--color-outline);
     background: none;
     border: none;
     border-bottom: 2px solid transparent;
@@ -270,8 +270,8 @@
   }
 
   .tab-active {
-    color: var(--color-accent-text, var(--color-accent));
-    border-bottom-color: var(--color-accent);
+    color: var(--color-primary);
+    border-bottom-color: var(--color-primary);
     font-weight: 600;
   }
 
@@ -280,36 +280,36 @@
     font-family: inherit;
     cursor: text;
     color: var(--color-text);
-    border-bottom-color: var(--color-accent);
+    border-bottom-color: var(--color-primary);
     outline: none;
   }
 
   .tab-add {
-    color: var(--color-text-muted);
+    color: var(--color-outline);
     padding: var(--space-1) var(--space-2);
   }
 
   .tab-add:hover {
-    color: var(--color-accent);
+    color: var(--color-primary);
   }
 
   .tab-add-disabled {
-    color: var(--color-text-muted);
+    color: var(--color-outline);
     opacity: 0.45;
   }
 
   .tab-add-disabled:hover {
-    color: var(--color-text-muted);
+    color: var(--color-outline);
   }
 
   /* Context menu */
   .tab-ctx {
     position: fixed;
     z-index: var(--z-popover, 300);
-    background: var(--color-bg-elevated, var(--color-bg-surface));
-    border: 1px solid var(--color-border);
+    background: var(--color-surface-card);
+    border: 1px solid color-mix(in srgb, var(--color-outline-variant) 15%, transparent);
     border-radius: var(--radius-md);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 4px 12px color-mix(in srgb, var(--color-surface-dim) 15%, transparent);
     padding: var(--space-1) 0;
     width: fit-content;
   }
@@ -328,7 +328,7 @@
   }
 
   .tab-ctx-item:hover {
-    background: var(--color-bg-hover);
+    background: var(--color-surface-high);
   }
 
   .tab-ctx-danger {
@@ -339,7 +339,7 @@
     display: block;
     padding: var(--space-2) 12px;
     font-size: 12px;
-    color: var(--color-text-muted);
+    color: var(--color-outline);
     white-space: nowrap;
   }
 </style>

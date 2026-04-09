@@ -37,7 +37,7 @@ function handleKeydown(e: KeyboardEvent) {
   .modal-backdrop {
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.6);
+    background: color-mix(in srgb, var(--color-surface-dim) 60%, transparent);
     z-index: 999;
   }
 
@@ -54,8 +54,8 @@ function handleKeydown(e: KeyboardEvent) {
   }
 
   .modal-content {
-    background: var(--color-bg-surface);
-    border: 1px solid var(--color-border);
+    background: var(--color-surface);
+    border: 1px solid color-mix(in srgb, var(--color-outline-variant) 15%, transparent);
     border-radius: var(--radius-lg);
     padding: var(--space-6);
     box-shadow: var(--shadow-md);

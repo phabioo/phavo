@@ -25,27 +25,27 @@ let { variant = 'default', children }: Props = $props();
   }
 
   .badge-default {
-    background: var(--color-bg-elevated);
-    color: var(--color-text-secondary);
+    background: var(--color-surface-card);
+    color: var(--color-on-surface-variant);
   }
 
   .badge-accent {
-    background: var(--color-accent-subtle);
+    background: var(--color-primary-fixed-dim);
     color: var(--color-bg);
   }
 
   .badge-danger {
     background: var(--color-danger-subtle);
-    color: var(--color-text-primary);
+    color: var(--color-on-surface);
   }
 
   .badge-warning {
     background: var(--color-warning-subtle);
-    color: var(--color-text-primary);
+    color: var(--color-on-surface);
   }
 
   .badge-success {
-    background: var(--color-accent-subtle);
+    background: var(--color-primary-fixed-dim);
     color: var(--color-bg);
   }
 </style>

@@ -2,7 +2,6 @@
   import { Button, Icon, Input, Switch } from '@phavo/ui';
   import en from '$lib/i18n/en.json';
   import { fetchWithCsrf } from '$lib/utils/api';
-  import SettingsSection from './SettingsSection.svelte';
 
   interface ParsedExport {
     version: string;
@@ -220,57 +219,62 @@
   }
 </script>
 
-<SettingsSection
-  eyebrow="Backup"
-  title={en.settings.exportSection}
-  description={en.settings.exportDescription}
->
-  <div class="section">
-    <div class="toggle-row">
+<div class="ie-layout">
+  <div class="settings-hero-card">
+    <span class="settings-card-label">BACKUP</span>
+    <h2 class="settings-hero-value">Export & Import</h2>
+    <p class="settings-hero-sub">Create portable backups and restore configurations</p>
+  </div>
+
+  <div class="settings-form-card">
+    <h3 class="settings-form-title">{en.settings.exportSection}</h3>
+    <p class="ie-description">{en.settings.exportDescription}</p>
+
+    <div class="ie-toggle-row">
       <Switch bind:checked={includeCredentials} label={en.settings.includeCredentials} />
     </div>
 
     {#if includeCredentials}
-      <p class="hint">{en.settings.includeCredentialsHint}</p>
-      <Input
-        type="password"
-        label={en.settings.passphrase}
-        placeholder={en.settings.passphrasePlaceholder}
-        bind:value={exportPassphrase}
-      />
+      <p class="ie-hint">{en.settings.includeCredentialsHint}</p>
+      <div>
+        <label class="settings-field-label">{en.settings.passphrase}</label>
+        <Input
+          type="password"
+          placeholder={en.settings.passphrasePlaceholder}
+          bind:value={exportPassphrase}
+        />
+      </div>
     {/if}
 
     {#if exportError}
-      <p class="error-msg">{exportError}</p>
+      <p class="ie-error">{exportError}</p>
     {/if}
 
-    <div class="action-row">
-      <Button disabled={exporting} onclick={handleExport}>
+    <div class="settings-form-actions">
+      <span></span>
+      <button class="settings-btn-primary" type="button" disabled={exporting} onclick={handleExport}>
         {exporting ? en.settings.exporting : en.settings.exportButton}
-      </Button>
+      </button>
     </div>
   </div>
-</SettingsSection>
 
-<SettingsSection
-  title={en.settings.importSection}
-  description={en.settings.importDescription}
-  tone="accent"
->
-  <div class="section">
+  <div class="settings-form-card">
+    <h3 class="settings-form-title">{en.settings.importSection}</h3>
+    <p class="ie-description">{en.settings.importDescription}</p>
+
     <input
       type="file"
       accept=".phavo,.json,application/json"
-      class="file-input-hidden"
+      class="ie-file-hidden"
       bind:this={fileInputEl}
       onchange={handleFileInput}
     />
 
     <!-- svelte-ignore a11y_no_static_element_interactions -->
     <div
-      class="drop-zone"
-      class:drag-over={dragOver}
-      class:has-file={!!parsedExport}
+      class="ie-drop-zone"
+      class:ie-drag-over={dragOver}
+      class:ie-has-file={!!parsedExport}
       onclick={openFilePicker}
       ondrop={handleDrop}
       ondragover={handleDragOver}
@@ -283,50 +287,52 @@
       }}
     >
       {#if parsedExport}
-        <span class="drop-zone-icon"><Icon name="check" size={18} /></span>
-        <span class="drop-zone-text">{selectedFile?.name ?? en.settings.importFileSelected}</span>
+        <Icon name="check" size={18} />
+        <span class="ie-drop-text">{selectedFile?.name ?? en.settings.importFileSelected}</span>
       {:else}
-        <span class="drop-zone-icon"><Icon name="upload" size={18} /></span>
-        <span class="drop-zone-text">{en.settings.importDropZone}</span>
+        <Icon name="upload" size={18} />
+        <span class="ie-drop-text">{en.settings.importDropZone}</span>
       {/if}
     </div>
 
     {#if importParseError}
-      <p class="error-msg">{importParseError}</p>
+      <p class="ie-error">{importParseError}</p>
     {/if}
 
     {#if parsedExport && !importParseError}
-      <div class="preview-panel">
-        <p class="preview-title">{en.settings.importPreviewTitle}</p>
-        <ul class="preview-list">
+      <div class="ie-preview-panel">
+        <p class="ie-preview-title">{en.settings.importPreviewTitle}</p>
+        <ul class="ie-preview-list">
           <li>{pluralise(parsedExport.tabs.length, en.settings.importPreviewTabs, en.settings.importPreviewTabsPlural)}</li>
           <li>{pluralise(parsedExport.widgetInstances.length, en.settings.importPreviewWidgets, en.settings.importPreviewWidgetsPlural)}</li>
           <li>{parsedExport.hasCredentials ? en.settings.importPreviewCredentials : en.settings.importPreviewNoCredentials}</li>
         </ul>
 
         {#if parsedExport.hasCredentials}
-          <p class="hint">{en.settings.importPassphraseHint}</p>
-          <Input
-            type="password"
-            label={en.settings.passphrase}
-            placeholder={en.settings.passphrasePlaceholder}
-            bind:value={importPassphrase}
-          />
+          <p class="ie-hint">{en.settings.importPassphraseHint}</p>
+          <div>
+            <label class="settings-field-label">{en.settings.passphrase}</label>
+            <Input
+              type="password"
+              placeholder={en.settings.passphrasePlaceholder}
+              bind:value={importPassphrase}
+            />
+          </div>
         {/if}
       </div>
 
       {#if importError}
-        <p class="error-msg">{importError}</p>
+        <p class="ie-error">{importError}</p>
       {/if}
 
       {#if importSuccess}
-        <p class="success-msg">{en.settings.importSuccess}</p>
+        <p class="ie-success">{en.settings.importSuccess}</p>
       {/if}
 
       {#if importWarnings.length > 0}
-        <div class="warnings-panel">
-          <p class="warnings-title">{en.settings.importWarnings}</p>
-          <ul class="warnings-list">
+        <div class="ie-warnings">
+          <p class="ie-preview-title">{en.settings.importWarnings}</p>
+          <ul class="ie-warnings-list">
             {#each importWarnings as warning}
               <li>{warning}</li>
             {/each}
@@ -334,54 +340,56 @@
         </div>
       {/if}
 
-      <div class="action-row">
-        <Button variant="secondary" disabled={importing || importSuccess} onclick={handleImport}>
+      <div class="settings-form-actions">
+        <span></span>
+        <button class="settings-btn-primary" type="button" disabled={importing || importSuccess} onclick={handleImport}>
           {importing ? en.settings.importing : en.settings.importConfirm}
-        </Button>
+        </button>
       </div>
     {/if}
   </div>
-</SettingsSection>
+</div>
 
 <style>
-  .section {
+  .ie-layout {
     display: flex;
     flex-direction: column;
     gap: var(--space-4);
   }
 
-  .toggle-row {
+  .ie-description {
+    font-size: 13px;
+    color: var(--color-on-surface-variant);
+    margin: 0;
+    line-height: 1.5;
+  }
+
+  .ie-toggle-row {
     display: flex;
     align-items: center;
     gap: var(--space-2);
   }
 
-  .hint {
-    color: var(--color-text-muted);
+  .ie-hint {
+    color: var(--color-on-surface-variant);
     font-size: 12px;
     margin: 0;
     line-height: 1.5;
   }
 
-  .action-row {
-    display: flex;
-    justify-content: flex-start;
-    padding-top: var(--space-1);
-  }
-
-  .error-msg {
-    color: var(--color-danger);
+  .ie-error {
+    color: var(--color-error);
     font-size: 13px;
     margin: 0;
   }
 
-  .success-msg {
-    color: var(--color-success);
+  .ie-success {
+    color: var(--color-secondary);
     font-size: 13px;
     margin: 0;
   }
 
-  .file-input-hidden {
+  .ie-file-hidden {
     position: absolute;
     width: 0;
     height: 0;
@@ -389,7 +397,7 @@
     pointer-events: none;
   }
 
-  .drop-zone {
+  .ie-drop-zone {
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -397,66 +405,48 @@
     gap: var(--space-2);
     min-height: 132px;
     padding: var(--space-6) var(--space-4);
-    border: 1px dashed color-mix(in srgb, var(--color-accent) 26%, var(--color-border));
-    border-radius: calc(var(--radius-xl) - 4px);
-    background:
-      radial-gradient(
-        ellipse 55% 60% at 50% 0%,
-        color-mix(in srgb, var(--color-accent-t) 26%, transparent),
-        transparent 72%
-      ),
-      color-mix(in srgb, var(--color-bg-elevated) 76%, transparent);
+    border: 1px dashed color-mix(in srgb, var(--color-primary-fixed) 26%, var(--color-outline-variant));
+    border-radius: 1.5rem;
+    background: color-mix(in srgb, var(--color-surface-dim) 60%, transparent);
     cursor: pointer;
-    transition: border-color 0.15s ease, background 0.15s ease;
+    transition: border-color 0.15s, background 0.15s;
     text-align: center;
+    color: var(--color-on-surface-variant);
   }
 
-  .drop-zone:hover,
-  .drop-zone.drag-over {
-    border-color: color-mix(in srgb, var(--color-accent) 48%, transparent);
-    background:
-      radial-gradient(
-        ellipse 55% 60% at 50% 0%,
-        color-mix(in srgb, var(--color-accent-t) 34%, transparent),
-        transparent 72%
-      ),
-      color-mix(in srgb, var(--color-bg-hover) 80%, transparent);
+  .ie-drop-zone:hover,
+  .ie-drop-zone.ie-drag-over {
+    border-color: color-mix(in srgb, var(--color-primary-fixed) 48%, transparent);
+    background: color-mix(in srgb, var(--color-surface-high) 60%, transparent);
   }
 
-  .drop-zone.has-file {
+  .ie-drop-zone.ie-has-file {
     border-style: solid;
+    color: var(--color-secondary);
   }
 
-  .drop-zone-icon {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--color-accent-text);
-  }
-
-  .drop-zone-text {
+  .ie-drop-text {
     font-size: 13px;
-    color: var(--color-text-secondary);
   }
 
-  .preview-panel {
+  .ie-preview-panel {
     display: flex;
     flex-direction: column;
     gap: var(--space-3);
     padding: var(--space-4);
-    border-radius: calc(var(--radius-xl) - 4px);
-    border: 1px solid var(--color-border-subtle);
-    background: color-mix(in srgb, var(--color-bg-base) 26%, transparent);
+    border-radius: 1.5rem;
+    border: 1px solid color-mix(in srgb, var(--color-outline-variant) 10%, transparent);
+    background: color-mix(in srgb, var(--color-surface-dim) 60%, transparent);
   }
 
-  .preview-title {
+  .ie-preview-title {
     margin: 0;
     font-size: 13px;
     font-weight: 700;
-    color: var(--color-text-primary);
+    color: var(--color-on-surface);
   }
 
-  .preview-list {
+  .ie-preview-list {
     display: flex;
     flex-wrap: wrap;
     gap: var(--space-2);
@@ -465,38 +455,31 @@
     list-style: none;
   }
 
-  .preview-list li {
+  .ie-preview-list li {
     padding: var(--space-2) var(--space-3);
-    border-radius: 999px;
-    background: color-mix(in srgb, var(--color-bg-hover) 80%, transparent);
-    color: var(--color-text-secondary);
+    border-radius: var(--radius-full);
+    background: var(--color-surface-highest);
+    color: var(--color-on-surface-variant);
     font-size: 12px;
   }
 
-  .warnings-panel {
+  .ie-warnings {
     display: flex;
     flex-direction: column;
     gap: var(--space-2);
     padding: var(--space-4);
-    border-radius: calc(var(--radius-xl) - 4px);
-    border: 1px solid color-mix(in srgb, var(--color-warning) 32%, transparent);
-    background: color-mix(in srgb, var(--color-warning-subtle) 84%, transparent);
+    border-radius: 1.5rem;
+    border: 1px solid color-mix(in srgb, var(--color-primary-fixed) 32%, transparent);
+    background: color-mix(in srgb, var(--color-primary-fixed) 6%, transparent);
   }
 
-  .warnings-title {
-    margin: 0;
-    font-size: 13px;
-    font-weight: 700;
-    color: var(--color-text-primary);
-  }
-
-  .warnings-list {
+  .ie-warnings-list {
     margin: 0;
     padding-left: var(--space-4);
-    color: var(--color-text-secondary);
+    color: var(--color-on-surface-variant);
   }
 
-  .warnings-list li {
+  .ie-warnings-list li {
     line-height: 1.5;
   }
 </style>

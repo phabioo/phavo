@@ -62,7 +62,7 @@ export function registerLicenseRoutes(app: Hono<{ Variables: AppVariables }>): v
 
       await db.insert(schema.licenseActivation).values({
         licenseKey: requestBody.data.licenseKey,
-        tier: 'local',
+        tier: 'celestial',
         activationJwt: activation.activationJwt,
         instanceIdentifier,
       });
@@ -74,14 +74,14 @@ export function registerLicenseRoutes(app: Hono<{ Variables: AppVariables }>): v
       await db.insert(schema.sessions).values({
         id: token,
         userId: session.userId,
-        tier: 'local',
+        tier: 'celestial',
         authMode: session.authMode,
         validatedAt: Date.now(),
         graceUntil: null,
         expiresAt: Date.now() + sessionMaxAge * 1000,
       });
 
-      const response = c.json(ok({ tier: 'local' as const, reload: true }));
+      const response = c.json(ok({ tier: 'celestial' as const, reload: true }));
       await setSessionCookies(response, token, sessionMaxAge);
       return response;
     } catch (e) {
@@ -147,10 +147,10 @@ export function registerLicenseRoutes(app: Hono<{ Variables: AppVariables }>): v
 
       await db
         .update(schema.sessions)
-        .set({ tier: 'free', graceUntil: null })
+        .set({ tier: 'stellar', graceUntil: null })
         .where(eq(schema.sessions.id, session.id));
 
-      return c.json(ok({ tier: 'free' as const, reload: true }));
+      return c.json(ok({ tier: 'stellar' as const, reload: true }));
     } catch (e) {
       console.error('[phavo]', e);
       return c.json(err('Internal error'), 500);

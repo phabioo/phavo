@@ -32,11 +32,11 @@ app.use('*', csrfMiddleware);
 
 // rateLimitMiddleware: applied after auth so we have the full path.
 // /auth/login has its own rate limiting in the handler (checkRateLimit).
-// /health is public and not rate-limited here.
+// /system/health is public and not rate-limited here.
 app.use('*', async (c, next) => {
   const path = c.req.path;
   // Public paths handled elsewhere â€” skip.
-  if (path === '/api/v1/health' || path === '/api/v1/auth/login') {
+  if (path === '/api/v1/system/health' || path === '/api/v1/auth/login') {
     return next();
   }
 

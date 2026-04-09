@@ -24,85 +24,159 @@
   const totalLinks = $derived(data.groups.reduce((s, g) => s + g.links.length, 0));
 </script>
 
-<div class="links-widget">
+{#if size === 'S'}
   {#if !hasLinks}
-    <div class="empty">
-      <Icon name="bookmark" size={20} />
-      <span>No links yet</span>
-    </div>
-  {:else if size === 'S'}
-    <div class="s-row">
-      <Icon name="bookmark" size={16} class="text-accent" />
-      <span class="metric-value mono">{totalLinks}</span>
-      <span class="s-label">links</span>
+    <div class="links-s">
+      <span class="widget-category-label">LINKS</span>
+      <span class="links-s-empty">No links configured</span>
     </div>
   {:else}
-    {#each data.groups as group (group.label)}
-      <div class="link-group">
-        <span class="group-label">{group.label}</span>
-        <ul class="links-list">
-          {#each group.links.slice(0, size === 'M' ? 5 : undefined) as link (link.url)}
-            <li class="link-item">
-              <Icon name={link.icon ?? 'link'} size={14} />
-              <a href={link.url} target="_blank" rel="noopener noreferrer" class="link-anchor">
-                {link.title}
-              </a>
-            </li>
-          {/each}
-        </ul>
-      </div>
-    {/each}
+    <div class="links-s">
+      <span class="widget-category-label">LINKS</span>
+      <span class="links-s-value hero-glow">
+        {totalLinks}<span class="links-s-unit"> links</span>
+      </span>
+    </div>
   {/if}
-</div>
+{:else if size === 'M'}
+  <div class="links-m">
+    <div class="widget-header">
+      <span class="widget-category-label">LINKS</span>
+      <Icon name="link" size={18} class="widget-icon" />
+    </div>
+
+    {#if !hasLinks}
+      <div class="links-empty">
+        <Icon name="link" size={20} />
+        <span>No links configured</span>
+      </div>
+    {:else}
+      <div class="links-groups">
+        {#each data.groups as group (group.label)}
+          <div class="links-group">
+            <span class="links-group-label">{group.label}</span>
+            <ul class="links-list">
+              {#each group.links.slice(0, 5) as link (link.url)}
+                <li class="links-item">
+                  <a href={link.url} target="_blank" rel="noopener noreferrer" class="links-anchor">
+                    <span class="links-name">{link.title}</span>
+                    <span class="links-url">{link.url}</span>
+                  </a>
+                </li>
+              {/each}
+            </ul>
+          </div>
+        {/each}
+      </div>
+    {/if}
+  </div>
+{:else}
+  <div class="links-l">
+    <div class="widget-header">
+      <span class="widget-category-label">LINKS</span>
+      <Icon name="link" size={18} class="widget-icon" />
+    </div>
+
+    {#if !hasLinks}
+      <div class="links-empty">
+        <Icon name="link" size={20} />
+        <span>No links configured</span>
+      </div>
+    {:else}
+      <div class="links-groups">
+        {#each data.groups as group (group.label)}
+          <div class="links-group">
+            <span class="links-group-label">{group.label}</span>
+            <ul class="links-list">
+              {#each group.links as link (link.url)}
+                <li class="links-item">
+                  <a href={link.url} target="_blank" rel="noopener noreferrer" class="links-anchor">
+                    <span class="links-name">{link.title}</span>
+                    <span class="links-url">{link.url}</span>
+                  </a>
+                </li>
+              {/each}
+            </ul>
+          </div>
+        {/each}
+      </div>
+    {/if}
+  </div>
+{/if}
 
 <style>
-  .links-widget {
+  /* ── S size ─────────────────────────────────────────── */
+  .links-s {
     display: flex;
     flex-direction: column;
-    gap: var(--space-3);
+    justify-content: center;
+    height: 100%;
+    padding: var(--space-4);
+    gap: var(--space-1);
   }
 
-  .empty {
+  .links-s-value {
+    font-size: 32px;
+    font-weight: 700;
+    color: var(--color-primary-fixed);
+    letter-spacing: -0.02em;
+  }
+
+  .links-s-unit {
+    font-size: 16px;
+    font-weight: 300;
+    color: var(--color-on-surface-variant);
+  }
+
+  .links-s-empty {
+    font-size: 14px;
+    color: var(--color-outline);
+  }
+
+  /* ── M/L/XL shared ──────────────────────────────────── */
+  .links-m,
+  .links-l {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    height: 100%;
+    gap: var(--space-4);
+  }
+
+  /* ── Empty state ────────────────────────────────────── */
+  .links-empty {
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: var(--space-2);
     padding: var(--space-4) 0;
-    color: var(--color-text-muted);
+    color: var(--color-outline);
     font-size: 13px;
+    flex: 1;
+    justify-content: center;
   }
 
-  .s-row {
+  /* ── Groups ─────────────────────────────────────────── */
+  .links-groups {
     display: flex;
-    align-items: center;
-    gap: var(--space-2);
+    flex-direction: column;
+    gap: var(--space-3);
   }
 
-  .metric-value {
-    font-size: 20px;
-    font-weight: 700;
-    color: var(--color-text-primary);
-    line-height: 1;
-  }
-
-  .s-label {
-    font-size: 12px;
-    color: var(--color-text-muted);
-  }
-
-  .link-group {
+  .links-group {
     display: flex;
     flex-direction: column;
     gap: var(--space-1);
   }
 
-  .group-label {
-    font-size: 11px;
+  .links-group-label {
+    font-size: var(--font-size-xs);
+    font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.06em;
-    color: var(--color-text-muted);
+    letter-spacing: 0.08em;
+    color: var(--color-outline);
     padding-bottom: 2px;
-    border-bottom: 1px solid var(--color-border-subtle);
+    border-bottom: 1px solid color-mix(in srgb, var(--color-outline-variant) 15%, transparent);
   }
 
   .links-list {
@@ -114,24 +188,37 @@
     gap: 2px;
   }
 
-  .link-item {
+  .links-item {
     display: flex;
     align-items: center;
-    gap: var(--space-2);
   }
 
-  .link-anchor {
-    font-size: 13px;
-    color: var(--color-text-primary);
+  .links-anchor {
+    display: flex;
+    flex-direction: column;
     text-decoration: none;
     padding: 4px 0;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    min-width: 0;
   }
 
-  .link-anchor:hover {
-    color: var(--color-accent-text);
+  .links-name {
+    font-size: 13px;
+    color: var(--color-on-surface);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .links-anchor:hover .links-name {
+    color: var(--color-primary-fixed);
     text-decoration: underline;
+  }
+
+  .links-url {
+    font-size: 11px;
+    color: var(--color-outline);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 </style>

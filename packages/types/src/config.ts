@@ -10,7 +10,6 @@ export type Tab = z.infer<typeof TabSchema>;
 export const DashboardConfigSchema = z.object({
   setupComplete: z.boolean().default(false),
   dashboardName: z.string().default('My Dashboard'),
-  dashboardSubtitle: z.string().default('System overview & performance'),
   tabs: z.array(TabSchema).default([]),
   sessionTimeout: z.enum(['1d', '7d', '30d', 'never']).default('7d'),
   location: z

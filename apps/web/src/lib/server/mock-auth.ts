@@ -10,10 +10,14 @@ export const DEV_MOCK_AUTH_ENABLED = DEV_MOCK_AUTH && process.env.NODE_ENV !== '
 
 /** Returns a synthetic dev session. Only used when DEV_MOCK_AUTH is true. */
 export function getMockSession(): Session {
+  const tier: 'stellar' | 'celestial' =
+    process.env.NODE_ENV !== 'production' && process.env.PHAVO_DEV_TIER === 'celestial'
+      ? 'celestial'
+      : 'stellar';
+
   return {
     userId: 'dev',
-    // Change to 'standard' to test Standard tier locally.
-    tier: 'free',
+    tier,
     authMode: 'local',
     validatedAt: Date.now(),
   };

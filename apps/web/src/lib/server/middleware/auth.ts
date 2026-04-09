@@ -15,12 +15,12 @@ export type AppVariables = {
   session?: SessionRecord;
 };
 
-type Tier = 'free' | 'standard' | 'local';
+type Tier = 'stellar' | 'celestial';
 
-const TIER_RANK: Record<Tier, number> = { free: 0, standard: 1, local: 2 };
+const TIER_RANK: Record<Tier, number> = { stellar: 0, celestial: 1 };
 
 // Routes that bypass session validation entirely (no auth required).
-const PUBLIC_PATHS = new Set(['/api/v1/health', '/api/v1/auth/login', '/api/v1/auth/totp']);
+const PUBLIC_PATHS = new Set(['/api/v1/system/health', '/api/v1/auth/login', '/api/v1/auth/totp']);
 
 function parseCookieValue(header: string, name: string): string | undefined {
   return header

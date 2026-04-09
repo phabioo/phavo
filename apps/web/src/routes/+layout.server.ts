@@ -1,3 +1,4 @@
+import { hostname } from 'node:os';
 import { schema } from '@phavo/db';
 import type { DashboardConfig } from '@phavo/types';
 import { redirect, type ServerLoadEvent } from '@sveltejs/kit';
@@ -21,7 +22,6 @@ export const load = async ({ cookies, url }: ServerLoadEvent) => {
   let config: DashboardConfig = {
     setupComplete: false,
     dashboardName: 'My Dashboard',
-    dashboardSubtitle: 'System overview & performance',
     tabs: [],
     sessionTimeout: '7d',
   };
@@ -37,7 +37,6 @@ export const load = async ({ cookies, url }: ServerLoadEvent) => {
     config = {
       setupComplete,
       dashboardName: entries.dashboard_name ?? 'My Dashboard',
-      dashboardSubtitle: entries.dashboard_subtitle ?? 'System overview & performance',
       tabs: [],
       sessionTimeout:
         (entries.session_timeout as '1d' | '7d' | '30d' | 'never' | undefined) ?? '7d',
@@ -115,5 +114,7 @@ export const load = async ({ cookies, url }: ServerLoadEvent) => {
     devMode: DEV_MOCK_AUTH_ENABLED,
     config,
     dashboardName: config.dashboardName,
+    hostname: hostname(),
+    username: session?.userId ?? '',
   };
 };

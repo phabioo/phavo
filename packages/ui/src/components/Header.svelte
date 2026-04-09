@@ -1,50 +1,40 @@
 <script lang="ts">
 import { onMount } from 'svelte';
-import type { Snippet } from 'svelte';
 import Icon from './Icon.svelte';
 import HeaderSearch from './HeaderSearch.svelte';
 import type { SearchEntry, AiProviders } from './HeaderSearch.svelte';
 
 interface Props {
-  pageTitle?: string | undefined;
-  pageSubtitle?: string | undefined;
   dashboardName?: string;
-  brandingLabel?: string | undefined;
+  tierLabel?: string;
   weather?: { temp: number; condition: string } | undefined;
   notificationCount?: number;
-  updateAvailable?: boolean;
-  updateBadge?: Snippet;
-  userMenu?: Snippet;
   unreadCount?: number;
+  systemOnline?: boolean | null;
   onBellClick?: () => void;
   onAddWidgetClick?: (() => void) | undefined;
   addWidgetLabel?: string;
   searchIndex?: SearchEntry[];
   searchEngineUrl?: string;
   aiProviders?: AiProviders;
-  tier?: 'free' | 'standard' | 'pro' | 'local';
+  tier?: 'stellar' | 'celestial';
   onSearchAction?: (entry: SearchEntry) => void;
   onAiChat?: (provider: 'ollama' | 'openai' | 'anthropic', query: string) => Promise<string>;
 }
 
 let {
-  pageTitle,
-  pageSubtitle,
-  dashboardName = 'My Dashboard',
-  brandingLabel,
-  weather,
+  dashboardName = 'PHAVO',
+  tierLabel = 'STELLAR',
   notificationCount,
-  updateAvailable = false,
-  updateBadge,
-  userMenu,
   unreadCount = 0,
+  systemOnline = null,
   onBellClick,
   onAddWidgetClick,
   addWidgetLabel = 'Add widget',
   searchIndex = [],
   searchEngineUrl,
   aiProviders,
-  tier = 'free',
+  tier = 'stellar',
   onSearchAction,
   onAiChat,
 }: Props = $props();
@@ -62,442 +52,253 @@ onMount(() => {
   });
 });
 
-const displayTitle = $derived(pageTitle ?? dashboardName);
 const effectiveUnread = $derived(notificationCount ?? unreadCount);
 const formattedTime = $derived(
   time.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }),
 );
 </script>
 
-<header class="header">
-  <div class="header-shell">
-    <div class="header-search-area">
-      <HeaderSearch
-        {searchIndex}
-        {searchEngineUrl}
-        {aiProviders}
-        {tier}
-        onAction={onSearchAction}
-        {onAiChat}
-      />
-    </div>
+<header class="phavo-header">
+  <!-- LEFT: Dashboard name -->
+  <div class="header-left">
+    <span class="header-dashboard-name">{dashboardName}</span>
+  </div>
 
-    <div class="header-control-rail">
-      <div class="status-cluster" role="group" aria-label="Current status">
-        <div class="status-segment status-segment-time">
-          <span class="status-label">Time</span>
-          <span class="header-clock mono">{formattedTime}</span>
-        </div>
+  <!-- CENTER: Command palette — mathematically centered via grid 1fr/auto/1fr -->
+  <div class="header-center">
+    <HeaderSearch
+      {searchIndex}
+      {searchEngineUrl}
+      {aiProviders}
+      {tier}
+      onAction={onSearchAction}
+      {onAiChat}
+    />
+  </div>
 
-        {#if weather}
-          <span class="status-divider" aria-hidden="true"></span>
-          <div class="status-segment status-segment-weather">
-            <span class="status-label">Weather</span>
-            <span class="header-weather">{weather.temp}&deg;C &middot; {weather.condition}</span>
-          </div>
-        {/if}
+  <!-- RIGHT: Info pill · System status · Action buttons -->
+  <div class="header-right">
+    <!-- System status pill -->
+    {#if systemOnline}
+      <div class="status-pill status-online">
+        <span class="status-dot"></span>
+        <span>SYSTEM ONLINE</span>
       </div>
-
-      <div class="header-action-group">
-        {#if onAddWidgetClick}
-          <button class="control-btn add-widget-btn" onclick={onAddWidgetClick} aria-label={addWidgetLabel}>
-            <Icon name="plus" size={15} />
-            <span class="add-widget-text">{addWidgetLabel}</span>
-          </button>
-        {/if}
-
-        <button
-          class="control-btn bell-btn"
-          onclick={onBellClick}
-          aria-label="Notifications{effectiveUnread > 0 ? ` (${effectiveUnread} unread)` : ''}"
-        >
-          <Icon name="bell" size={17} />
-          <span class="bell-label">Alerts</span>
-          {#if effectiveUnread > 0}
-            <span class="bell-badge" aria-hidden="true">
-              {effectiveUnread > 99 ? '99+' : effectiveUnread}
-            </span>
-          {/if}
-        </button>
-      </div>
-    </div>
-
-    {#if (updateAvailable && updateBadge) || userMenu}
-      <div class="header-meta-rail">
-        {#if updateAvailable && updateBadge}
-          <div class="header-update-slot">
-            {@render updateBadge()}
-          </div>
-        {/if}
-
-        {#if userMenu}
-          <div class="header-user-slot">
-            {@render userMenu()}
-          </div>
-        {/if}
+    {:else}
+      <div class="status-pill status-offline status-offline-force">
+        <span class="status-dot"></span>
+        <span>OFFLINE</span>
       </div>
     {/if}
+
+    <!-- Info pill: clock -->
+    <div class="header-info-pill">
+      <Icon name="clock" size={14} />
+      <span class="header-clock">{formattedTime}</span>
+    </div>
+
+    <button
+      class="header-action bell-btn"
+      onclick={onBellClick}
+      aria-label="Notifications{effectiveUnread > 0 ? ` (${effectiveUnread} unread)` : ''}"
+    >
+      <Icon name="bell" size={17} />
+      {#if effectiveUnread > 0}
+        <span class="bell-badge" aria-hidden="true">
+          {effectiveUnread > 99 ? '99+' : effectiveUnread}
+        </span>
+      {/if}
+    </button>
   </div>
 </header>
 
-{#if displayTitle}
-  <section class="page-title-section">
-    <div class="page-title-copy">
-      {#if brandingLabel}
-        <span class="page-branding">{brandingLabel}</span>
-      {/if}
-      <h1 class="page-title">{displayTitle}</h1>
-      {#if pageSubtitle}
-        <p class="page-subtitle">{pageSubtitle}</p>
-      {/if}
-    </div>
-  </section>
-{/if}
-
 <style>
-  .header {
+  /* ── Layout: 1fr / auto / 1fr ensures center is always mathematically centered ── */
+  .phavo-header {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    height: 64px;
+    padding: 0 var(--space-8);
+    gap: var(--space-4);
+    background: color-mix(in srgb, var(--color-surface-dim) 60%, transparent);
+    backdrop-filter: blur(20px);
     position: sticky;
     top: 0;
     z-index: 40;
-    isolation: isolate;
-    padding: var(--space-5) var(--space-8) var(--space-5);
   }
 
-  .header::before {
-    content: '';
-    position: absolute;
-    inset: -28px 0 -44px;
-    z-index: -2;
-    background:
-      linear-gradient(
-        180deg,
-        color-mix(in srgb, var(--color-bg-base) 82%, transparent) 0%,
-        color-mix(in srgb, var(--color-bg-base) 52%, transparent) 42%,
-        transparent 100%
-      );
-    backdrop-filter: blur(22px) saturate(122%);
-    -webkit-backdrop-filter: blur(22px) saturate(122%);
-    mask-image: linear-gradient(180deg, black 0%, black 58%, transparent 100%);
-  }
-
-  .header::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    z-index: -1;
-    pointer-events: none;
-    background:
-      radial-gradient(
-        ellipse 56% 92% at 14% 0%,
-        color-mix(in srgb, var(--color-accent-t) 22%, transparent),
-        transparent 74%
-      ),
-      linear-gradient(
-        180deg,
-        color-mix(in srgb, var(--color-bg-elevated) 12%, transparent),
-        transparent 100%
-      );
-  }
-
-  .header-shell {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto auto;
+  .header-left {
+    justify-self: start;
+    display: flex;
     align-items: center;
     gap: var(--space-3);
-    width: 100%;
   }
 
-  .header-search-area {
-    min-width: 0;
-    max-width: 520px;
-  }
-
-  .header-meta-rail {
-    display: inline-flex;
-    align-items: center;
-    justify-self: end;
-    gap: var(--space-2);
-  }
-
-  .header-update-slot,
-  .header-user-slot {
-    display: inline-flex;
-    align-items: center;
-  }
-
-  .header-control-rail {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    align-items: center;
-    gap: var(--space-2);
-    min-width: 0;
-  }
-
-  .status-cluster,
-  .control-btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 40px;
-    padding: 0 var(--space-4);
-    border-radius: 999px;
-    border: 1px solid color-mix(in srgb, var(--color-accent) 18%, var(--color-border-subtle));
-    background: color-mix(in srgb, var(--color-bg-elevated) 94%, transparent);
-    box-shadow: 0 8px 22px rgba(0, 0, 0, 0.16);
-  }
-
-  .status-cluster {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--space-3);
-    min-width: 0;
-    max-width: min(100%, 30rem);
-    color: var(--color-text-primary);
-  }
-
-  .header-action-group {
-    display: inline-flex;
-    align-items: stretch;
-    justify-content: flex-end;
-    gap: var(--space-2);
-    flex-shrink: 0;
-  }
-
-  .status-segment {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--space-3);
-    min-width: 0;
-  }
-
-  .status-segment-weather {
-    flex: 1 1 auto;
-  }
-
-  .status-divider {
-    width: 1px;
-    align-self: stretch;
-    background: color-mix(in srgb, var(--color-border-subtle) 82%, var(--color-accent-t));
-    opacity: 0.9;
-    flex-shrink: 0;
-  }
-
-  .status-label {
-    font-size: 10px;
+  .header-dashboard-name {
+    font-size: 14px;
     font-weight: 700;
-    letter-spacing: 0.18em;
+    color: var(--color-primary-fixed);
     text-transform: uppercase;
-    color: var(--color-text-muted);
+    letter-spacing: 0.08em;
+  }
+
+  .header-center {
+    justify-self: center;
+    width: 100%;
+    max-width: 440px;
+  }
+
+  .header-right {
+    justify-self: end;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+  }
+
+  /* ── Info pill: clock · weather ── */
+  .header-info-pill {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 6px 16px;
+    border-radius: var(--radius-full);
+    background: color-mix(in srgb, var(--color-surface-highest) 40%, transparent);
+    backdrop-filter: blur(20px);
+    border: 1px solid color-mix(in srgb, var(--color-primary) 8%, transparent);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--color-on-surface-variant);
   }
 
   .header-clock {
-    font-size: 13px;
+    color: var(--color-on-surface-variant);
+  }
+
+  /* ── System status pills ── */
+  :global(.status-pill) {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    border-radius: 9999px;
+    font-family: var(--font-mono);
+    font-size: 10px;
     font-weight: 700;
-    letter-spacing: 0.03em;
-    color: var(--color-text-primary);
-  }
-
-  .header-weather {
-    font-size: 12px;
-    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
     white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    color: var(--color-text-secondary);
+    flex-shrink: 0;
   }
 
-  .control-btn {
+  :global(.status-online) {
+    background: color-mix(in srgb, var(--color-secondary) 10%, transparent);
+    color: var(--color-secondary);
+    border: 1px solid color-mix(in srgb, var(--color-secondary) 20%, transparent);
+  }
+
+  :global(.status-offline) {
+    background: color-mix(in srgb, var(--color-error) 10%, transparent);
+    color: var(--color-error);
+    border: 1px solid color-mix(in srgb, var(--color-error) 25%, transparent);
+  }
+
+  :global(.status-dot) {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+    flex-shrink: 0;
+  }
+
+  :global(.status-online .status-dot) {
+    animation: pulse 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: 0.3; }
+  }
+
+  /* ── Action buttons (Add Widget, Bell) ── */
+  .header-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     gap: var(--space-2);
+    background: var(--color-surface-highest);
+    border: none;
+    color: var(--color-on-surface-variant);
     cursor: pointer;
-    color: var(--color-text-primary);
-    font-family: var(--font-ui);
-    font-size: var(--font-size-sm);
-    font-weight: 600;
-    transition:
-      color 0.15s ease,
-      border-color 0.15s ease,
-      background 0.15s ease,
-      transform 0.15s ease;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 6px 14px;
+    border-radius: var(--radius-full);
+    transition: color 0.15s, background 0.15s;
   }
 
-  .control-btn:hover {
-    color: var(--color-accent-text);
-    border-color: color-mix(in srgb, var(--color-accent) 28%, var(--color-border-subtle));
-    background: color-mix(in srgb, var(--color-bg-hover) 88%, transparent);
-    transform: translateY(-1px);
-  }
-
-  .add-widget-btn {
-    min-width: 0;
-  }
-
-  .add-widget-text {
-    white-space: nowrap;
+  .header-action:hover {
+    color: var(--color-on-surface);
+    background: var(--color-surface-bright);
   }
 
   .bell-btn {
     position: relative;
-    padding-right: calc(var(--space-4) + 2px);
-  }
-
-  .bell-label {
-    font-size: 12px;
-    font-weight: 600;
-    white-space: nowrap;
   }
 
   .bell-badge {
     position: absolute;
-    top: 4px;
-    right: 4px;
+    top: 2px;
+    right: 2px;
     min-width: 16px;
     height: 16px;
     padding: 0 4px;
-    border-radius: 999px;
-    background: var(--color-accent);
-    color: var(--color-text-inverse);
+    border-radius: var(--radius-full);
+    background: var(--color-error);
+    color: var(--color-on-surface);
     font-size: 9px;
-    font-weight: 700;
+    font-weight: 500;
     line-height: 16px;
     text-align: center;
     pointer-events: none;
   }
 
-  .page-title-section {
-    width: 100%;
-    padding: 0 var(--space-8) var(--space-7);
-  }
-
-  .page-title-copy {
-    width: min(100%, 1080px);
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-2);
-  }
-
-  .page-branding {
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 0.22em;
-    text-transform: uppercase;
-    color: var(--color-accent-text);
-  }
-
-  .page-title {
-    margin: 0;
-    font-size: clamp(2.35rem, 5vw, 3.15rem);
-    font-weight: 800;
-    letter-spacing: -0.04em;
-    line-height: 1.02;
-    color: var(--color-text-primary);
-  }
-
-  .page-subtitle {
-    margin: 0;
-    font-size: var(--font-size-sm);
-    color: var(--color-text-muted);
-    text-transform: uppercase;
-    letter-spacing: 0.22em;
-  }
-
-  @media (max-width: 1180px) {
-    .header-shell {
-      grid-template-columns: minmax(0, 1fr) auto;
-      align-items: end;
-    }
-
-    .header-search-area {
-      grid-column: 1 / -1;
-      max-width: none;
-    }
-
-    .header-control-rail {
-      grid-column: 1 / 2;
-      width: 100%;
-    }
-
-    .status-cluster {
-      max-width: none;
-    }
-
-    .header-meta-rail {
-      justify-self: end;
-      align-self: center;
-    }
-  }
-
   @media (max-width: 960px) {
-    .header-shell {
-      grid-template-columns: 1fr;
+    .phavo-header {
+      grid-template-columns: auto 1fr auto;
+      height: auto;
+      padding: var(--space-3) var(--space-8);
     }
 
-    .header-control-rail,
-    .header-meta-rail {
-      grid-column: 1 / -1;
-      justify-self: start;
-    }
-
-    .header-control-rail {
-      grid-template-columns: 1fr;
-      align-items: stretch;
-    }
-
-    .header-action-group {
-      justify-content: flex-start;
-    }
-
-    .status-cluster,
-    .control-btn {
-      min-height: 38px;
-    }
-
-    .status-cluster {
-      padding-inline: var(--space-3);
-    }
-
-    .control-btn {
-      padding-inline: var(--space-3);
+    .header-center {
+      max-width: none;
     }
   }
 
   @media (max-width: 639px) {
-    .header {
-      padding: var(--space-4);
+    .phavo-header {
+      padding: var(--space-3) var(--space-4);
     }
 
-    .header-control-rail {
-      gap: var(--space-2);
-    }
-
-    .status-label,
-    .add-widget-text,
-    .bell-label {
+    .header-dashboard-name {
       display: none;
     }
+  }
 
-    .status-cluster {
-      gap: var(--space-2);
-    }
+  .status-offline-force {
+    color: var(--color-error) !important;
+    background-color: color-mix(in srgb, var(--color-error) 10%, transparent) !important;
+  }
 
-    .status-segment {
-      gap: var(--space-2);
-    }
-
-    .header-action-group {
-      width: 100%;
-      justify-content: flex-start;
-    }
-
-    .header-weather {
-      max-width: 12ch;
-    }
-
-    .page-title-section {
-      padding: 0 var(--space-4) var(--space-4);
-    }
-
-    .page-title {
-      font-size: 28px;
-    }
+  .status-offline-force :global(.dot),
+  .status-offline-force :global(span) {
+    background-color: var(--color-error) !important;
+    color: var(--color-error) !important;
   }
 </style>

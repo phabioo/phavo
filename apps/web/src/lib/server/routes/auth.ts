@@ -71,7 +71,7 @@ export function registerAuthRoutes(app: Hono<{ Variables: AppVariables }>): void
   app.post('/auth/login', async (c) => {
     // In dev mode, always succeed without real credentials.
     if (DEV_MOCK_AUTH_ENABLED) {
-      const response = c.json(ok({ tier: 'free' as const }));
+      const response = c.json(ok({ tier: 'stellar' as const }));
       await setSessionCookies(response, 'dev', 7 * 24 * 60 * 60);
       return response;
     }
@@ -109,13 +109,13 @@ export function registerAuthRoutes(app: Hono<{ Variables: AppVariables }>): void
       let accessToken: string;
       let userEmail: string;
       let userId: string;
-      let tier: 'free' | 'standard';
+      let tier: 'stellar' | 'celestial';
 
       const PhavioTokenResponseSchema = z.object({
         access_token: z.string(),
         user: z.object({ id: z.string(), email: z.string() }),
       });
-      const LicenseValidateSchema = z.object({ tier: z.enum(['free', 'standard']) });
+      const LicenseValidateSchema = z.object({ tier: z.enum(['stellar', 'celestial']) });
 
       try {
         const tokenRes = await fetch(`${phavoIoUrl}/api/oauth/token`, {
@@ -166,7 +166,7 @@ export function registerAuthRoutes(app: Hono<{ Variables: AppVariables }>): void
           .limit(1);
         const ex = existing[0];
         if (ex && ex.graceUntil !== null && ex.graceUntil > Date.now()) {
-          tier = ex.tier as 'free' | 'standard';
+          tier = ex.tier as 'stellar' | 'celestial';
         } else {
           recordLoginAttempt(ip, false);
           console.log(`[phavo] Login failed: ip=${ip} attempt=${getLoginAttemptCount(ip)}`);
@@ -174,7 +174,7 @@ export function registerAuthRoutes(app: Hono<{ Variables: AppVariables }>): void
         }
       }
 
-      const graceUntil = Date.now() + (tier === 'free' ? 86_400_000 : 259_200_000);
+      const graceUntil = Date.now() + (tier === 'stellar' ? 86_400_000 : 259_200_000);
 
       // Upsert user record.
       const existingUsers = await db
@@ -257,7 +257,7 @@ export function registerAuthRoutes(app: Hono<{ Variables: AppVariables }>): void
 
       await db.insert(schema.licenseActivation).values({
         licenseKey,
-        tier: 'local',
+        tier: 'celestial',
         activationJwt,
         instanceIdentifier,
       });
@@ -275,7 +275,7 @@ export function registerAuthRoutes(app: Hono<{ Variables: AppVariables }>): void
         }
         partialSessions.set(partialToken, {
           userId: localUserId,
-          tier: 'local',
+          tier: 'celestial',
           authMode: 'local',
           graceUntil: null,
           expiresMs: Date.now() + 5 * 60 * 1000,
@@ -287,7 +287,7 @@ export function registerAuthRoutes(app: Hono<{ Variables: AppVariables }>): void
       await db.insert(schema.sessions).values({
         id: token,
         userId: localUserId,
-        tier: 'local',
+        tier: 'celestial',
         authMode: 'local',
         validatedAt: Date.now(),
         graceUntil: null,
@@ -295,8 +295,8 @@ export function registerAuthRoutes(app: Hono<{ Variables: AppVariables }>): void
       });
 
       recordLoginAttempt(ip, true);
-      console.log(`[phavo] Login success: userId=${localUserId} tier=local ip=${ip}`);
-      const response = c.json(ok({ tier: 'local' as const }));
+      console.log(`[phavo] Login success: userId=${localUserId} tier=celestial ip=${ip}`);
+      const response = c.json(ok({ tier: 'celestial' as const }));
       await setSessionCookies(response, token, SESSION_MAX_AGE);
       return response;
     }
@@ -357,7 +357,7 @@ export function registerAuthRoutes(app: Hono<{ Variables: AppVariables }>): void
       }
       partialSessions.set(partialToken, {
         userId: user.id,
-        tier: 'local',
+        tier: 'celestial',
         authMode: 'local',
         graceUntil: null,
         expiresMs: Date.now() + 5 * 60 * 1000,
@@ -369,7 +369,7 @@ export function registerAuthRoutes(app: Hono<{ Variables: AppVariables }>): void
     await db.insert(schema.sessions).values({
       id: token,
       userId: user.id,
-      tier: 'local',
+      tier: 'celestial',
       authMode: 'local',
       validatedAt: Date.now(),
       graceUntil: null,
@@ -377,8 +377,8 @@ export function registerAuthRoutes(app: Hono<{ Variables: AppVariables }>): void
     });
 
     recordLoginAttempt(ip, true);
-    console.log(`[phavo] Login success: userId=${user.id} tier=local ip=${ip}`);
-    const response = c.json(ok({ tier: 'local' as const }));
+    console.log(`[phavo] Login success: userId=${user.id} tier=celestial ip=${ip}`);
+    const response = c.json(ok({ tier: 'celestial' as const }));
     await setSessionCookies(response, token, SESSION_MAX_AGE);
     return response;
   });

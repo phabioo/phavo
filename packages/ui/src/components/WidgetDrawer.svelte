@@ -9,8 +9,9 @@
   } from '@phavo/types';
   import type { Snippet } from 'svelte';
   import { onMount } from 'svelte';
-  import { fade, fly } from 'svelte/transition';
+  import { fade } from 'svelte/transition';
   import Icon from './Icon.svelte';
+  import WidgetCard from './WidgetCard.svelte';
 
   type Category = 'all' | WidgetCategory;
   type TileCategory = WidgetCategory | 'custom';
@@ -55,8 +56,6 @@
     labels = {},
   }: Props = $props();
 
-  const DEFAULT_MOBILE_HEIGHT = 60;
-  const DESKTOP_BREAKPOINT = 640;
   const SIZE_OPTIONS: WidgetSize[] = ['S', 'M', 'L', 'XL'];
   const CATEGORY_ICONS: Record<Category, string> = {
     all: 'layout-grid',
@@ -70,8 +69,7 @@
   let confirmRemoveId = $state<string | null>(null);
   let activeLockedId = $state<string | null>(null);
   let isDraggingFromDrawer = $state(false);
-  let isDesktop = $state(false);
-  let mobileDrawerHeight = $state(DEFAULT_MOBILE_HEIGHT);
+  let drawerHeight = $state(60);
   let selectedSizes = $state<Record<string, WidgetSize>>({});
 
   const filters: { key: Category; label: () => string }[] = [
@@ -83,23 +81,10 @@
   ];
 
   onMount(() => {
-    const syncViewport = () => {
-      isDesktop = window.innerWidth >= DESKTOP_BREAKPOINT;
-    };
-
-    syncViewport();
-    window.addEventListener('resize', syncViewport);
-
-    return () => {
-      window.removeEventListener('resize', syncViewport);
-    };
-  });
-
-  onMount(() => {
     return $effect.root(() => {
       $effect(() => {
         if (open) return;
-        mobileDrawerHeight = DEFAULT_MOBILE_HEIGHT;
+        drawerHeight = 60;
         confirmRemoveId = null;
         activeLockedId = null;
         selectedSizes = {};
@@ -117,8 +102,6 @@
         ),
   );
 
-  const visibleTileCount = $derived(filteredWidgets.length);
-
   function getInstanceForWidget(widgetId: string): WidgetInstance | undefined {
     return instances.find((instance) => instance.widgetId === widgetId);
   }
@@ -133,7 +116,8 @@
 
   function getDefaultSize(widget: WidgetManifestEntry): WidgetSize {
     const availableSizes = getAvailableSizes(widget);
-    return availableSizes.includes('S') ? 'S' : (availableSizes[0] ?? 'S');
+    if (availableSizes.includes('M')) return 'M';
+    return availableSizes[0] ?? 'M';
   }
 
   function getSelectedSize(widget: WidgetManifestEntry): WidgetSize {
@@ -201,11 +185,6 @@
     return category.charAt(0).toUpperCase() + category.slice(1);
   }
 
-  function getWidgetIcon(widget: WidgetManifestEntry): string {
-    if (isWidgetTeaserDefinition(widget)) return 'lock';
-    return CATEGORY_ICONS[widget.category] ?? 'layout-grid';
-  }
-
   function getTierLabel(widget: WidgetManifestEntry): string {
     if (isWidgetTeaserDefinition(widget)) {
       return labels.locked ?? 'Locked';
@@ -213,12 +192,42 @@
 
     return widget.tier.charAt(0).toUpperCase() + widget.tier.slice(1);
   }
+
+  function getTierColorClass(widget: WidgetManifestEntry): string {
+    if (isWidgetTeaserDefinition(widget)) return 'drawer-tile-tier-locked';
+    return widget.tier === 'celestial' ? 'drawer-tile-tier-celestial' : 'drawer-tile-tier-stellar';
+  }
+
+  function startResize(e: MouseEvent | TouchEvent) {
+    e.preventDefault();
+    const startY = 'touches' in e ? e.touches[0]?.clientY ?? 0 : e.clientY;
+    const startHeight = drawerHeight;
+
+    function onMove(ev: MouseEvent | TouchEvent) {
+      const y = 'touches' in ev ? ev.touches[0]?.clientY ?? 0 : ev.clientY;
+      const delta = startY - y;
+      const newH = startHeight + (delta / window.innerHeight) * 100;
+      drawerHeight = Math.min(90, Math.max(20, newH));
+    }
+
+    function onEnd() {
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('touchmove', onMove);
+      window.removeEventListener('mouseup', onEnd);
+      window.removeEventListener('touchend', onEnd);
+    }
+
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('touchmove', onMove, { passive: false });
+    window.addEventListener('mouseup', onEnd);
+    window.addEventListener('touchend', onEnd);
+  }
 </script>
 
 {#if open}
   <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
   <div
-    class="fixed inset-0 z-[210] bg-black/42 backdrop-blur-[2px]"
+    class="drawer-backdrop"
     onclick={handleBackdropClick}
     aria-hidden="true"
     style="pointer-events: {isDraggingFromDrawer ? 'none' : 'auto'}"
@@ -226,33 +235,37 @@
   ></div>
 
   <aside
-    class="widget-tray fixed z-[220] flex flex-col overflow-hidden"
-    style="height: {isDesktop ? 'min(72dvh, 760px)' : `${mobileDrawerHeight}vh`}"
+    class="drawer-panel"
+    style="height: {drawerHeight}vh"
     aria-label={labels.title ?? 'Widget Tray'}
-    transition:fly={{ y: isDesktop ? 520 : 360, duration: isDesktop ? 260 : 220 }}
   >
-    <div class="tray-header">
-      <div class="tray-header-copy">
-        <span class="tray-eyebrow">Widget library</span>
-        <div class="tray-title-row">
-          <h2 class="tray-title">{labels.title ?? 'Widget Tray'}</h2>
-          <span class="tray-count">{visibleTileCount} tiles</span>
-        </div>
-        <p class="tray-description">
-          {labels.subtitle ?? 'Browse structured S-size widget tiles and place them onto the board.'}
-        </p>
-      </div>
-
-      <button class="tray-close" onclick={onClose} aria-label="Close">
-        <Icon name="x" size={16} />
-      </button>
+    <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+    <div
+      class="drawer-handle"
+      role="separator"
+      onmousedown={startResize}
+      ontouchstart={startResize}
+    >
+      <div class="drawer-handle-bar"></div>
     </div>
 
-    <div class="tray-filter-row">
+    <div class="drawer-header">
+      <div class="drawer-header-top">
+        <h2 class="drawer-title">{labels.title ?? 'Widget Tray'}</h2>
+        <button class="drawer-close-btn" onclick={onClose} aria-label="Close">
+          <Icon name="x" size={16} />
+        </button>
+      </div>
+      <p class="drawer-subtitle">
+        {labels.subtitle ?? 'Browse and add widgets to your board.'}
+      </p>
+    </div>
+
+    <div class="drawer-filters">
       {#each filters as filter (filter.key)}
         <button
-          class="tray-filter-chip"
-          class:tray-filter-chip-active={activeFilter === filter.key}
+          class="drawer-filter-btn"
+          class:active={activeFilter === filter.key}
           onclick={() => (activeFilter = filter.key)}
         >
           {filter.label()}
@@ -260,106 +273,113 @@
       {/each}
     </div>
 
-    <div class="tray-scroll">
-      <div class="tray-grid" role="list">
+    <div class="drawer-content">
+      <div class="drawer-tiles-grid" role="list">
         {#each filteredWidgets as widget (widget.id)}
           {@const instance = getInstanceForWidget(widget.id)}
           {@const locked = isLocked(widget)}
           <div
-            class="tray-tile"
-            class:tray-tile-added={!!instance && !locked}
-            class:tray-tile-locked={locked}
+            class="drawer-tile"
+            class:drawer-tile-locked={locked}
             role="listitem"
             draggable={!locked && !instance ? 'true' : 'false'}
             ondragstart={(event) => handleDragStart(event, widget)}
             ondragend={handleDragEnd}
           >
-            <div class="tray-tile-preview">
-              <div class="tray-tile-meta-row">
-                <span class="tray-tile-category">{getWidgetCategoryLabel(widget)}</span>
-                <span class="tray-tile-tier">{getTierLabel(widget)}</span>
-              </div>
-
-              <div class="tray-tile-preview-body">
+            <!-- Top: live S-size widget preview inside WidgetCard -->
+            <div class="drawer-tile-preview">
+              <WidgetCard
+                instanceId=""
+                size="S"
+                colSpan={3}
+                rowSpan={1}
+                draggable={false}
+                glowColor="gold"
+                showControls={false}
+                clipContent={false}
+              >
                 {#if tilePreview}
-                  <div class="tray-tile-preview-content">
-                    {@render tilePreview(widget)}
+                  {@render tilePreview(widget)}
+                {:else if locked}
+                  <div class="drawer-locked-preview">
+                    <Icon name="lock" size={16} />
+                    <span class="widget-category-label">{widget.name}</span>
                   </div>
                 {:else}
-                  <div class="tray-tile-preview-fallback">
-                    <span class="tray-tile-fallback-icon">
-                      <Icon name={getWidgetIcon(widget)} size={18} />
-                    </span>
-                    <div class="tray-tile-fallback-copy">
-                      <span class="tray-tile-fallback-kicker">
-                        {locked ? (labels.locked ?? 'Locked') : 'Live preview'}
-                      </span>
-                      <p class="tray-tile-fallback-text">
-                        {locked
-                          ? 'Upgrade to unlock this widget preview.'
-                          : 'Live widget data appears here when available.'}
-                      </p>
-                    </div>
+                  <div class="drawer-locked-preview">
+                    <span class="widget-category-label">{widget.name}</span>
                   </div>
                 {/if}
-              </div>
+              </WidgetCard>
             </div>
 
-            <div class="tray-tile-body">
-              <div class="tray-tile-copy">
-                <h3 class="tray-tile-title">{widget.name}</h3>
-                <p class="tray-tile-description">{widget.description}</p>
+            <!-- Middle: widget info -->
+            <div class="drawer-tile-info">
+              <div class="drawer-tile-meta">
+                <span class="drawer-tile-category">{getWidgetCategoryLabel(widget)}</span>
+                <span class={getTierColorClass(widget)}>{getTierLabel(widget)}</span>
               </div>
+              <span class="drawer-tile-name">{widget.name}</span>
+              <span class="drawer-tile-desc">{widget.description}</span>
+            </div>
 
-              <div class="tray-size-row" aria-label="Widget sizes">
-                {#each SIZE_OPTIONS as size}
-                  <button
-                    class="tray-size-chip"
-                    class:tray-size-chip-active={size === getSelectedSize(widget)}
-                    type="button"
-                    disabled={locked || !getAvailableSizes(widget).includes(size)}
-                    aria-pressed={size === getSelectedSize(widget)}
-                    onclick={() => handleSizeSelect(widget, size)}
-                  >
-                    {size}
-                  </button>
-                {/each}
-              </div>
-
-              <div class="tray-tile-footer">
-                {#if locked}
-                  <button class="tray-action tray-action-locked" onclick={() => handleLockedClick(widget.id)}>
-                    <Icon name="lock" size={14} />
-                    <span>{labels.locked ?? 'Locked'}</span>
-                  </button>
-                {:else if instance}
+            <!-- Bottom: size selector + action button -->
+            <div class="drawer-tile-footer">
+              {#if !locked}
+                <div class="drawer-tile-controls">
+                  {#each getAvailableSizes(widget) as s}
+                    <button
+                      class="drawer-ctrl-size"
+                      class:drawer-ctrl-size-active={s === getSelectedSize(widget)}
+                      type="button"
+                      onclick={() => handleSizeSelect(widget, s)}
+                    >
+                      {s}
+                    </button>
+                  {/each}
+                </div>
+                {#if instance}
                   {#if confirmRemoveId === instance.id}
-                    <button class="tray-action tray-action-remove" onclick={() => handleRemoveConfirm(instance.id)}>
+                    <button
+                      class="drawer-tile-btn drawer-tile-btn-remove"
+                      onclick={() => handleRemoveConfirm(instance.id)}
+                    >
                       {labels.removeConfirm ?? 'Remove?'}
                     </button>
                   {:else}
-                    <button class="tray-action tray-action-added" onclick={() => handleRemoveClick(instance.id)}>
-                      <Icon name="check" size={14} />
-                      <span>{labels.alreadyAdded ?? 'Added'}</span>
+                    <button
+                      class="drawer-tile-btn drawer-tile-btn-added"
+                      onclick={() => handleRemoveClick(instance.id)}
+                    >
+                      {labels.alreadyAdded ?? 'Added'}
                     </button>
                   {/if}
                 {:else}
-                  <button class="tray-action tray-action-add" onclick={() => handleAdd(widget)}>
-                    <Icon name="plus" size={14} />
-                    <span>{labels.addToBoard ?? 'Add to board'}</span>
+                  <button
+                    class="drawer-tile-btn drawer-tile-btn-add"
+                    onclick={() => handleAdd(widget)}
+                  >
+                    {labels.addToBoard ?? '+ Add'}
                   </button>
                 {/if}
-              </div>
-
-              {#if locked && activeLockedId === widget.id}
-                <div class="tray-tile-message">
-                  <Icon name="sparkles" size={14} />
-                  <span>
-                    {labels.upgradePrompt ?? 'Upgrade to Standard to unlock this widget and add it to the board.'}
-                  </span>
-                </div>
+              {:else}
+                <button
+                  class="drawer-tile-btn drawer-tile-btn-locked"
+                  onclick={() => handleLockedClick(widget.id)}
+                >
+                  {labels.locked ?? 'Locked'}
+                </button>
               {/if}
             </div>
+
+            {#if locked && activeLockedId === widget.id}
+              <div class="drawer-tile-message">
+                <Icon name="sparkles" size={14} />
+                <span>
+                  {labels.upgradePrompt ?? 'Upgrade to Celestial to unlock this widget.'}
+                </span>
+              </div>
+            {/if}
           </div>
         {/each}
       </div>
@@ -368,481 +388,345 @@
 {/if}
 
 <style>
-  .widget-tray {
-    --tray-inline-gutter: clamp(var(--space-6), 3vw, var(--space-10));
-    --tray-shell-width: calc(100vw - var(--shell-sidebar-offset, 0px));
-    --tray-max-width: 1440px;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background:
-      radial-gradient(
-        ellipse 78% 90% at 50% 0%,
-        color-mix(in srgb, var(--color-accent-t) 38%, transparent),
-        transparent 74%
-      ),
-      linear-gradient(
-        180deg,
-        color-mix(in srgb, var(--color-bg-elevated) 94%, transparent),
-        color-mix(in srgb, var(--color-bg-surface) 98%, transparent)
-      );
-    border: 1px solid color-mix(in srgb, var(--color-accent) 20%, var(--color-border-subtle));
-    border-bottom: none;
-    border-radius: calc(var(--radius-xl) + 4px) calc(var(--radius-xl) + 4px) 0 0;
-    box-shadow:
-      0 -22px 60px rgba(0, 0, 0, 0.56),
-      inset 0 1px 0 color-mix(in srgb, var(--color-accent) 12%, transparent);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
+  @keyframes drawer-slide-up {
+    from { transform: translateY(100%); opacity: 0; }
+    to   { transform: translateY(0);    opacity: 1; }
   }
 
-  .tray-header {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: var(--space-4);
-    padding: var(--space-6) var(--space-6) var(--space-5);
-    border-bottom: 1px solid color-mix(in srgb, var(--color-border-subtle) 88%, transparent);
+  .drawer-backdrop {
+    position: fixed;
+    inset: 0;
+    background: color-mix(in srgb, var(--color-surface-dim) 50%, transparent);
+    backdrop-filter: blur(4px);
+    z-index: 100;
+    pointer-events: all;
   }
 
-  .tray-header-copy {
+  .drawer-panel {
+    position: fixed;
+    bottom: var(--space-3);
+    left: calc(var(--shell-sidebar-offset, var(--sidebar-width)) + var(--space-4));
+    right: calc(var(--notification-panel-width, 0px) + var(--space-4));
+    min-height: 280px;
+    max-height: 90vh;
+    background: var(--color-surface-low);
+    border-radius: 1.5rem;
+    z-index: 101;
     display: flex;
     flex-direction: column;
-    gap: var(--space-2);
-    min-width: 0;
+    overflow: hidden;
+    animation: drawer-slide-up 0.25s cubic-bezier(0.32, 0.72, 0, 1);
   }
 
-  .tray-eyebrow {
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 0.24em;
-    text-transform: uppercase;
-    color: var(--color-accent-text);
-  }
-
-  .tray-title-row {
+  .drawer-handle {
+    width: 100%;
+    padding: var(--space-3) 0 var(--space-1);
+    cursor: ns-resize;
     display: flex;
+    justify-content: center;
     align-items: center;
-    gap: var(--space-3);
+    flex-shrink: 0;
+  }
+
+  .drawer-handle-bar {
+    width: 40px;
+    height: 4px;
+    border-radius: 9999px;
+    background: color-mix(in srgb, var(--color-outline) 40%, transparent);
+  }
+
+  .drawer-header {
+    padding: var(--space-4) var(--space-6) var(--space-3);
+    flex-shrink: 0;
+  }
+
+  .drawer-header-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--space-1);
+  }
+
+  .drawer-title {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--color-on-surface);
+  }
+
+  .drawer-subtitle {
+    margin: 0;
+    font-size: 12px;
+    color: var(--color-on-surface-variant);
+  }
+
+  .drawer-close-btn {
+    background: none;
+    border: none;
+    color: var(--color-on-surface-variant);
+    cursor: pointer;
+    padding: var(--space-1);
+    border-radius: var(--radius-sm);
+  }
+
+  .drawer-close-btn:hover {
+    color: var(--color-on-surface);
+    background: color-mix(in srgb, var(--color-surface-high) 60%, transparent);
+  }
+
+  .drawer-filters {
+    display: flex;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-6) var(--space-3);
     flex-wrap: wrap;
-  }
-
-  .tray-title {
-    margin: 0;
-    font-size: 1.1rem;
-    font-weight: 700;
-    letter-spacing: -0.03em;
-    color: var(--color-text-primary);
-  }
-
-  .tray-count {
-    display: inline-flex;
-    align-items: center;
-    padding: 2px var(--space-2);
-    border-radius: 999px;
-    background: color-mix(in srgb, var(--color-bg-base) 72%, transparent);
-    border: 1px solid color-mix(in srgb, var(--color-accent) 20%, transparent);
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    color: var(--color-text-secondary);
-  }
-
-  .tray-description {
-    margin: 0;
-    font-size: var(--font-size-sm);
-    line-height: 1.6;
-    color: var(--color-text-secondary);
-    max-width: 58ch;
-  }
-
-  .tray-close {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 38px;
-    height: 38px;
     flex-shrink: 0;
-    background: color-mix(in srgb, var(--color-bg-base) 76%, transparent);
-    border: 1px solid var(--color-border-subtle);
-    border-radius: 999px;
-    color: var(--color-text-secondary);
-    cursor: pointer;
-    transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease;
   }
 
-  .tray-close:hover {
-    color: var(--color-text-primary);
-    border-color: color-mix(in srgb, var(--color-accent) 24%, transparent);
-    background: color-mix(in srgb, var(--color-bg-hover) 84%, transparent);
-  }
-
-  .tray-filter-row {
-    display: flex;
-    gap: var(--space-2);
-    padding: 0 var(--space-6) var(--space-5);
-    overflow-x: auto;
-    scrollbar-width: none;
-  }
-
-  .tray-filter-row::-webkit-scrollbar {
-    display: none;
-  }
-
-  .tray-filter-chip {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 34px;
-    padding: 0 var(--space-4);
-    border-radius: 999px;
-    border: 1px solid var(--color-border-subtle);
-    background: color-mix(in srgb, var(--color-bg-base) 72%, transparent);
-    color: var(--color-text-secondary);
+  .drawer-filter-btn {
+    padding: 4px 14px;
+    border-radius: var(--radius-full);
     font-size: 11px;
     font-weight: 700;
-    letter-spacing: 0.16em;
+    font-family: var(--font-mono);
+    letter-spacing: 0.06em;
     text-transform: uppercase;
-    white-space: nowrap;
     cursor: pointer;
-    transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+    border: none;
+    transition: background 0.15s, color 0.15s;
   }
 
-  .tray-filter-chip:hover {
-    color: var(--color-text-primary);
-    border-color: color-mix(in srgb, var(--color-accent) 18%, transparent);
+  .drawer-filter-btn.active {
+    background: var(--color-primary-fixed);
+    color: var(--color-on-primary-fixed);
   }
 
-  .tray-filter-chip-active {
-    color: var(--color-bg-base);
-    border-color: var(--color-accent);
-    background: var(--color-accent);
+  .drawer-filter-btn:not(.active) {
+    background: color-mix(in srgb, var(--color-surface-high) 80%, transparent);
+    color: var(--color-on-surface-variant);
   }
 
-  .tray-scroll {
+  .drawer-filter-btn:not(.active):hover {
+    color: var(--color-on-surface);
+    background: var(--color-surface-high);
+  }
+
+  .drawer-content {
     flex: 1;
-    min-height: 0;
     overflow-y: auto;
-    padding: 0 var(--space-6) calc(var(--space-9) + env(safe-area-inset-bottom, 0px));
-    scroll-padding-bottom: calc(var(--space-8) + env(safe-area-inset-bottom, 0px));
-    overscroll-behavior: contain;
-    scrollbar-width: none;
-    background:
-      linear-gradient(180deg, transparent, color-mix(in srgb, var(--color-bg-base) 12%, transparent));
+    overflow-x: hidden;
   }
 
-  .tray-scroll::-webkit-scrollbar {
-    display: none;
-  }
-
-  .tray-grid {
+  .drawer-tiles-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
     gap: var(--space-4);
-    grid-auto-rows: minmax(0, auto);
-    align-content: start;
-    padding-bottom: var(--space-4);
+    padding: var(--space-4) var(--space-6) var(--space-8);
   }
 
-  .tray-tile {
-    display: grid;
-    grid-template-rows: minmax(128px, 144px) minmax(0, 1fr);
-    min-height: 264px;
-    border-radius: var(--radius-xl);
-    border: 1px solid color-mix(in srgb, var(--color-accent) 10%, var(--color-border-subtle));
-    background:
-      linear-gradient(
-        180deg,
-        color-mix(in srgb, var(--color-bg-elevated) 88%, transparent),
-        color-mix(in srgb, var(--color-bg-surface) 96%, transparent)
-      );
-    box-shadow: var(--shadow-sm);
-    overflow: hidden;
-    transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
-  }
-
-  .tray-tile:hover {
-    transform: translateY(-1px);
-    border-color: color-mix(in srgb, var(--color-accent) 24%, var(--color-border-subtle));
-    box-shadow: var(--shadow-md);
-  }
-
-  .tray-tile-added {
-    border-color: color-mix(in srgb, var(--color-success) 32%, var(--color-border-subtle));
-  }
-
-  .tray-tile-locked {
-    border-color: color-mix(in srgb, var(--color-warning) 28%, var(--color-border-subtle));
-  }
-
-  .tray-tile-preview {
-    display: grid;
-    grid-template-rows: auto minmax(0, 1fr);
-    gap: var(--space-4);
-    min-height: 0;
-    padding: var(--space-4) var(--space-5);
-    border-bottom: 1px solid color-mix(in srgb, var(--color-border-subtle) 86%, transparent);
-    background:
-      radial-gradient(
-        ellipse 56% 70% at 0% 0%,
-        color-mix(in srgb, var(--color-accent-t) 30%, transparent),
-        transparent 78%
-      ),
-      color-mix(in srgb, var(--color-bg-base) 18%, var(--color-bg-surface));
-    overflow: hidden;
-  }
-
-  .tray-tile-preview-body {
+  .drawer-tile {
     display: flex;
-    align-items: stretch;
-    min-height: 0;
-    overflow: hidden;
+    flex-direction: column;
+    gap: 0;
+    transition: transform 0.15s ease;
   }
 
-  .tray-tile-meta-row {
+  .drawer-tile:hover:not(.drawer-tile-locked) {
+    transform: scale(1.01);
+  }
+
+  .drawer-tile-preview {
+    background: var(--color-surface-card);
+    border-radius: 1rem;
+    overflow: visible;
+  }
+
+  .drawer-tile-info {
+    padding: var(--space-3) var(--space-4) var(--space-2);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    flex: 1;
+  }
+
+  .drawer-tile-footer {
+    padding: var(--space-2) var(--space-4) var(--space-4);
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: var(--space-3);
   }
 
-  .tray-tile-category,
-  .tray-tile-tier {
-    font-size: 10px;
+  .drawer-tile-controls {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    background: color-mix(in srgb, var(--color-surface-dim) 80%, transparent);
+    border: 1px solid color-mix(in srgb, var(--color-outline-variant) 20%, transparent);
+    border-radius: var(--radius-full);
+    padding: 2px;
+    width: fit-content;
+  }
+
+  .drawer-ctrl-size {
+    font-size: var(--font-size-xs);
     font-weight: 700;
-    letter-spacing: 0.16em;
-    text-transform: uppercase;
-  }
-
-  .tray-tile-category {
-    color: var(--color-text-muted);
-  }
-
-  .tray-tile-tier {
-    color: var(--color-text-secondary);
-  }
-
-  .tray-tile-preview-content {
-    display: flex;
-    align-items: center;
-    width: 100%;
-    min-height: 0;
-    overflow: hidden;
-  }
-
-  .tray-tile-preview-fallback {
-    display: flex;
-    align-items: center;
-    gap: var(--space-3);
-    width: 100%;
-    min-height: 0;
-    padding: var(--space-3);
-    border-radius: var(--radius-lg);
-    border: 1px solid color-mix(in srgb, var(--color-border-subtle) 84%, transparent);
-    background: color-mix(in srgb, var(--color-bg-base) 42%, transparent);
-    overflow: hidden;
-  }
-
-  .tray-tile-fallback-icon {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 34px;
-    height: 34px;
-    border-radius: 10px;
-    flex-shrink: 0;
-    background: color-mix(in srgb, var(--color-accent-t) 90%, transparent);
-    border: 1px solid color-mix(in srgb, var(--color-accent) 18%, transparent);
-    color: var(--color-accent-text);
-  }
-
-  .tray-tile-fallback-copy {
-    display: flex;
-    min-width: 0;
-    flex-direction: column;
-    gap: 4px;
-  }
-
-  .tray-tile-fallback-kicker {
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 0.16em;
-    text-transform: uppercase;
-    color: var(--color-text-muted);
-  }
-
-  .tray-tile-fallback-text {
-    margin: 0;
-    color: var(--color-text-secondary);
-    font-size: 11px;
-    line-height: 1.45;
-  }
-
-  .tray-tile-body {
-    display: grid;
-    grid-template-rows: auto auto minmax(0, 1fr) auto;
-    gap: var(--space-4);
-    padding: var(--space-4) var(--space-5) var(--space-5);
-    min-height: 0;
-  }
-
-  .tray-tile-copy {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-2);
-    min-height: 0;
-  }
-
-  .tray-tile-title {
-    margin: 0;
-    font-size: 1rem;
-    font-weight: 700;
-    letter-spacing: -0.02em;
-    color: var(--color-text-primary);
-  }
-
-  .tray-tile-description {
-    margin: 0;
-    font-size: var(--font-size-sm);
-    line-height: 1.55;
-    color: var(--color-text-secondary);
-    line-clamp: 2;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-  }
-
-  .tray-size-row {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
-  }
-
-  .tray-size-chip {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 28px;
-    min-height: 28px;
-    padding: 0 var(--space-2);
-    border-radius: 999px;
-    border: 1px solid var(--color-border-subtle);
-    background: color-mix(in srgb, var(--color-bg-base) 60%, transparent);
-    color: var(--color-text-muted);
-    font-size: 11px;
-    font-weight: 700;
+    font-family: var(--font-mono);
+    letter-spacing: 0.04em;
+    color: var(--color-on-surface-variant);
+    background: none;
+    border: none;
+    border-radius: var(--radius-full);
+    padding: 3px 8px;
     cursor: pointer;
-    transition:
-      color 0.15s ease,
-      border-color 0.15s ease,
-      background 0.15s ease,
-      opacity 0.15s ease;
+    transition: background 0.1s, color 0.1s;
+    line-height: 1;
   }
 
-  .tray-size-chip:disabled {
+  .drawer-ctrl-size:hover {
+    color: var(--color-on-surface);
+  }
+
+  .drawer-ctrl-size-active {
+    background: var(--color-surface-high);
+    color: var(--color-on-surface);
+  }
+
+  .drawer-locked-preview {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+    height: 100%;
+    color: var(--color-outline);
+  }
+
+  .drawer-tile-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .drawer-tile-category {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--color-on-surface-variant);
+  }
+
+  .drawer-tile-tier-stellar  { color: var(--color-primary-fixed); }
+  .drawer-tile-tier-celestial { color: var(--color-secondary); }
+  .drawer-tile-tier-locked   { color: var(--color-outline); }
+
+  .drawer-tile-preview-slot {
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .drawer-tile-value {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--color-primary-fixed);
+    letter-spacing: -0.02em;
+    line-height: 1;
+  }
+
+  .drawer-tile-value-unit {
+    font-size: 14px;
+    font-weight: 300;
+    color: var(--color-on-surface-variant);
+  }
+
+  .drawer-tile-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--color-on-surface);
+  }
+
+  .drawer-tile-desc {
+    font-size: 11px;
+    color: var(--color-on-surface-variant);
+    line-height: 1.4;
+  }
+
+  .drawer-tile-sizes {
+    display: flex;
+    gap: var(--space-2);
+    align-items: center;
+  }
+
+  .drawer-tile-size-btn {
+    font-size: 10px;
+    font-weight: 700;
+    font-family: var(--font-mono);
+    color: var(--color-on-surface-variant);
+    padding: 2px 6px;
+    border-radius: var(--radius-sm);
+    background: color-mix(in srgb, var(--color-surface-high) 80%, transparent);
+    border: none;
+    cursor: pointer;
+  }
+
+  .drawer-tile-size-btn.active {
+    background: color-mix(in srgb, var(--color-primary-fixed) 15%, transparent);
+    color: var(--color-primary-fixed);
+  }
+
+  .drawer-tile-size-btn:disabled {
     cursor: not-allowed;
     opacity: 0.4;
   }
 
-  .tray-size-chip-active {
-    opacity: 1;
-    border-color: color-mix(in srgb, var(--color-accent) 26%, transparent);
-    color: var(--color-accent-text);
-    background: color-mix(in srgb, var(--color-accent-t) 90%, transparent);
-  }
-
-  .tray-tile-footer {
-    margin-top: auto;
-  }
-
-  .tray-action {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: var(--space-2);
-    width: 100%;
-    min-height: 40px;
-    padding: 0 var(--space-4);
-    border-radius: 999px;
-    border: 1px solid var(--color-border-subtle);
-    background: color-mix(in srgb, var(--color-bg-base) 68%, transparent);
-    color: var(--color-text-primary);
-    font-size: 12px;
+  .drawer-tile-btn {
+    padding: var(--space-2) var(--space-3);
+    border-radius: var(--radius-full);
+    font-size: var(--font-size-xs);
     font-weight: 700;
-    letter-spacing: 0.02em;
+    font-family: var(--font-mono);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
     cursor: pointer;
-    transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+    border: none;
+    transition: background 0.15s;
+    white-space: nowrap;
   }
 
-  .tray-action:hover {
-    border-color: color-mix(in srgb, var(--color-accent) 22%, transparent);
-    background: color-mix(in srgb, var(--color-bg-hover) 86%, transparent);
+  .drawer-tile-btn-add {
+    background: color-mix(in srgb, var(--color-primary-fixed) 15%, transparent);
+    color: var(--color-primary-fixed);
   }
 
-  .tray-action-add {
-    border-color: color-mix(in srgb, var(--color-accent) 24%, var(--color-border-subtle));
-    color: var(--color-accent-text);
+  .drawer-tile-btn-add:hover {
+    background: color-mix(in srgb, var(--color-primary-fixed) 25%, transparent);
   }
 
-  .tray-action-added {
-    color: var(--color-success);
-    border-color: color-mix(in srgb, var(--color-success) 28%, transparent);
+  .drawer-tile-btn-added {
+    background: color-mix(in srgb, var(--color-secondary) 10%, transparent);
+    color: var(--color-secondary);
+    cursor: default;
   }
 
-  .tray-action-remove {
-    color: var(--color-text-primary);
-    border-color: color-mix(in srgb, var(--color-danger) 32%, transparent);
-    background: color-mix(in srgb, var(--color-danger-subtle) 72%, transparent);
+  .drawer-tile-btn-remove {
+    color: var(--color-error);
+    background: color-mix(in srgb, var(--color-error-container) 20%, transparent);
   }
 
-  .tray-action-locked {
-    color: var(--color-warning);
-    border-color: color-mix(in srgb, var(--color-warning) 28%, transparent);
+  .drawer-tile-btn-locked {
+    background: color-mix(in srgb, var(--color-outline) 10%, transparent);
+    color: var(--color-outline);
+    cursor: not-allowed;
   }
 
-  .tray-tile-message {
+  .drawer-tile-message {
     display: flex;
     align-items: flex-start;
     gap: var(--space-2);
     padding: var(--space-3);
     border-radius: var(--radius-lg);
-    border: 1px solid color-mix(in srgb, var(--color-warning) 24%, transparent);
-    background: color-mix(in srgb, var(--color-warning-subtle) 78%, transparent);
-    color: var(--color-text-primary);
+    background: color-mix(in srgb, var(--color-outline) 8%, transparent);
+    color: var(--color-on-surface);
     font-size: 11px;
     line-height: 1.5;
-  }
-
-  @media (min-width: 640px) {
-    .widget-tray {
-      left: calc(
-        var(--shell-sidebar-offset, 0px) +
-          max(var(--tray-inline-gutter), (var(--tray-shell-width) - var(--tray-max-width)) / 2)
-      );
-      right: max(var(--tray-inline-gutter), (var(--tray-shell-width) - var(--tray-max-width)) / 2);
-      bottom: var(--space-6);
-      border-bottom: 1px solid color-mix(in srgb, var(--color-accent) 20%, var(--color-border-subtle));
-      border-radius: calc(var(--radius-xl) + 12px);
-    }
-  }
-
-  @media (max-width: 639px) {
-    .tray-header,
-    .tray-filter-row,
-    .tray-scroll {
-      padding-left: var(--space-5);
-      padding-right: var(--space-5);
-    }
-
-    .tray-grid {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: var(--space-3);
-    }
-
-    .tray-tile {
-      min-height: 236px;
-    }
   }
 </style>

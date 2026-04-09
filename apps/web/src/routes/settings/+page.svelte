@@ -1,11 +1,12 @@
 <script lang="ts">
 import { goto } from '$app/navigation';
+import { page } from '$app/state';
 import { onMount } from 'svelte';
-  import { Badge, Button, Card, Icon, Input, Select, Tooltip } from '@phavo/ui';
+  import { Badge, Icon, Input, Select, Tooltip } from '@phavo/ui';
 import en from '$lib/i18n/en.json';
 import ImportExportTab from '$lib/components/settings/ImportExportTab.svelte';
 import LicenceTab from '$lib/components/settings/LicenceTab.svelte';
-import SettingsSection from '$lib/components/settings/SettingsSection.svelte';
+import SettingsLayout from '$lib/components/settings/SettingsLayout.svelte';
 import WidgetsTab from '$lib/components/settings/WidgetsTab.svelte';
 import type { AiStatusResponseData } from '$lib/stores/ai.svelte';
 import { updateAiStatusFromPayload } from '$lib/stores/ai.svelte';
@@ -23,14 +24,14 @@ type GeoResult = {
 };
 type SessionInfo = {
   userId: string;
-  tier: 'free' | 'standard' | 'local';
+  tier: 'stellar' | 'celestial';
   authMode: 'phavo-net' | 'local';
   validatedAt: number;
   email: string | null;
 } | null;
 type AboutInfo = {
   version: string;
-  tier: 'free' | 'standard' | 'local';
+  tier: 'stellar' | 'celestial';
   licenseKeyMasked: string | null;
 };
 type UpdateInfo = {
@@ -45,7 +46,6 @@ type UpdateInfo = {
 type ConfigResponse = {
   setupComplete: boolean;
   dashboardName: string;
-  dashboardSubtitle: string;
   tabs: Array<{ id: string; label: string; order: number }>;
   sessionTimeout: '1d' | '7d' | '30d' | 'never';
   location?: {
@@ -64,14 +64,14 @@ type AiSettingsResponseData = AiStatusResponseData & {
   hasAnthropicKey: boolean;
 };
 
-const settingsTabs: Array<{ id: TabId; label: string; icon: string }> = [
-  { id: 'general', label: 'General', icon: 'settings-2' },
-  { id: 'widgets', label: 'Widgets', icon: 'puzzle' },
-  { id: 'import-export', label: 'Backup & Export', icon: 'archive' },
-  { id: 'license', label: 'Licence', icon: 'shield-check' },
-  { id: 'account', label: 'Account', icon: 'user' },
-  { id: 'plugins', label: 'Plugins', icon: 'plug' },
-  { id: 'about', label: 'About', icon: 'info' },
+const settingsTabs: Array<{ id: TabId; label: string; icon: string; statusLabel: string; status: 'active' | 'inactive' | 'warning' | 'error' }> = [
+  { id: 'general', label: 'General', icon: 'settings-2', statusLabel: 'Configured', status: 'active' },
+  { id: 'widgets', label: 'Widgets', icon: 'puzzle', statusLabel: 'Active', status: 'active' },
+  { id: 'import-export', label: 'Backup & Export', icon: 'archive', statusLabel: 'Ready', status: 'active' },
+  { id: 'license', label: 'Licence', icon: 'shield-check', statusLabel: 'Active', status: 'active' },
+  { id: 'account', label: 'Account', icon: 'user', statusLabel: 'Secured', status: 'active' },
+  { id: 'plugins', label: 'Plugins', icon: 'plug', statusLabel: 'Coming soon', status: 'inactive' },
+  { id: 'about', label: 'About', icon: 'info', statusLabel: 'Up to date', status: 'active' },
 ];
 
 const tabMeta: Record<TabId, { title: string; description: string }> = {
@@ -118,7 +118,11 @@ const DISCORD_URL = 'https://discord.gg/phavo';
 const PHAVO_ACCOUNT_URL = 'https://phavo.net/account';
 const PHAVO_LICENSE_URL = 'https://phavo.net/account/license';
 
-let activeTab = $state<TabId>('general');
+const validTabs = new Set<TabId>(['general', 'widgets', 'import-export', 'license', 'account', 'plugins', 'about']);
+const activeTab = $derived.by(() => {
+  const tab = page.url.searchParams.get('tab') as TabId | null;
+  return tab && validTabs.has(tab) ? tab : 'general';
+});
 let loading = $state(true);
 let loadError = $state('');
 
@@ -133,7 +137,7 @@ let geoTimer: ReturnType<typeof setTimeout> | null = null;
 
 let sessionTimeout = $state<'1d' | '7d' | '30d' | 'never'>('7d');
 let sessionInfo = $state<SessionInfo>(null);
-let aboutInfo = $state<AboutInfo>({ version: '1.0.0', tier: 'free', licenseKeyMasked: null });
+let aboutInfo = $state<AboutInfo>({ version: '1.0.0', tier: 'stellar', licenseKeyMasked: null });
 let updateInfo = $state<UpdateInfo | null>(null);
 let checkingUpdates = $state(false);
 let applying = $state(false);
@@ -213,7 +217,7 @@ const generalDirty = $derived(
     aiDirty,
 );
 const securityDirty = $derived(sessionTimeout !== securityInitial);
-const canChangePassword = $derived(sessionInfo?.tier === 'local');
+const canChangePassword = $derived(sessionInfo?.authMode === 'local');
 const accountDirty = $derived(canChangePassword && (newPassword.length > 0 || confirmPassword.length > 0));
 const accountValid = $derived(
   !canChangePassword ||
@@ -237,50 +241,26 @@ onMount(() => {
     void loadSettings();
   }
 
-  syncTabFromHash();
-  const handleHashChange = () => syncTabFromHash();
-  window.addEventListener('hashchange', handleHashChange);
-
-  return () => {
-    window.removeEventListener('hashchange', handleHashChange);
-  };
+  return () => {};
 });
 
 onMount(() => {
   $effect.root(() => {
     $effect(() => {
-      if (typeof window === 'undefined') return;
-      const nextHash = `#${activeTab}`;
-      if (window.location.hash === nextHash || window.location.hash.startsWith(`${nextHash}/`)) {
-        if (activeTab === 'about' && !updateInfo && !checkingUpdates) {
-          void checkForUpdates();
-        }
-        return;
+      if (activeTab === 'about' && !updateInfo && !checkingUpdates) {
+        void checkForUpdates();
       }
-
-      history.replaceState(history.state, '', `${window.location.pathname}${nextHash}`);
     });
   });
 });
 
-function syncTabFromHash(): void {
-  if (typeof window === 'undefined') return;
-  const rawHash = window.location.hash.replace(/^#/, '');
-  const [tabId] = rawHash.split('/');
-  if (tabId && settingsTabs.some((tab) => tab.id === tabId)) {
-    activeTab = tabId as TabId;
-  }
-}
-
-function tierVariant(tier: 'free' | 'standard' | 'local') {
-  if (tier === 'standard') return 'accent';
-  if (tier === 'local') return 'success';
+function tierVariant(tier: 'stellar' | 'celestial') {
+  if (tier === 'celestial') return 'accent';
   return 'default';
 }
 
-function tierLabel(tier: 'free' | 'standard' | 'local') {
-  if (tier === 'standard') return en.settings.tierStandard;
-  if (tier === 'local') return en.settings.tierLocal;
+function tierLabel(tier: 'stellar' | 'celestial') {
+  if (tier === 'celestial') return en.settings.tierStandard;
   return en.settings.tierFree;
 }
 
@@ -682,457 +662,532 @@ function formatReleaseDate(iso: string): string {
 }
 </script>
 
-<div class="settings-content">
-  <Card padding="none">
-    <section class="settings-hero">
-      <div class="settings-hero-copy">
-        <span class="settings-eyebrow">Settings</span>
-        <h1 class="settings-hero-title">{activeTabMeta.title}</h1>
-        <p class="settings-hero-description">{activeTabMeta.description}</p>
-      </div>
-    </section>
-  </Card>
-
+<SettingsLayout title={activeTabMeta.title} subtitle={activeTabMeta.description}>
   {#if loadError}
     <div class="settings-alert settings-alert-danger">{loadError}</div>
   {/if}
 
-    {#if activeTab === 'general'}
-      <div class="settings-stack">
-        <SettingsSection
-          eyebrow="General"
-          title="Dashboard identity & search"
-          description="Manage the dashboard name, location, search defaults, and AI provider connections from one structured section."
-        >
-          <div class="flex flex-col gap-4">
-            <Input label="Dashboard Name" bind:value={dashboardName} />
+  {#if activeTab === 'general'}
+    <div class="settings-hero-card">
+      <span class="settings-card-label">DASHBOARD</span>
+      <h2 class="settings-hero-value">{dashboardName || 'My Dashboard'}</h2>
+      <p class="settings-hero-sub">{locationName || 'No location set'}</p>
+    </div>
 
-            <div class="relative">
-              <Input
-                label="Weather Location"
-                placeholder="Search for a city…"
-                bind:value={locationName}
-                oninput={onLocationInput}
-              />
-              {#if showSuggestions}
-                <ul class="absolute top-full left-0 right-0 mt-1 bg-elevated border border-border rounded-md shadow-lg z-10 py-1 list-none" role="listbox">
-                  {#if suggestions.length === 0 && !geocoding}
-                    <li class="px-3 py-2 text-sm text-text-muted">No results</li>
-                  {:else}
-                    {#each suggestions as result (result.id)}
-                      <li role="option" aria-selected="false">
-                        <button class="w-full text-left px-3 py-2 text-sm text-text hover:bg-hover bg-transparent border-none cursor-pointer" type="button" onclick={() => selectSuggestion(result)}>
-                          {result.name}, {result.country}
-                        </button>
-                      </li>
-                    {/each}
-                  {/if}
-                </ul>
-              {/if}
-              <p class="text-xs text-text-muted mt-1">Used for weather widget display.</p>
-            </div>
-
-            <Select label="Search Engine" options={searchEngineOptions} bind:value={searchEngine} />
-            {#if searchEngine === 'custom'}
-              <Input
-                label="Custom Search URL"
-                placeholder="https://example.com/search?q=&#123;query&#125;"
-                bind:value={customSearchUrl}
-              />
-            {/if}
-
-            <div class="flex items-center gap-3">
-              <Input label="Ollama URL" placeholder="http://localhost:11434" bind:value={ollamaUrl} />
-              <div class="shrink-0 pt-5">
-                <Button variant="secondary" onclick={testOllamaConnection} disabled={!ollamaUrl.trim() || ollamaTestResult === 'testing'}>
-                  {ollamaTestResult === 'testing' ? 'Testing…' : ollamaTestResult === 'ok' ? '✓ Connected' : ollamaTestResult === 'fail' ? '✗ Failed' : 'Test'}
-                </Button>
-              </div>
-            </div>
-
-            <Input label="Ollama Model" placeholder="llama3.2" bind:value={ollamaModel} />
-            <Input label="OpenAI API Key" type="password" placeholder="sk-…" bind:value={openaiKey} />
-            <Input label="Anthropic API Key" type="password" placeholder="sk-ant-…" bind:value={anthropicKey} />
-          </div>
-        </SettingsSection>
-
-        <SettingsSection
-          title="Setup tools"
-          description="Re-open guided setup when you want to rebuild the onboarding baseline instead of patching everything manually."
-          tone="accent"
-        >
-          <Button variant="secondary" onclick={reRunSetup}>Re-run Setup</Button>
-        </SettingsSection>
-
-        {#if tabErrors.general}
-          <div class="settings-alert settings-alert-danger">{tabErrors.general}</div>
-        {/if}
-
-        <div class="settings-action-row">
-          <Button onclick={saveCurrentTab} disabled={!canSaveCurrentTab || saveStates.general === 'saving'}>
-            {currentSaveLabel}
-          </Button>
+    <div class="settings-form-card">
+      <h3 class="settings-form-title">Configuration</h3>
+      <div class="settings-form-fields">
+        <div>
+          <label class="settings-field-label">Dashboard Name</label>
+          <Input bind:value={dashboardName} />
         </div>
-      </div>
 
-    {:else if activeTab === 'widgets'}
-      <WidgetsTab />
-
-    {:else if activeTab === 'import-export'}
-      <ImportExportTab />
-
-    {:else if activeTab === 'license'}
-      <LicenceTab
-        tier={sessionInfo?.tier ?? aboutInfo.tier}
-        authMode={sessionInfo?.authMode ?? null}
-        licenseKeyMasked={aboutInfo.licenseKeyMasked}
-        manageUrl={PHAVO_LICENSE_URL}
-      />
-
-    {:else if activeTab === 'account'}
-      <div class="settings-stack">
-        <SettingsSection
-          eyebrow="Account"
-          title="Access overview"
-          description="Review the active auth mode, account contact details, and the tier currently attached to this install."
-        >
-          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
-            <div>
-              <span class="text-xs text-text-muted uppercase tracking-widest">Auth Mode</span>
-              <p class="text-sm text-text mt-1">
-                {#if sessionInfo}
-                  {sessionInfo.authMode === 'phavo-net' ? 'phavo.net' : 'Local'}
+        <div>
+          <label class="settings-field-label">Weather Location</label>
+          <div class="settings-location-wrap">
+            <Input
+              placeholder="Search for a city…"
+              bind:value={locationName}
+              oninput={onLocationInput}
+            />
+            {#if showSuggestions}
+              <ul class="settings-suggestions" role="listbox">
+                {#if suggestions.length === 0 && !geocoding}
+                  <li class="settings-suggestion-empty">No results</li>
                 {:else}
-                  —
+                  {#each suggestions as result (result.id)}
+                    <li role="option" aria-selected="false">
+                      <button class="settings-suggestion-btn" type="button" onclick={() => selectSuggestion(result)}>
+                        {result.name}, {result.country}
+                      </button>
+                    </li>
+                  {/each}
                 {/if}
-              </p>
-            </div>
-            <div>
-              <span class="text-xs text-text-muted uppercase tracking-widest">Email</span>
-              <p class="text-sm text-text mt-1">{sessionInfo?.email ?? '—'}</p>
-            </div>
-            <div>
-              <span class="text-xs text-text-muted uppercase tracking-widest">Tier</span>
-              <div class="mt-1">
-                <Badge variant={tierVariant(sessionInfo?.tier ?? aboutInfo.tier)}>
-                  {tierLabel(sessionInfo?.tier ?? aboutInfo.tier)}
-                </Badge>
-              </div>
-            </div>
-          </div>
-
-          {#if sessionInfo?.authMode === 'phavo-net'}
-            <a class="inline-flex items-center gap-2 text-sm text-text hover:text-accent-text transition-colors" href={PHAVO_ACCOUNT_URL} target="_blank" rel="noreferrer">
-              Manage account on phavo.net
-              <Icon name="external-link" size={14} />
-            </a>
-          {/if}
-        </SettingsSection>
-
-        {#if canChangePassword}
-          <SettingsSection
-            title="Local password"
-            description="Keep password changes inside the account section so access controls stay in one place."
-          >
-            <p class="text-xs text-text-muted uppercase tracking-widest mb-3">Change Password</p>
-            <div class="flex flex-col gap-3">
-              <Input label="New Password" type="password" bind:value={newPassword} />
-              <Input label="Confirm Password" type="password" bind:value={confirmPassword} />
-            </div>
-            {#if passwordError}
-              <div class="settings-alert settings-alert-danger mt-2">{passwordError}</div>
+              </ul>
             {/if}
-          </SettingsSection>
-        {/if}
-
-        <SettingsSection
-          title="Two-factor authentication"
-          description="TOTP stays grouped with account controls instead of returning as a separate security tab."
-          tone="accent"
-        >
-          <p class="text-xs text-text-muted uppercase tracking-widest mb-3">2FA (TOTP)</p>
-          <div class="flex items-center justify-between">
-            <p class="text-sm text-text-muted">Not configured</p>
-            <Tooltip text="Coming soon">
-              <span>
-                <Button variant="secondary" disabled>Enable 2FA</Button>
-              </span>
-            </Tooltip>
           </div>
-        </SettingsSection>
+          <p class="settings-field-hint">Used for weather widget display.</p>
+        </div>
 
-        <SettingsSection
-          title="Session security"
-          description="Adjust session lifetime and close every active session from one structured control surface."
-        >
-          <p class="text-xs text-text-muted uppercase tracking-widest mb-3">Session</p>
-          <Select label="Session Timeout" options={sessionTimeoutOptions} bind:value={sessionTimeout} />
-          <div class="flex items-center justify-between mt-4 pt-4 border-t border-border-subtle">
-            <div>
-              <p class="text-sm font-medium text-text">Current Session</p>
-              <p class="text-xs text-text-muted">Signed in: {formatTimestamp(sessionInfo?.validatedAt)}</p>
-            </div>
-            <Button variant="ghost" onclick={signOutAllSessions}>Sign out all sessions</Button>
+        <div>
+          <label class="settings-field-label">Search Engine</label>
+          <Select options={searchEngineOptions} bind:value={searchEngine} />
+        </div>
+        {#if searchEngine === 'custom'}
+          <div>
+            <label class="settings-field-label">Custom Search URL</label>
+            <Input
+              placeholder="https://example.com/search?q=&#123;query&#125;"
+              bind:value={customSearchUrl}
+            />
           </div>
-        </SettingsSection>
-
-        {#if tabErrors.account}
-          <div class="settings-alert settings-alert-danger">{tabErrors.account}</div>
         {/if}
+      </div>
+    </div>
 
-        <div class="settings-action-row">
-          <Button onclick={saveCurrentTab} disabled={!canSaveCurrentTab || saveStates.account === 'saving'}>
-            {currentSaveLabel}
-          </Button>
+    <div class="settings-form-card">
+      <h3 class="settings-form-title">AI Connections</h3>
+      <div class="settings-form-fields">
+        <div>
+          <label class="settings-field-label">Ollama URL</label>
+          <div class="settings-inline-action">
+            <Input placeholder="http://localhost:11434" bind:value={ollamaUrl} />
+            <button class="settings-btn-ghost" type="button" onclick={testOllamaConnection} disabled={!ollamaUrl.trim() || ollamaTestResult === 'testing'}>
+              {ollamaTestResult === 'testing' ? 'Testing…' : ollamaTestResult === 'ok' ? '✓ OK' : ollamaTestResult === 'fail' ? '✗ Fail' : 'Test'}
+            </button>
+          </div>
+        </div>
+        <div>
+          <label class="settings-field-label">Ollama Model</label>
+          <Input placeholder="llama3.2" bind:value={ollamaModel} />
+        </div>
+        <div>
+          <label class="settings-field-label">OpenAI API Key</label>
+          <Input type="password" placeholder="sk-…" bind:value={openaiKey} />
+        </div>
+        <div>
+          <label class="settings-field-label">Anthropic API Key</label>
+          <Input type="password" placeholder="sk-ant-…" bind:value={anthropicKey} />
+        </div>
+      </div>
+    </div>
+
+    <div class="settings-form-card">
+      <h3 class="settings-form-title">Setup Tools</h3>
+      <p class="settings-hero-sub" style="color: var(--color-on-surface-variant);">
+        Re-open guided setup to rebuild the onboarding baseline.
+      </p>
+      <button class="settings-btn-ghost" type="button" onclick={reRunSetup}>Re-run Setup</button>
+    </div>
+
+    {#if tabErrors.general}
+      <div class="settings-alert settings-alert-danger">{tabErrors.general}</div>
+    {/if}
+
+    <div class="settings-form-actions">
+      <span></span>
+      <button class="settings-btn-primary" type="button" onclick={saveCurrentTab} disabled={!canSaveCurrentTab || saveStates.general === 'saving'}>
+        {currentSaveLabel}
+      </button>
+    </div>
+
+  {:else if activeTab === 'widgets'}
+    <WidgetsTab />
+
+  {:else if activeTab === 'import-export'}
+    <ImportExportTab />
+
+  {:else if activeTab === 'license'}
+    <LicenceTab
+      tier={sessionInfo?.tier ?? aboutInfo.tier}
+      authMode={sessionInfo?.authMode ?? null}
+      licenseKeyMasked={aboutInfo.licenseKeyMasked}
+      manageUrl={PHAVO_LICENSE_URL}
+    />
+
+  {:else if activeTab === 'account'}
+    <div class="settings-hero-card">
+      <span class="settings-card-label">ACCOUNT</span>
+      <h2 class="settings-hero-value">
+        {#if sessionInfo}
+          {sessionInfo.authMode === 'phavo-net' ? 'phavo.net' : 'Local'}
+        {:else}
+          —
+        {/if}
+      </h2>
+      <p class="settings-hero-sub">
+        {sessionInfo?.email ?? 'Local authentication mode'}
+      </p>
+    </div>
+
+    <div class="settings-form-card">
+      <h3 class="settings-form-title">Access Overview</h3>
+      <div class="settings-meta-grid">
+        <div class="settings-meta-item">
+          <span class="settings-field-label">Auth Mode</span>
+          <span class="settings-meta-value">
+            {#if sessionInfo}
+              {sessionInfo.authMode === 'phavo-net' ? 'phavo.net' : 'Local'}
+            {:else}
+              —
+            {/if}
+          </span>
+        </div>
+        <div class="settings-meta-item">
+          <span class="settings-field-label">Email</span>
+          <span class="settings-meta-value">{sessionInfo?.email ?? '—'}</span>
+        </div>
+        <div class="settings-meta-item">
+          <span class="settings-field-label">Tier</span>
+          <div>
+            <Badge variant={tierVariant(sessionInfo?.tier ?? aboutInfo.tier)}>
+              {tierLabel(sessionInfo?.tier ?? aboutInfo.tier)}
+            </Badge>
+          </div>
         </div>
       </div>
 
-    {:else if activeTab === 'plugins'}
-      <div class="settings-stack">
-        <SettingsSection
-          eyebrow="Plugins"
-          title="Plugin pipeline"
-          description="Plugin upload remains part of the PHAVO surface system even before the install flow opens."
-          tone="accent"
-        >
-          <p class="text-xs text-text-muted uppercase tracking-widest mb-3">Plugin pipeline</p>
-          <p class="text-sm text-text-muted mb-4">Upload <code class="font-mono text-xs bg-elevated px-1.5 py-0.5 rounded">.phwidget</code> or <code class="font-mono text-xs bg-elevated px-1.5 py-0.5 rounded">.phtheme</code> files to install plugins.</p>
-          <div class="settings-dropzone">
-            <Icon name="upload" size={32} class="mx-auto mb-2 text-text-muted" />
-            <p class="text-sm text-text-muted">Drag & drop plugin files here</p>
-            <p class="text-xs text-text-dim mt-1">Plugin support coming in v1.1</p>
+      {#if sessionInfo?.authMode === 'phavo-net'}
+        <a class="settings-help-link" href={PHAVO_ACCOUNT_URL} target="_blank" rel="noreferrer">
+          Manage account on phavo.net
+        </a>
+      {/if}
+    </div>
+
+    {#if canChangePassword}
+      <div class="settings-form-card">
+        <h3 class="settings-form-title">Local Password</h3>
+        <div class="settings-form-fields">
+          <div>
+            <label class="settings-field-label">New Password</label>
+            <Input type="password" bind:value={newPassword} />
           </div>
-        </SettingsSection>
-      </div>
-
-    {:else if activeTab === 'about'}
-      <div class="settings-stack">
-        <SettingsSection
-          eyebrow="About"
-          title="Release channel"
-          description="Check the current build, inspect update state, and trigger or copy the next update command."
-        >
-          <div class="flex items-center justify-between mb-4">
-            <div>
-              <span class="text-xs text-text-muted uppercase tracking-widest">Version</span>
-              <p class="text-sm font-mono text-text mt-1">v{aboutInfo.version}</p>
-            </div>
-            <Button
-              variant="secondary"
-              onclick={checkForUpdates}
-              disabled={checkingUpdates}
-            >
-              {checkingUpdates ? 'Checking…' : 'Check for updates'}
-            </Button>
+          <div>
+            <label class="settings-field-label">Confirm Password</label>
+            <Input type="password" bind:value={confirmPassword} />
           </div>
-
-          {#if updateInfo !== null}
-            {#if updateInfo.updateAvailable}
-              <div class="p-3 bg-accent-subtle border border-accent/20 rounded-md mb-3">
-                <p class="font-semibold text-text">{en.settings.updateBanner.replace('{version}', updateInfo.latestVersion)}</p>
-                {#if updateInfo.publishedAt}
-                  <p class="text-xs text-text-muted mt-1">Released {formatReleaseDate(updateInfo.publishedAt)}</p>
-                {/if}
-              </div>
-
-              {#if updateInfo.changelog}
-                <div class="p-3 bg-base border border-border-subtle rounded-md text-sm max-h-64 overflow-auto mb-3">
-                  {@html renderMarkdown(updateInfo.changelog)}
-                </div>
-              {/if}
-
-              {#if applyResult?.started}
-                <p class="text-sm text-primary font-medium">{en.settings.updateStarted}</p>
-              {:else if applyResult && !applyResult.started}
-                <p class="text-sm text-text-muted mb-2">{en.settings.updateRunManually}</p>
-                <div class="flex items-center gap-2 p-2 bg-base border border-border-subtle rounded-md">
-                  <code class="flex-1 text-xs font-mono text-text-muted overflow-x-auto">{updateInfo.updateCommand}</code>
-                  <Button variant="ghost" size="sm" onclick={copyUpdateCommand}>
-                    {cmdCopied ? 'Copied' : 'Copy'}
-                  </Button>
-                </div>
-              {:else}
-                <div class="flex items-center gap-3 flex-wrap">
-                  <Button onclick={applyUpdate} disabled={applying}>{en.settings.updateNow}</Button>
-                  <Button variant="secondary" onclick={copyUpdateCommand}>{cmdCopied ? 'Copied' : 'Copy command'}</Button>
-                </div>
-              {/if}
-            {:else}
-              <p class="flex items-center gap-2 text-sm text-primary font-medium">
-                <Icon name="check" size={16} />
-                Up to date
-              </p>
-            {/if}
-          {:else}
-            <p class="text-sm text-text-muted">Up to date</p>
-          {/if}
-        </SettingsSection>
-
-        <SettingsSection
-          title="Resources"
-          description="Official PHAVO references for documentation, code, and community support."
-        >
-          <div class="settings-links-surface">
-          <a class="inline-flex items-center gap-2 text-sm text-text hover:text-accent-text transition-colors" href={DOCS_URL} target="_blank" rel="noreferrer">
-            Documentation <Icon name="external-link" size={14} />
-          </a>
-          <a class="inline-flex items-center gap-2 text-sm text-text hover:text-accent-text transition-colors" href={GITHUB_URL} target="_blank" rel="noreferrer">
-            GitHub <Icon name="external-link" size={14} />
-          </a>
-          <a class="inline-flex items-center gap-2 text-sm text-text hover:text-accent-text transition-colors" href={DISCORD_URL} target="_blank" rel="noreferrer">
-            Discord <Icon name="external-link" size={14} />
-          </a>
-          </div>
-        </SettingsSection>
-
-        {#if tabErrors.about}
-          <div class="settings-alert settings-alert-danger">{tabErrors.about}</div>
+        </div>
+        {#if passwordError}
+          <div class="settings-alert settings-alert-danger">{passwordError}</div>
         {/if}
       </div>
     {/if}
-</div>
+
+    <div class="settings-form-card">
+      <h3 class="settings-form-title">Two-Factor Authentication</h3>
+      <div class="settings-meta-grid">
+        <div class="settings-meta-item">
+          <span class="settings-field-label">2FA (TOTP)</span>
+          <span class="settings-meta-value">Not configured</span>
+        </div>
+      </div>
+      <Tooltip text="Coming soon">
+        <span>
+          <button class="settings-btn-ghost" type="button" disabled>Enable 2FA</button>
+        </span>
+      </Tooltip>
+    </div>
+
+    <div class="settings-form-card">
+      <h3 class="settings-form-title">Session Security</h3>
+      <div class="settings-form-fields">
+        <div>
+          <label class="settings-field-label">Session Timeout</label>
+          <Select options={sessionTimeoutOptions} bind:value={sessionTimeout} />
+        </div>
+      </div>
+      <div class="settings-form-actions">
+        <div class="settings-session-info">
+          <span class="settings-meta-value">Current Session</span>
+          <span class="settings-field-hint">Signed in: {formatTimestamp(sessionInfo?.validatedAt)}</span>
+        </div>
+        <button class="settings-btn-ghost" type="button" onclick={signOutAllSessions}>Sign out all sessions</button>
+      </div>
+    </div>
+
+    {#if tabErrors.account}
+      <div class="settings-alert settings-alert-danger">{tabErrors.account}</div>
+    {/if}
+
+    <div class="settings-form-actions">
+      <span></span>
+      <button class="settings-btn-primary" type="button" onclick={saveCurrentTab} disabled={!canSaveCurrentTab || saveStates.account === 'saving'}>
+        {currentSaveLabel}
+      </button>
+    </div>
+
+  {:else if activeTab === 'plugins'}
+    <div class="settings-hero-card">
+      <span class="settings-card-label">PLUGIN PIPELINE</span>
+      <h2 class="settings-hero-value">Coming Soon</h2>
+      <p class="settings-hero-sub">Plugin support arrives in v1.1</p>
+    </div>
+
+    <div class="settings-form-card">
+      <h3 class="settings-form-title">Plugin Upload</h3>
+      <p class="settings-hero-sub" style="color: var(--color-on-surface-variant);">
+        Upload <code class="settings-code">.phwidget</code> or <code class="settings-code">.phtheme</code> files to install plugins.
+      </p>
+      <div class="settings-dropzone">
+        <Icon name="upload" size={32} />
+        <p class="settings-dropzone-text">Drag & drop plugin files here</p>
+        <p class="settings-dropzone-hint">Plugin support coming in v1.1</p>
+      </div>
+    </div>
+
+  {:else if activeTab === 'about'}
+    <div class="settings-hero-card">
+      <span class="settings-card-label">VERSION</span>
+      <h2 class="settings-hero-value">v{aboutInfo.version}</h2>
+      <p class="settings-hero-sub">
+        {aboutInfo.tier === 'celestial' ? 'Celestial Edition' : 'Stellar Edition'}
+      </p>
+      <button class="settings-hero-btn" type="button" onclick={checkForUpdates} disabled={checkingUpdates}>
+        <Icon name="refresh-cw" size={14} />
+        {checkingUpdates ? 'Checking…' : 'Check Updates'}
+      </button>
+    </div>
+
+    {#if updateInfo !== null}
+      {#if updateInfo.updateAvailable}
+        <div class="settings-form-card">
+          <h3 class="settings-form-title">Update Available</h3>
+          <p class="settings-meta-value">{en.settings.updateBanner.replace('{version}', updateInfo.latestVersion)}</p>
+          {#if updateInfo.publishedAt}
+            <p class="settings-field-hint">Released {formatReleaseDate(updateInfo.publishedAt)}</p>
+          {/if}
+
+          {#if updateInfo.changelog}
+            <div class="settings-changelog">
+              {@html renderMarkdown(updateInfo.changelog)}
+            </div>
+          {/if}
+
+          {#if applyResult?.started}
+            <p class="settings-update-ok">{en.settings.updateStarted}</p>
+          {:else if applyResult && !applyResult.started}
+            <p class="settings-field-hint">{en.settings.updateRunManually}</p>
+            <div class="settings-cmd-row">
+              <code class="settings-code settings-code-block">{updateInfo.updateCommand}</code>
+              <button class="settings-btn-ghost" type="button" onclick={copyUpdateCommand}>
+                {cmdCopied ? 'Copied' : 'Copy'}
+              </button>
+            </div>
+          {:else}
+            <div class="settings-actions-row">
+              <button class="settings-btn-primary" type="button" onclick={applyUpdate} disabled={applying}>{en.settings.updateNow}</button>
+              <button class="settings-btn-ghost" type="button" onclick={copyUpdateCommand}>{cmdCopied ? 'Copied' : 'Copy command'}</button>
+            </div>
+          {/if}
+        </div>
+      {:else}
+        <div class="settings-form-card">
+          <div class="settings-update-ok-row">
+            <Icon name="check" size={16} />
+            <span>Up to date</span>
+          </div>
+        </div>
+      {/if}
+    {/if}
+
+    <div class="settings-help-card">
+      <div class="settings-help-icon">
+        <Icon name="book-open" size={20} />
+      </div>
+      <div class="settings-help-text">
+        <span class="settings-help-title">Documentation</span>
+        <p class="settings-help-description">Official PHAVO docs and guides</p>
+      </div>
+      <a class="settings-help-link" href={DOCS_URL} target="_blank" rel="noreferrer">Open</a>
+    </div>
+
+    <div class="settings-help-card">
+      <div class="settings-help-icon">
+        <Icon name="github" size={20} />
+      </div>
+      <div class="settings-help-text">
+        <span class="settings-help-title">GitHub</span>
+        <p class="settings-help-description">Source code and issue tracker</p>
+      </div>
+      <a class="settings-help-link" href={GITHUB_URL} target="_blank" rel="noreferrer">Open</a>
+    </div>
+
+    <div class="settings-help-card">
+      <div class="settings-help-icon">
+        <Icon name="message-circle" size={20} />
+      </div>
+      <div class="settings-help-text">
+        <span class="settings-help-title">Discord</span>
+        <p class="settings-help-description">Community support and chat</p>
+      </div>
+      <a class="settings-help-link" href={DISCORD_URL} target="_blank" rel="noreferrer">Open</a>
+    </div>
+
+    {#if tabErrors.about}
+      <div class="settings-alert settings-alert-danger">{tabErrors.about}</div>
+    {/if}
+  {/if}
+</SettingsLayout>
 
 <style>
-  .settings-content {
-    width: 100%;
-    max-width: 1120px;
-    margin: 0 auto;
-    padding: var(--space-6) var(--space-8) var(--space-10);
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-5);
-  }
-
-  .settings-hero {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: var(--space-6);
-    padding: var(--space-7) var(--space-7);
-    border-radius: var(--radius-xl);
-    background:
-      radial-gradient(
-        ellipse 62% 82% at 0% 0%,
-        color-mix(in srgb, var(--color-accent-t) 30%, transparent),
-        transparent 76%
-      ),
-      linear-gradient(
-        180deg,
-        color-mix(in srgb, var(--color-bg-elevated) 76%, transparent),
-        color-mix(in srgb, var(--color-bg-surface) 92%, transparent)
-      );
-  }
-
-  .settings-hero-copy {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-2);
-    max-width: 64ch;
-  }
-
-  .settings-eyebrow {
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 0.24em;
-    text-transform: uppercase;
-    color: var(--color-accent-text);
-    font-family: var(--font-ui);
-  }
-
-  .settings-hero-title {
-    margin: 0;
-    font-size: clamp(1.9rem, 4vw, 2.6rem);
-    font-weight: 800;
-    letter-spacing: -0.04em;
-    color: var(--color-text-primary);
-    line-height: 1.02;
-    font-family: var(--font-ui);
-  }
-
-  .settings-hero-description {
-    margin: 0;
-    max-width: 58ch;
-    color: var(--color-text-secondary);
-    font-size: var(--font-size-sm);
-    line-height: 1.6;
-  }
-
-  .settings-stack {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-4);
-  }
-
-  .settings-links-surface {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-    gap: var(--space-3);
-  }
-
-  .settings-action-row {
-    display: flex;
-    justify-content: flex-end;
-    padding-top: var(--space-1);
-  }
-
-  .settings-links-surface a {
-    display: inline-flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: var(--space-3);
-    padding: var(--space-4);
-    border-radius: calc(var(--radius-xl) - 4px);
-    border: 1px solid var(--color-border-subtle);
-    background: color-mix(in srgb, var(--color-bg-base) 26%, transparent);
-    text-decoration: none;
-    transition:
-      color 0.15s ease,
-      border-color 0.15s ease,
-      background 0.15s ease,
-      transform 0.15s ease;
-  }
-
-  .settings-links-surface a:hover {
-    border-color: color-mix(in srgb, var(--color-accent) 24%, transparent);
-    background: color-mix(in srgb, var(--color-bg-hover) 82%, transparent);
-    transform: translateY(-1px);
-  }
-
   .settings-alert {
     padding: var(--space-3) var(--space-4);
-    border-radius: var(--radius-xl);
+    border-radius: 1.5rem;
     border: 1px solid transparent;
     font-size: var(--font-size-sm);
     line-height: 1.5;
   }
 
   .settings-alert-danger {
-    color: var(--color-danger);
-    border-color: color-mix(in srgb, var(--color-danger) 36%, transparent);
-    background: color-mix(in srgb, var(--color-danger-subtle) 86%, transparent);
+    color: var(--color-error);
+    border-color: color-mix(in srgb, var(--color-error) 36%, transparent);
+    background: color-mix(in srgb, var(--color-error) 8%, transparent);
+  }
+
+  .settings-form-fields {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-5);
+  }
+
+  .settings-location-wrap {
+    position: relative;
+  }
+
+  .settings-suggestions {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    margin-top: var(--space-1);
+    background: var(--color-surface-high);
+    border: 1px solid color-mix(in srgb, var(--color-outline-variant) 20%, transparent);
+    border-radius: 1rem;
+    padding: var(--space-1);
+    z-index: 10;
+    list-style: none;
+    box-shadow: var(--shadow-lg);
+  }
+
+  .settings-suggestion-empty {
+    padding: var(--space-3);
+    font-size: 13px;
+    color: var(--color-on-surface-variant);
+  }
+
+  .settings-suggestion-btn {
+    width: 100%;
+    text-align: left;
+    padding: var(--space-3);
+    font-size: 13px;
+    color: var(--color-on-surface);
+    background: none;
+    border: none;
+    border-radius: 0.75rem;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .settings-suggestion-btn:hover {
+    background: var(--color-surface-highest);
+  }
+
+  .settings-field-hint {
+    font-size: var(--font-size-xs);
+    color: var(--color-on-surface-variant);
+    margin: var(--space-1) 0 0;
+  }
+
+  .settings-inline-action {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+  }
+
+  .settings-meta-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: var(--space-4);
+  }
+
+  .settings-meta-item {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+  }
+
+  .settings-meta-value {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--color-on-surface);
+  }
+
+  .settings-session-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .settings-code {
+    font-family: var(--font-mono);
+    font-size: var(--font-size-xs);
+    background: var(--color-surface-highest);
+    padding: 2px var(--space-2);
+    border-radius: var(--radius-sm);
+  }
+
+  .settings-code-block {
+    display: block;
+    flex: 1;
+    overflow-x: auto;
+    padding: var(--space-3);
   }
 
   .settings-dropzone {
-    border: 1px dashed color-mix(in srgb, var(--color-accent) 26%, var(--color-border));
-    border-radius: calc(var(--radius-xl) - 4px);
+    border: 1px dashed color-mix(in srgb, var(--color-primary-fixed) 26%, var(--color-outline-variant));
+    border-radius: 1.5rem;
     padding: var(--space-8);
     text-align: center;
-    background:
-      radial-gradient(
-        ellipse 55% 60% at 50% 0%,
-        color-mix(in srgb, var(--color-accent-t) 26%, transparent),
-        transparent 72%
-      ),
-      color-mix(in srgb, var(--color-bg-elevated) 76%, transparent);
+    background: color-mix(in srgb, var(--color-surface-dim) 60%, transparent);
+    color: var(--color-on-surface-variant);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-2);
   }
 
-  @media (max-width: 639px) {
-    .settings-content {
-      padding: var(--space-4);
-    }
+  .settings-dropzone-text {
+    font-size: 13px;
+    color: var(--color-on-surface-variant);
+    margin: 0;
+  }
 
-    .settings-hero {
-      padding: var(--space-5);
-    }
+  .settings-dropzone-hint {
+    font-size: var(--font-size-xs);
+    color: var(--color-outline);
+    margin: 0;
+  }
+
+  .settings-changelog {
+    padding: var(--space-4);
+    border-radius: 1rem;
+    background: var(--color-surface-dim);
+    border: 1px solid color-mix(in srgb, var(--color-outline-variant) 10%, transparent);
+    font-size: 13px;
+    max-height: 256px;
+    overflow-y: auto;
+    color: var(--color-on-surface-variant);
+  }
+
+  .settings-cmd-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-2);
+    border-radius: 1rem;
+    background: var(--color-surface-dim);
+    border: 1px solid color-mix(in srgb, var(--color-outline-variant) 10%, transparent);
+  }
+
+  .settings-actions-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    flex-wrap: wrap;
+  }
+
+  .settings-update-ok {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--color-secondary);
+    margin: 0;
+  }
+
+  .settings-update-ok-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--color-secondary);
   }
 </style>

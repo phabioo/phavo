@@ -50,7 +50,7 @@
   {#if size === 'S'}
     <div class="s-row">
       <Icon name={weatherIcon} size={16} class="text-accent" />
-      <span class="metric-value mono">{Math.round(data.currentTemp)}°C</span>
+      <span class="metric-value mono hero-glow">{Math.round(data.currentTemp)}°C</span>
     </div>
   {:else}
     <div class="current-row">
@@ -87,14 +87,13 @@
     flex-direction: column;
     gap: var(--space-3);
     position: relative;
-    overflow: hidden;
   }
 
   .weather-bg {
     position: absolute;
     inset: 0;
     opacity: 0.08;
-    background: linear-gradient(135deg, var(--color-accent) 0%, var(--color-info) 100%);
+    background: linear-gradient(135deg, var(--color-primary-fixed) 0%, var(--color-secondary) 100%);
     pointer-events: none;
     border-radius: inherit;
   }
@@ -123,38 +122,38 @@
     font-size: 2.5rem;
     font-weight: 700;
     line-height: 1;
-    color: var(--color-text-primary);
+    color: var(--color-on-surface);
   }
 
   .unit {
     font-size: 1.25rem;
     font-weight: 400;
-    color: var(--color-text-muted);
+    color: var(--color-outline);
     margin-left: 2px;
   }
 
   .metric-value {
     font-size: 20px;
     font-weight: 700;
-    color: var(--color-text-primary);
+    color: var(--color-on-surface);
     line-height: 1;
   }
 
   .condition {
     font-size: 0.875rem;
-    color: var(--color-text-secondary);
+    color: var(--color-on-surface-variant);
   }
 
   .city-label {
     font-size: 11px;
-    color: var(--color-text-muted);
+    color: var(--color-outline);
     text-transform: uppercase;
     letter-spacing: 0.5px;
     position: relative;
   }
 
   :global(.weather-icon) {
-    color: var(--color-accent-text);
+    color: var(--color-primary-fixed);
   }
 
   .forecast {
@@ -162,7 +161,7 @@
     flex-direction: column;
     gap: var(--space-2);
     padding-top: var(--space-2);
-    border-top: 1px solid var(--color-border-subtle);
+    border-top: 1px solid color-mix(in srgb, var(--color-outline-variant) 15%, transparent);
     position: relative;
   }
 
@@ -174,13 +173,13 @@
 
   .forecast-date {
     font-size: 11px;
-    color: var(--color-text-secondary);
+    color: var(--color-on-surface-variant);
     min-width: 100px;
   }
 
   .forecast-temps {
     font-size: 12px;
-    color: var(--color-text-secondary);
+    color: var(--color-on-surface-variant);
     margin-left: auto;
   }
 </style>

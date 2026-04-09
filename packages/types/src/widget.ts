@@ -6,7 +6,7 @@ export type WidgetSize = z.infer<typeof WidgetSize>;
 export const WidgetCategory = z.enum(['system', 'consumer', 'integration', 'utility']);
 export type WidgetCategory = z.infer<typeof WidgetCategory>;
 
-export const WidgetTier = z.enum(['free', 'standard']);
+export const WidgetTier = z.enum(['stellar', 'celestial']);
 export type WidgetTier = z.infer<typeof WidgetTier>;
 
 export const WidgetDefinitionSchema = z.object({

@@ -98,10 +98,9 @@ class WidgetRegistry {
     this.widgets.set(def.id, def);
   }
 
-  getManifest(sessionTier: 'free' | 'standard' | 'local'): WidgetManifestEntry[] {
+  getManifest(sessionTier: 'stellar' | 'celestial'): WidgetManifestEntry[] {
     return Array.from(this.widgets.values(), (widget) => {
-      const entitled =
-        sessionTier === 'local' || sessionTier === 'standard' || widget.tier === 'free';
+      const entitled = sessionTier === 'celestial' || widget.tier === 'stellar';
 
       if (entitled) {
         return toManifestDefinition(widget);
@@ -121,10 +120,10 @@ class WidgetRegistry {
     return this.widgets.get(id);
   }
 
-  getByTier(tier: 'free' | 'standard'): WidgetDefinition[] {
+  getByTier(tier: 'stellar' | 'celestial'): WidgetDefinition[] {
     return Array.from(this.widgets.values()).filter((w) => {
-      if (tier === 'standard') return true;
-      return w.tier === 'free';
+      if (tier === 'celestial') return true;
+      return w.tier === 'stellar';
     });
   }
 }
@@ -136,7 +135,7 @@ registry.register({
   id: 'cpu',
   name: 'CPU',
   description: 'CPU usage, per-core breakdown, and load average',
-  tier: 'free',
+  tier: 'stellar',
   category: 'system',
   sizes: ['S', 'M', 'L'],
   defaultSize: { w: 4, h: 3 },
@@ -149,7 +148,7 @@ registry.register({
   id: 'memory',
   name: 'Memory',
   description: 'RAM and swap usage',
-  tier: 'free',
+  tier: 'stellar',
   category: 'system',
   sizes: ['S', 'M', 'L'],
   defaultSize: { w: 4, h: 3 },
@@ -162,7 +161,7 @@ registry.register({
   id: 'disk',
   name: 'Disk',
   description: 'Per-mount disk usage, read/write throughput',
-  tier: 'free',
+  tier: 'stellar',
   category: 'system',
   sizes: ['S', 'M', 'L'],
   defaultSize: { w: 4, h: 3 },
@@ -175,7 +174,7 @@ registry.register({
   id: 'network',
   name: 'Network',
   description: 'Upload/download speed and total traffic',
-  tier: 'free',
+  tier: 'stellar',
   category: 'system',
   sizes: ['S', 'M', 'L'],
   defaultSize: { w: 4, h: 3 },
@@ -188,7 +187,7 @@ registry.register({
   id: 'temperature',
   name: 'Temperature',
   description: 'CPU temperature (where available)',
-  tier: 'free',
+  tier: 'stellar',
   category: 'system',
   sizes: ['S', 'M'],
   defaultSize: { w: 2, h: 2 },
@@ -201,7 +200,7 @@ registry.register({
   id: 'uptime',
   name: 'Uptime',
   description: 'System uptime, human-readable',
-  tier: 'free',
+  tier: 'stellar',
   category: 'system',
   sizes: ['S', 'M'],
   defaultSize: { w: 2, h: 2 },
@@ -214,7 +213,7 @@ registry.register({
   id: 'weather',
   name: 'Weather',
   description: 'Current conditions and 5-day forecast via Open-Meteo',
-  tier: 'free',
+  tier: 'stellar',
   category: 'consumer',
   sizes: ['S', 'M', 'L'],
   defaultSize: { w: 4, h: 3 },
@@ -228,7 +227,7 @@ registry.register({
   id: 'pihole',
   name: 'Pi-hole',
   description: 'Total queries, blocked %, blocklist count, enable/disable toggle',
-  tier: 'standard',
+  tier: 'celestial',
   category: 'integration',
   sizes: ['S', 'M', 'L'],
   defaultSize: { w: 4, h: 3 },
@@ -242,9 +241,9 @@ registry.register({
   id: 'rss',
   name: 'RSS Feed',
   description: 'User-configurable feed URLs with title, source, and timestamp',
-  tier: 'standard',
+  tier: 'celestial',
   category: 'consumer',
-  sizes: ['M', 'L', 'XL'],
+  sizes: ['M', 'L'],
   defaultSize: { w: 6, h: 4 },
   minSize: { w: 4, h: 3 },
   dataEndpoint: '/api/v1/rss',
@@ -256,7 +255,7 @@ registry.register({
   id: 'links',
   name: 'Links / Bookmarks',
   description: 'Named links with optional icons grouped by category',
-  tier: 'standard',
+  tier: 'celestial',
   category: 'utility',
   sizes: ['S', 'M', 'L'],
   defaultSize: { w: 4, h: 3 },

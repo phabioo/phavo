@@ -2,12 +2,13 @@
 import type { WidgetSize } from '@phavo/types';
 import type { Snippet } from 'svelte';
 import Icon from './Icon.svelte';
+import WishStar from './WishStar.svelte';
 
-const ALL_SIZES: WidgetSize[] = ['S', 'M', 'L', 'XL'];
+const ALL_SIZES: WidgetSize[] = ['S', 'M', 'L'];
 
 interface Props {
   status?: 'loading' | 'active' | 'unconfigured' | 'error' | 'stale';
-  title: string;
+  title?: string;
   subtitle?: string;
   icon?: string;
   showHeader?: boolean;
@@ -36,6 +37,16 @@ interface Props {
   removeCancelLabel?: string;
   removeActionLabel?: string;
   sizeLabel?: string;
+  /** Custom card background CSS value. Defaults to --color-surface-card. */
+  cardBackground?: string;
+  /** Render a subtle dot star-field texture over the card background. */
+  starField?: boolean | undefined;
+  /** Dynamic glow color for hero stats: gold or teal. */
+  glowColor?: 'gold' | 'teal' | undefined;
+  /** Suppress hover controls and WishStar in non-interactive contexts (e.g. drawer preview). */
+  showControls?: boolean;
+  /** Whether to apply overflow:hidden on the inner card (disable in drawer to allow nebula bleed). */
+  clipContent?: boolean;
 }
 
 let {
@@ -61,6 +72,11 @@ let {
   removeCancelLabel,
   removeActionLabel,
   sizeLabel,
+  cardBackground,
+  starField = false,
+  glowColor,
+  showControls = true,
+  clipContent = true,
 }: Props = $props();
 
 /** Effective status: explicit status prop wins, else derived from loading/error booleans. */
@@ -77,6 +93,14 @@ let removing = $state(false);
 function handleDragStart(e: DragEvent) {
   if (!instanceId || !draggable || !e.dataTransfer) return;
   isDragging = true;
+
+  // Create invisible ghost — prevents browser dragging a copy of the card
+  const ghost = document.createElement('div');
+  ghost.style.cssText = 'width:1px;height:1px;opacity:0;position:fixed;top:-100px;';
+  document.body.appendChild(ghost);
+  e.dataTransfer.setDragImage(ghost, 0, 0);
+  setTimeout(() => ghost.remove(), 0);
+
   e.dataTransfer.effectAllowed = 'move';
   e.dataTransfer.setData('application/phavo-instance', JSON.stringify({ instanceId }));
 }
@@ -129,19 +153,96 @@ function isSizeAvailable(s: WidgetSize): boolean {
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div
-  class="widget-card {cls}"
+  class="widget-card-outer {cls}"
   class:widget-dragging={isDragging}
   class:widget-drop-target={dropIndicator}
   class:widget-featured={colSpan >= 8}
   class:widget-compact={colSpan <= 4}
+  class:widget-size-s={size === 'S'}
+  class:widget-size-m={size === 'M'}
+  class:widget-state-error={effectiveStatus === 'error'}
+  class:widget-state-stale={effectiveStatus === 'stale'}
   style:grid-column="span {colSpan}"
   style:grid-row="span {rowSpan}"
   ondragover={handleCardDragOver}
   ondragleave={handleCardDragLeave}
   ondrop={handleCardDrop}
   id={instanceId ? `widget-${instanceId}` : undefined}
+  data-widget-id={instanceId || undefined}
 >
+  <div
+    class="widget-card-inner"
+    class:widget-card-inner-clip={clipContent}
+    style="--widget-glow: {glowColor === 'teal'
+      ? 'var(--color-secondary)'
+      : 'var(--color-primary-fixed)'}; {cardBackground ? `background: ${cardBackground};` : ''}"
+  >
+    <!-- Background texture: star field -->
+    {#if starField}
+      <div style="position: absolute; inset: 0; background-image: radial-gradient(circle, color-mix(in srgb, var(--color-primary) 20%, transparent) 1px, transparent 1px); background-size: 50px 50px; opacity: 0.08; pointer-events: none; border-radius: inherit; z-index: 0;"></div>
+    {/if}
+
+    <!-- Widget body — renders children (backward compat) or state-based defaults -->
+    <div class="widget-body">
+      <div class="widget-content">
+        {#if children}
+          {#if effectiveStatus === 'loading'}
+            <div class="widget-skeleton">
+              <div class="skeleton-line"></div>
+              <div class="skeleton-line short"></div>
+              <div class="skeleton-line"></div>
+            </div>
+          {:else}
+            {@render children()}
+          {/if}
+        {:else if effectiveStatus === 'loading'}
+          <div class="widget-skeleton">
+            <div class="skeleton-line"></div>
+            <div class="skeleton-line short"></div>
+            <div class="skeleton-line"></div>
+          </div>
+        {:else if effectiveStatus === 'error'}
+          <div class="widget-error">
+            <Icon name="alert-triangle" size={20} />
+            <span>{error ?? 'Failed to load'}</span>
+            <button class="retry-btn" type="button">Retry</button>
+          </div>
+        {:else if effectiveStatus === 'unconfigured'}
+          <div class="widget-unconfigured">
+            <Icon name="settings" size={20} />
+            <span>Widget needs configuration</span>
+            <a class="configure-link" href="/settings">Configure &rarr;</a>
+          </div>
+        {:else if effectiveStatus === 'stale'}
+          <div class="widget-stale">
+            <div class="stale-badge">
+              <Icon name="clock" size={12} />
+              <span>Stale data</span>
+            </div>
+          </div>
+        {/if}
+      </div>
+    </div>
+  </div>
+
+  <!-- WishStar drag handle (outside inner, so glow isn't clipped) -->
+  {#if showControls && draggable}
+    <!-- svelte-ignore a11y_no_static_element_interactions -->
+    <div
+      class="wishstar-drag-handle"
+      role="button"
+      aria-label="Drag to reorder"
+      draggable="true"
+      ondragstart={handleDragStart}
+      ondragend={handleDragEnd}
+      onmousedown={(e) => e.stopPropagation()}
+    >
+      <WishStar size={20} />
+    </div>
+  {/if}
+
   <!-- Hover controls (Stitch pattern) — absolute positioned pill -->
+  {#if showControls}
   <div class="widget-controls">
     {#if confirmingRemoval}
       <span class="confirm-label">Remove?</span>
@@ -191,105 +292,27 @@ function isSizeAvailable(s: WidgetSize): boolean {
       {/if}
     {/if}
   </div>
-
-  <!-- Drag handle (when draggable) -->
-  {#if draggable}
-    <!-- svelte-ignore a11y_no_static_element_interactions -->
-    <span
-      class="drag-handle"
-      aria-hidden="true"
-      draggable="true"
-      ondragstart={handleDragStart}
-      ondragend={handleDragEnd}
-    >
-      <Icon name="grip-vertical" size={16} />
-    </span>
   {/if}
-
-  <!-- Widget body — renders children (backward compat) or state-based defaults -->
-  <div class="widget-body">
-    {#if showHeader && (title || subtitle || icon)}
-      <div class="widget-meta">
-        <div class="widget-copy">
-          {#if subtitle}
-            <p class="widget-subtitle">{subtitle}</p>
-          {/if}
-          {#if title}
-            <h3 class="widget-title">{title}</h3>
-          {/if}
-        </div>
-        {#if icon}
-          <span class="widget-icon-shell" aria-hidden="true">
-            <Icon name={icon} size={colSpan >= 8 ? 22 : 18} />
-          </span>
-        {/if}
-      </div>
-    {/if}
-
-    <div class="widget-content">
-      {#if children}
-        {#if effectiveStatus === 'loading'}
-          <div class="widget-skeleton">
-            <div class="skeleton-line"></div>
-            <div class="skeleton-line short"></div>
-            <div class="skeleton-line"></div>
-          </div>
-        {:else}
-          {@render children()}
-        {/if}
-      {:else if effectiveStatus === 'loading'}
-        <div class="widget-skeleton">
-          <div class="skeleton-line"></div>
-          <div class="skeleton-line short"></div>
-          <div class="skeleton-line"></div>
-        </div>
-      {:else if effectiveStatus === 'error'}
-        <div class="widget-error">
-          <Icon name="alert-triangle" size={20} />
-          <span>{error ?? 'Failed to load'}</span>
-          <button class="retry-btn" type="button">Retry</button>
-        </div>
-      {:else if effectiveStatus === 'unconfigured'}
-        <div class="widget-unconfigured">
-          <Icon name="settings" size={20} />
-          <span>Widget needs configuration</span>
-          <a class="configure-link" href="/settings">Configure &rarr;</a>
-        </div>
-      {:else if effectiveStatus === 'stale'}
-        <div class="widget-stale">
-          <div class="stale-badge">
-            <Icon name="clock" size={12} />
-            <span>Stale data</span>
-          </div>
-        </div>
-      {/if}
-    </div>
-  </div>
 </div>
 
 <style>
-  .widget-card {
-    background: var(--color-bg-elevated);
-    border: 1px solid var(--color-border-subtle);
-    border-radius: var(--radius-xl);
-    overflow: hidden;
+  /* ── Outer wrapper — NO overflow:hidden, allows glows to bleed ──────── */
+  .widget-card-outer {
+    position: relative;
+    border-radius: 2rem;
     display: flex;
     flex-direction: column;
-    position: relative;
-    padding: var(--space-6);
     min-height: 188px;
     box-shadow: var(--shadow-md);
-    transition: opacity 0.15s, border-color 0.15s, transform 0.15s;
+    transition: transform 0.3s ease;
   }
 
-  .widget-card:hover {
-    border-color: color-mix(in srgb, var(--color-accent) 20%, var(--color-border-subtle));
-    transform: translateY(-1px);
+  .widget-card-outer:hover {
+    transform: scale(1.02);
   }
 
   .widget-featured {
     min-height: 264px;
-    padding: var(--space-8);
   }
 
   .widget-compact {
@@ -301,7 +324,50 @@ function isSizeAvailable(s: WidgetSize): boolean {
   }
 
   .widget-drop-target {
-    border-top: 2px solid var(--color-accent);
+    border-top: 2px solid var(--color-primary);
+  }
+
+  /* ── Inner wrapper — holds background, no overflow clip (allows glow bleed) */
+  .widget-card-inner {
+    position: relative;
+    border-radius: inherit;
+    background: var(--color-surface-card);
+    width: 100%;
+    height: 100%;
+    min-height: inherit;
+    padding: var(--space-8);
+    display: flex;
+    flex-direction: column;
+  }
+
+  .widget-card-inner-clip {
+    overflow: hidden;
+  }
+
+  /* ── WishStar drag handle ────────────────────────────────────────────── */
+  .wishstar-drag-handle {
+    position: absolute;
+    top: var(--space-3);
+    left: var(--space-3);
+    z-index: 10;
+    cursor: grab;
+    opacity: 0.4;
+    transition: opacity 0.15s;
+    pointer-events: all;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .wishstar-drag-handle:hover {
+    opacity: 0.9;
+  }
+
+  .wishstar-drag-handle:active {
+    cursor: grabbing;
+    opacity: 1;
   }
 
   /* ── Hover controls (Stitch pattern) ─────────────────────────────────── */
@@ -313,18 +379,18 @@ function isSizeAvailable(s: WidgetSize): boolean {
     display: flex;
     align-items: center;
     gap: var(--space-1);
-    background: color-mix(in srgb, var(--color-bg-base) 72%, transparent);
+    background: color-mix(in srgb, var(--color-surface-dim) 72%, transparent);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
     padding: var(--space-1) var(--space-3);
     border-radius: 9999px;
-    border: 1px solid color-mix(in srgb, var(--color-text-primary) 8%, transparent);
+    border: 1px solid color-mix(in srgb, var(--color-on-surface) 8%, transparent);
     opacity: 0;
     transition: opacity 0.2s ease;
     pointer-events: none;
   }
 
-  .widget-card:hover .widget-controls {
+  .widget-card-outer:hover .widget-controls {
     opacity: 1;
     pointer-events: auto;
   }
@@ -346,16 +412,16 @@ function isSizeAvailable(s: WidgetSize): boolean {
   .ctrl-size {
     font-size: var(--font-size-xs);
     font-weight: 700;
-    color: var(--color-text-muted);
+    color: var(--color-outline);
     font-family: var(--font-ui);
   }
 
   .ctrl-size:hover:not(:disabled) {
-    color: var(--color-accent);
+    color: var(--color-primary);
   }
 
   .ctrl-size-active {
-    color: var(--color-accent);
+    color: var(--color-primary);
   }
 
   .ctrl-size-disabled {
@@ -366,13 +432,13 @@ function isSizeAvailable(s: WidgetSize): boolean {
   .ctrl-divider {
     width: 1px;
     height: var(--space-3);
-    background: var(--color-text-muted);
+    background: var(--color-outline);
     opacity: 0.3;
     margin: 0 var(--space-1);
   }
 
   .ctrl-close {
-    color: var(--color-text-muted);
+    color: var(--color-outline);
   }
 
   .ctrl-close:hover {
@@ -386,31 +452,9 @@ function isSizeAvailable(s: WidgetSize): boolean {
   .confirm-label {
     font-size: var(--font-size-xs);
     font-weight: 600;
-    color: var(--color-text-secondary);
+    color: var(--color-on-surface-variant);
     white-space: nowrap;
     margin-right: var(--space-1);
-  }
-
-  /* ── Drag handle ─────────────────────────────────────────────────────── */
-  .drag-handle {
-    position: absolute;
-    top: var(--space-4);
-    left: var(--space-4);
-    display: flex;
-    align-items: center;
-    color: var(--color-text-muted);
-    cursor: grab;
-    transition: color 0.15s;
-    opacity: 0;
-    z-index: 10;
-  }
-
-  .widget-card:hover .drag-handle {
-    opacity: 1;
-  }
-
-  .drag-handle:active {
-    cursor: grabbing;
   }
 
   /* ── Widget body ─────────────────────────────────────────────────────── */
@@ -418,8 +462,9 @@ function isSizeAvailable(s: WidgetSize): boolean {
     flex: 1;
     display: flex;
     flex-direction: column;
-    gap: var(--space-5);
     min-height: 0;
+    position: relative;
+    z-index: 1;
   }
 
   .widget-content {
@@ -427,53 +472,6 @@ function isSizeAvailable(s: WidgetSize): boolean {
     display: flex;
     flex-direction: column;
     min-height: 0;
-  }
-
-  .widget-meta {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: var(--space-3);
-    min-width: 0;
-  }
-
-  .widget-copy {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-1);
-    min-width: 0;
-  }
-
-  .widget-subtitle {
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
-    color: var(--color-text-muted);
-    margin: 0;
-  }
-
-  .widget-title {
-    font-size: 1.3rem;
-    font-weight: 700;
-    letter-spacing: -0.03em;
-    color: var(--color-text-primary);
-    line-height: 1.08;
-    margin: 0;
-    max-width: 22ch;
-  }
-
-  .widget-icon-shell {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 2.5rem;
-    height: 2.5rem;
-    border-radius: 999px;
-    background: color-mix(in srgb, var(--color-accent-t) 86%, transparent);
-    color: var(--color-accent-text);
-    flex-shrink: 0;
-    border: 1px solid color-mix(in srgb, var(--color-accent) 24%, transparent);
   }
 
   /* ── Default state renders ───────────────────────────────────────────── */
@@ -485,7 +483,7 @@ function isSizeAvailable(s: WidgetSize): boolean {
 
   .skeleton-line {
     height: 14px;
-    background: var(--color-bg-hover);
+    background: var(--color-surface-high);
     border-radius: var(--radius-sm);
     animation: pulse 1.5s ease-in-out infinite;
   }
@@ -515,9 +513,9 @@ function isSizeAvailable(s: WidgetSize): boolean {
     font-size: var(--font-size-sm);
     font-weight: 600;
     font-family: var(--font-ui);
-    color: var(--color-accent);
+    color: var(--color-primary);
     background: transparent;
-    border: 1px solid var(--color-accent);
+    border: 1px solid var(--color-primary);
     border-radius: var(--radius-sm);
     padding: var(--space-1) var(--space-3);
     cursor: pointer;
@@ -525,7 +523,7 @@ function isSizeAvailable(s: WidgetSize): boolean {
   }
 
   .retry-btn:hover {
-    background: var(--color-accent-t);
+    background: color-mix(in srgb, var(--color-primary) 10%, transparent);
   }
 
   .widget-unconfigured {
@@ -534,7 +532,7 @@ function isSizeAvailable(s: WidgetSize): boolean {
     align-items: center;
     justify-content: center;
     gap: var(--space-2);
-    color: var(--color-text-muted);
+    color: var(--color-outline);
     font-size: var(--font-size-md);
     height: 100%;
     text-align: center;
@@ -543,7 +541,7 @@ function isSizeAvailable(s: WidgetSize): boolean {
   .configure-link {
     font-size: var(--font-size-sm);
     font-weight: 600;
-    color: var(--color-accent);
+    color: var(--color-primary);
     text-decoration: none;
   }
 
@@ -569,16 +567,25 @@ function isSizeAvailable(s: WidgetSize): boolean {
     align-self: flex-start;
   }
 
+  /* ── Widget state styles ───────────────────────────────────────────── */
+
+  /* Error: red top accent */
+  .widget-state-error .widget-card-inner {
+    border: 1px solid color-mix(in srgb, var(--color-error) 25%, transparent);
+  }
+
+  /* Stale: muted border */
+  .widget-state-stale .widget-card-inner {
+    border: 1px solid color-mix(in srgb, var(--color-outline) 15%, transparent);
+    opacity: 0.7;
+  }
+
   /* ── Responsive overrides ────────────────────────────────────────────── */
   @media (max-width: 639px) {
-    .widget-card {
+    .widget-card-outer {
       grid-column: span 1 !important;
       grid-row: auto !important;
       min-height: 120px;
-    }
-
-    .widget-title {
-      font-size: 1.05rem;
     }
 
     .widget-controls {
@@ -596,18 +603,10 @@ function isSizeAvailable(s: WidgetSize): boolean {
   }
 
   @media (min-width: 640px) and (max-width: 1023px) {
-    .widget-card {
+    .widget-card-outer {
       grid-column: span 1 !important;
       grid-row: auto !important;
     }
   }
 
-  .widget-featured .widget-title {
-    font-size: 1.85rem;
-    max-width: 18ch;
-  }
-
-  .widget-compact .widget-title {
-    font-size: 1.05rem;
-  }
 </style>

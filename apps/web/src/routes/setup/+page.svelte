@@ -34,7 +34,7 @@ type FullStep =
   | 'assign'
   | 'config'
   | 'done';
-type Tier = 'free' | 'standard' | 'local';
+type Tier = 'stellar' | 'celestial';
 type AuthMode = 'phavo-net' | 'local';
 type ApiResponse<T> = { ok: true; data: T } | { ok: false; error: string };
 type SessionInfo = { authMode: AuthMode; validatedAt: number; graceUntil: number | null };
@@ -82,7 +82,7 @@ let fullStep = $state<FullStep>('tier');
 
 // ── AUTH STATE ─────────────────────────────────────────────────────────────
 let quickAuthMethod = $state<'choice' | 'phavo-net' | 'local'>('choice');
-let selectedTier = $state<Tier>('free');
+let selectedTier = $state<Tier>('stellar');
 let sessionTier = $state<Tier | null>(null);
 let currentAuthMode = $state<AuthMode | null>(null);
 let authUsername = $state('');
@@ -126,7 +126,7 @@ let hydrated = $state(false);
 const quickStepIndex = $derived(QUICK_STEPS.indexOf(quickStep));
 const fullStepIndex = $derived(FULL_STEPS.indexOf(fullStep));
 const effectiveTier = $derived(sessionTier ?? selectedTier);
-const freeTabLimitReached = $derived(effectiveTier === 'free' && tabs.length >= 1);
+const freeTabLimitReached = $derived(effectiveTier === 'stellar' && tabs.length >= 1);
 const configurableSelections = $derived(
   selectedWidgets.filter((id) => CONFIGURABLE_WIDGET_IDS.has(id)),
 );
@@ -417,8 +417,8 @@ async function loadWidgetManifest() {
     const resp = await apiRequest<WidgetManifestEntry[]>('/api/v1/widgets');
     if (!resp.ok) { widgetManifestError = resp.error; return; }
     widgetManifest = resp.data;
-    if (currentAuthMode === 'local') { sessionTier = 'local'; return; }
-    sessionTier = widgetManifest.some((e) => isWidgetTeaserDefinition(e)) ? 'free' : 'standard';
+    if (currentAuthMode === 'local') { sessionTier = 'celestial'; return; }
+    sessionTier = widgetManifest.some((e) => isWidgetTeaserDefinition(e)) ? 'stellar' : 'celestial';
   } catch {
     widgetManifestError = en.errors.networkError;
   } finally {
@@ -902,8 +902,8 @@ onMount(() => {
           <button
             type="button"
             class="flex flex-col gap-2 p-6 border rounded-lg bg-surface text-left cursor-pointer text-text transition-colors hover:border-border focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2
-              {selectedTier === 'free' || selectedTier === 'standard' ? 'border-accent shadow-[0_0_0_1px_var(--color-accent)]' : 'border-border-subtle'}"
-            onclick={() => { selectedTier = 'free'; nextFullStep(); }}
+              {selectedTier === 'stellar' ? 'border-accent shadow-[0_0_0_1px_var(--color-accent)]' : 'border-border-subtle'}"
+            onclick={() => { selectedTier = 'stellar'; nextFullStep(); }}
           >
             <h3 class="text-lg font-semibold">{en.setup.auth.phavoIo}</h3>
             <p class="text-sm text-text-muted">Sign in with phavo.net. Free to start — Standard unlocks all widgets.</p>
@@ -911,8 +911,8 @@ onMount(() => {
           <button
             type="button"
             class="flex flex-col gap-2 p-6 border rounded-lg bg-surface text-left cursor-pointer text-text transition-colors hover:border-border focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2
-              {selectedTier === 'local' ? 'border-accent shadow-[0_0_0_1px_var(--color-accent)]' : 'border-border-subtle'}"
-            onclick={() => { selectedTier = 'local'; nextFullStep(); }}
+              {selectedTier === 'celestial' && quickAuthMethod === 'local' ? 'border-accent shadow-[0_0_0_1px_var(--color-accent)]' : 'border-border-subtle'}"
+            onclick={() => { selectedTier = 'celestial'; nextFullStep(); }}
           >
             <h3 class="text-lg font-semibold">{en.setup.auth.localAccount}</h3>
             <p class="text-sm text-text-muted">Offline-capable — requires a Local licence key.</p>
@@ -925,7 +925,7 @@ onMount(() => {
       {:else if fullStep === 'auth'}
         <h2 class="text-xl font-semibold text-text">{en.setup.steps.auth}</h2>
         <div class="flex flex-col gap-3">
-          {#if selectedTier === 'free' || selectedTier === 'standard'}
+          {#if selectedTier === 'stellar'}
             <p class="text-text-muted">
               You'll be redirected to phavo.net to authenticate, then returned here automatically.
             </p>
@@ -1056,7 +1056,7 @@ onMount(() => {
                     {selectedWidgets.includes(entry.id) ? 'border-accent shadow-[0_0_0_1px_var(--color-accent)]' : 'border-border hover:border-border-strong'}"
                   onclick={() => toggleWidgetSelection(entry)}
                 >
-                  <span class="text-[11px] px-2 py-0.5 rounded-full bg-base text-text-muted w-fit">{entry.tier === 'free' ? 'Free' : 'Standard'}</span>
+                  <span class="text-[11px] px-2 py-0.5 rounded-full bg-base text-text-muted w-fit">{entry.tier === 'stellar' ? 'Free' : 'Standard'}</span>
                   <strong>{entry.name}</strong>
                   <p class="text-sm text-text-muted">{entry.description}</p>
                 </button>

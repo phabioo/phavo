@@ -1,7 +1,6 @@
 <script lang="ts">
   import type { MemoryMetrics, WidgetSize } from '@phavo/types';
-  import { Icon, ProgressBar } from '@phavo/ui';
-  import { formatBytes, formatPercentage } from '$lib/utils/format';
+  import { Icon } from '@phavo/ui';
 
   interface Props {
     data: MemoryMetrics;
@@ -10,153 +9,162 @@
 
   let { data, size = 'M' }: Props = $props();
 
-  const usedPct = $derived(data.total > 0 ? (data.used / data.total) * 100 : 0);
-  const freePct = $derived(data.total > 0 ? (data.free / data.total) * 100 : 0);
-  const cachedPct = $derived(Math.max(0, 100 - usedPct - freePct));
-  const swapPct = $derived(
-    data.swap.total > 0 ? (data.swap.used / data.swap.total) * 100 : 0,
-  );
-  const ramColor = $derived(
-    usedPct >= 90 ? 'danger' : usedPct >= 75 ? 'warning' : 'accent',
-  );
+  const usedGb = $derived(((data?.used ?? 0) / 1024 / 1024 / 1024).toFixed(1));
+  const totalGb = $derived(Math.round((data?.total ?? 0) / 1024 / 1024 / 1024));
+  const usedPercent = $derived(data?.total ? (data.used / data.total) * 100 : 0);
+  const swapGb = $derived(((data?.swap?.used ?? 0) / 1024 / 1024 / 1024).toFixed(1));
+  const swapPercent = $derived(data?.swap?.total ? (data.swap.used / data.swap.total) * 100 : 0);
 </script>
 
-<div class="memory-widget">
-  {#if size === 'S'}
-    <div class="s-row">
-      <Icon name="server" size={16} class="text-accent" />
-      <span class="metric-value mono">{formatBytes(data.used, 0)}</span>
-    </div>
-  {:else}
-    <div class="primary-metric">
-      <span class="metric-value mono">{formatBytes(data.used, 1)}</span>
-      <span class="metric-label">of {formatBytes(data.total, 1)} total</span>
-    </div>
-
-    <div class="segmented-bar">
-      <div class="seg seg-used" style:width="{usedPct}%"></div>
-      <div class="seg seg-cached" style:width="{cachedPct}%"></div>
-      <div class="seg seg-free" style:width="{freePct}%"></div>
+{#if size === 'S'}
+  <div class="mem-s">
+    <span class="widget-category-label">MEMORY</span>
+    <span class="mem-value-s hero-glow">{usedGb}<span class="mem-unit-s"> GB</span></span>
+  </div>
+{:else}
+  <div class="mem-m">
+    <div class="widget-header">
+      <span class="widget-category-label">MEMORY</span>
+      <Icon name="memory-stick" size={18} class="widget-icon" />
     </div>
 
-    <div class="legend">
-      <span class="legend-item"><span class="legend-dot dot-used"></span> Used</span>
-      <span class="legend-item"><span class="legend-dot dot-cached"></span> Cached</span>
-      <span class="legend-item"><span class="legend-dot dot-free"></span> Free</span>
-    </div>
-
-    {#if (size === 'L' || size === 'XL') && data.swap.total > 0}
-      <div class="progress-labeled">
-        <div class="progress-header">
-          <span class="progress-title">Swap</span>
-          <span class="progress-pct mono">
-            {formatBytes(data.swap.used)} / {formatBytes(data.swap.total)}
-          </span>
+    <div class="mem-top">
+      <div>
+        <div class="mem-stat">
+          <span class="mem-hero hero-glow">{usedGb}</span>
+          <span class="mem-total">/{totalGb}GB</span>
         </div>
-        <ProgressBar value={swapPct} color="warning" />
       </div>
-    {/if}
-  {/if}
-</div>
+
+      <div class="mem-donut">
+        <svg viewBox="0 0 96 96" class="mem-donut-svg">
+          <circle
+            cx="48" cy="48" r="40"
+            fill="transparent"
+            stroke="currentColor"
+            stroke-width="4"
+            class="mem-donut-track"
+          />
+          <circle
+            cx="48" cy="48" r="40"
+            fill="transparent"
+            stroke="currentColor"
+            stroke-width="6"
+            stroke-linecap="round"
+            stroke-dasharray="251.2"
+            stroke-dashoffset={251.2 * (1 - usedPercent / 100)}
+            class="mem-donut-fill"
+            transform="rotate(-90 48 48)"
+          />
+        </svg>
+      </div>
+    </div>
+
+    <div class="mem-footer">
+      <div class="mem-swap-label">
+        <span class="widget-meta-label">SWAP USAGE</span>
+        <span class="mem-swap-value">{swapGb} GB</span>
+      </div>
+      <div class="mem-swap-track">
+        <div class="mem-swap-fill" style="width: {swapPercent}%"></div>
+      </div>
+    </div>
+  </div>
+{/if}
 
 <style>
-  .memory-widget {
+  .mem-s {
     display: flex;
     flex-direction: column;
-    gap: var(--space-3);
+    justify-content: center;
+    align-items: flex-start;
+    height: 100%;
+    gap: var(--space-1);
   }
 
-  .s-row {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
-  }
-
-  .primary-metric {
-    display: flex;
-    align-items: baseline;
-    gap: var(--space-2);
-  }
-
-  .metric-value {
-    font-size: 28px;
+  .mem-value-s {
+    font-size: 32px;
     font-weight: 700;
-    color: var(--color-text-primary);
+    color: var(--color-primary-fixed);
+    letter-spacing: -0.02em;
+  }
+
+  .mem-unit-s {
+    font-size: 16px;
+    font-weight: 300;
+    color: var(--color-on-surface-variant);
+  }
+
+  .mem-m {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    height: 100%;
+  }
+
+  .mem-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+  }
+
+  .mem-stat { margin-top: var(--space-2); }
+
+  .mem-hero {
+    font-size: var(--font-size-hero);
+    font-weight: 700;
+    color: var(--color-primary-fixed);
+    letter-spacing: -0.03em;
     line-height: 1;
   }
 
-  .s-row .metric-value {
-    font-size: 20px;
+  .mem-total {
+    font-size: 30px;
+    font-weight: 300;
+    color: var(--color-on-surface-variant);
   }
 
-  .metric-label {
-    font-size: 12px;
-    color: var(--color-text-muted);
+  .mem-donut {
+    width: 96px;
+    height: 96px;
+    flex-shrink: 0;
   }
 
-  .segmented-bar {
-    display: flex;
-    height: 6px;
-    border-radius: 3px;
-    overflow: hidden;
-    background: var(--color-bg-hover);
+  .mem-donut-svg { width: 100%; height: 100%; }
+
+  .mem-donut-track {
+    color: color-mix(in srgb, var(--color-primary) 5%, transparent);
   }
 
-  .seg {
-    height: 100%;
-    transition: width 0.3s ease;
+  .mem-donut-fill {
+    color: var(--color-secondary);
+    filter: drop-shadow(0 0 8px color-mix(in srgb, var(--color-secondary) 40%, transparent));
   }
 
-  .seg-used { background: var(--color-accent); }
-  .seg-cached { background: var(--color-accent-subtle); }
-  .seg-free { background: var(--color-bg-hover); }
+  .mem-footer { padding-top: var(--space-4); }
 
-  .legend {
-    display: flex;
-    gap: var(--space-3);
-    font-size: 11px;
-    color: var(--color-text-secondary);
-  }
-
-  .legend-item {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-  }
-
-  .legend-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-  }
-
-  .dot-used { background: var(--color-accent); }
-  .dot-cached { background: var(--color-accent-subtle); }
-  .dot-free { background: var(--color-bg-hover); border: 1px solid var(--color-border); }
-
-  .progress-labeled {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-1);
-    padding-top: var(--space-2);
-    border-top: 1px solid var(--color-border-subtle);
-  }
-
-  .progress-header {
+  .mem-swap-label {
     display: flex;
     justify-content: space-between;
-    align-items: center;
+    margin-bottom: var(--space-2);
   }
 
-  .progress-title {
-    font-size: 11px;
-    color: var(--color-text-muted);
-    text-transform: uppercase;
-    letter-spacing: 0.4px;
+  .mem-swap-value {
+    color: var(--color-secondary);
+    font-size: var(--font-size-xs);
+    font-weight: 700;
   }
 
-  .progress-pct {
-    font-size: 11px;
-    color: var(--color-text-secondary);
+  .mem-swap-track {
+    height: 4px;
+    background: color-mix(in srgb, var(--color-primary) 5%, transparent);
+    border-radius: 9999px;
+    overflow: hidden;
+  }
+
+  .mem-swap-fill {
+    height: 100%;
+    background: color-mix(in srgb, var(--color-secondary) 50%, transparent);
+    border-radius: 9999px;
   }
 </style>

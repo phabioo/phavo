@@ -20,6 +20,10 @@
   const badgeLabel = $derived(
     tempState === 'hot' ? 'Hot' : tempState === 'warm' ? 'Warm' : 'Cool',
   );
+
+  const sensors = $derived(
+    hasTemp ? [{ label: 'CPU', temp: Math.round(temp) }] : [],
+  );
 </script>
 
 <div class="temp-widget">
@@ -31,15 +35,53 @@
   {:else if size === 'S'}
     <div class="s-row">
       <Icon name="thermometer" size={16} class="text-accent" />
-      <span class="metric-value mono">{temp.toFixed(0)}°C</span>
+      <span class="metric-value mono hero-glow">{temp.toFixed(0)}°C</span>
     </div>
-  {:else}
+  {:else if size === 'M'}
+    <div class="widget-header">
+      <span class="widget-category-label">THERMAL STATUS</span>
+      <Icon name="thermometer" size={18} class="widget-icon" />
+    </div>
     <div class="primary-metric">
       <span class="metric-value mono">{temp.toFixed(1)}</span>
       <span class="metric-unit">°{data.unit}</span>
     </div>
 
     <Badge variant={badgeVariant}>{badgeLabel}</Badge>
+  {:else}
+    <div class="widget-header">
+      <span class="widget-category-label">TEMPERATURE</span>
+      <Icon name="thermometer" size={18} class="widget-icon" />
+    </div>
+    <div class="temp-hero-row">
+      <span class="metric-value mono">{temp.toFixed(1)}</span>
+      <span class="metric-unit">°{data.unit}</span>
+    </div>
+
+    <Badge variant={badgeVariant}>{badgeLabel}</Badge>
+
+    <!-- L-only: per-sensor list -->
+    {#if sensors.length > 1}
+    <div class="temp-sensors">
+      {#each sensors as sensor}
+      <div class="temp-sensor-row">
+        <span class="temp-sensor-name">{sensor.label}</span>
+        <div class="temp-sensor-bar-track">
+          <div
+            class="temp-sensor-bar-fill"
+            style="width: {Math.min(100, (sensor.temp / 100) * 100)}%;
+                   background: {sensor.temp > 80
+                     ? 'var(--color-error)'
+                     : sensor.temp > 60
+                     ? 'var(--color-primary-fixed)'
+                     : 'var(--color-secondary)'};"
+          ></div>
+        </div>
+        <span class="temp-sensor-value">{sensor.temp}°</span>
+      </div>
+      {/each}
+    </div>
+    {/if}
   {/if}
 </div>
 
@@ -63,10 +105,12 @@
   }
 
   .metric-value {
-    font-size: 28px;
+    font-size: var(--font-size-hero);
     font-weight: 700;
-    color: var(--color-text-primary);
+    color: var(--color-primary-fixed);
+    letter-spacing: -0.03em;
     line-height: 1;
+    filter: drop-shadow(0 0 20px color-mix(in srgb, var(--color-primary-fixed) 30%, transparent));
   }
 
   .s-row .metric-value {
@@ -74,8 +118,9 @@
   }
 
   .metric-unit {
-    font-size: 14px;
-    color: var(--color-text-muted);
+    font-size: 30px;
+    font-weight: 300;
+    color: var(--color-on-surface-variant);
   }
 
   .no-sensor {
@@ -84,10 +129,65 @@
     align-items: center;
     gap: var(--space-2);
     padding: var(--space-4) 0;
-    color: var(--color-text-muted);
+    color: var(--color-outline);
   }
 
   .no-sensor-text {
     font-size: 13px;
+  }
+
+  /* ── L-size layout ──────────────────────────────────────────────────── */
+  .temp-hero-row {
+    display: flex;
+    align-items: baseline;
+    gap: 2px;
+  }
+
+  .temp-sensors {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    margin-top: var(--space-4);
+    padding-top: var(--space-4);
+    border-top: 1px solid color-mix(in srgb, var(--color-outline-variant) 15%, transparent);
+  }
+
+  .temp-sensor-row {
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    align-items: center;
+    gap: var(--space-3);
+  }
+
+  .temp-sensor-name {
+    font-size: 11px;
+    font-family: var(--font-mono);
+    color: var(--color-on-surface-variant);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .temp-sensor-bar-track {
+    width: 80px;
+    height: 3px;
+    background: color-mix(in srgb, var(--color-primary) 5%, transparent);
+    border-radius: 9999px;
+    overflow: hidden;
+  }
+
+  .temp-sensor-bar-fill {
+    height: 100%;
+    border-radius: 9999px;
+    transition: width 0.5s ease;
+  }
+
+  .temp-sensor-value {
+    font-size: 11px;
+    font-weight: 700;
+    font-family: var(--font-mono);
+    color: var(--color-on-surface-variant);
+    min-width: 32px;
+    text-align: right;
   }
 </style>

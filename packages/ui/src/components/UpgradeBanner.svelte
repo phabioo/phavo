@@ -22,8 +22,8 @@ let { feature, price = '€8.99' }: Props = $props();
 
 <style>
   .upgrade-banner {
-    background: var(--color-accent-subtle);
-    border: 1px solid var(--color-accent);
+    background: var(--color-primary-fixed-dim);
+    border: 1px solid var(--color-primary);
     border-radius: var(--radius-md);
     padding: var(--space-4);
   }
@@ -35,14 +35,14 @@ let { feature, price = '€8.99' }: Props = $props();
   }
 
   .upgrade-icon {
-    color: var(--color-accent-text);
+    color: var(--color-primary);
     flex-shrink: 0;
     display: flex;
   }
 
   .upgrade-text {
     font-size: 14px;
-    color: var(--color-accent-text);
+    color: var(--color-primary);
   }
 
   .upgrade-text strong {

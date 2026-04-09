@@ -1,0 +1,1420 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Phavo — Technical Architecture Spec v3.0</title>
+<style>
+@import url('/fonts/geist.css'); /* @fontsource/geist — never CDN */
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --surface:          #0f131f;
+  --surface-low:      #171b28;
+  --surface-card:     #1b1f2c;
+  --surface-high:     #262a37;
+  --surface-dim:      #0a0e1a;
+  --primary:          #dcc66e;
+  --primary-fixed:    #ffde7a;
+  --secondary:        #3fc8a0;
+  --secondary-cont:   #0d3d2e;
+  --tertiary:         #a89cf5;
+  --on-surface:       #e8e1d6;
+  --on-surface-var:   #cdc6b3;
+  --outline:          #6e685c;
+  --outline-var:      #4b4738;
+  --error:            #e05c4b;
+  --error-cont:       #3d0f08;
+  --font-ui:          'Geist', -apple-system, sans-serif;
+  --font-mono:        'Geist Mono', 'SF Mono', monospace;
+  --nav-w:            248px;
+}
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: var(--font-ui);
+  background: var(--surface-dim);
+  color: var(--on-surface);
+  font-size: 13.5px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  display: flex;
+}
+
+/* ── NAV ──────────────────────────────────────────────── */
+nav {
+  width: var(--nav-w);
+  flex-shrink: 0;
+  position: fixed;
+  top: 0; left: 0; bottom: 0;
+  background: var(--surface-low);
+  border-right: 1px solid color-mix(in srgb, var(--outline-var) 15%, transparent);
+  overflow-y: auto;
+  padding: 24px 0 40px;
+  z-index: 100;
+}
+
+.nav-logo {
+  padding: 0 20px 20px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid color-mix(in srgb, var(--outline-var) 15%, transparent);
+}
+.nav-logo .name {
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--primary);
+  letter-spacing: -.01em;
+}
+.nav-logo .sub {
+  font-size: 11px;
+  color: var(--outline);
+  font-family: var(--font-mono);
+  margin-top: 3px;
+}
+
+.nav-label {
+  font-size: 10px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: .1em;
+  color: var(--outline);
+  padding: 12px 20px 4px;
+}
+
+nav a {
+  display: block;
+  padding: 5px 20px;
+  font-size: 12.5px;
+  color: var(--on-surface-var);
+  text-decoration: none;
+  border-left: 2px solid transparent;
+  transition: all .12s;
+}
+nav a:hover { color: var(--on-surface); background: var(--surface-card); }
+nav a.active {
+  color: var(--primary);
+  border-left-color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 8%, transparent);
+}
+
+/* ── MAIN ─────────────────────────────────────────────── */
+main {
+  margin-left: var(--nav-w);
+  flex: 1;
+  padding: 48px 56px 80px;
+  max-width: calc(var(--nav-w) + 920px);
+}
+
+/* ── HEADER ───────────────────────────────────────────── */
+.doc-header {
+  padding-bottom: 28px;
+  margin-bottom: 48px;
+  border-bottom: 1px solid color-mix(in srgb, var(--outline-var) 15%, transparent);
+}
+.doc-header h1 {
+  font-size: 22px;
+  font-weight: 400;
+  letter-spacing: -.02em;
+  color: var(--on-surface);
+  margin-bottom: 6px;
+}
+.doc-header h1 span { color: var(--primary); }
+.doc-meta { display: flex; gap: 20px; flex-wrap: wrap; }
+.doc-meta span {
+  font-size: 11px;
+  font-family: var(--font-mono);
+  color: var(--outline);
+}
+.doc-meta span b { color: var(--on-surface-var); font-weight: 500; }
+
+/* ── SECTIONS ─────────────────────────────────────────── */
+section { margin-bottom: 64px; scroll-margin-top: 32px; }
+
+h2 {
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--on-surface);
+  margin-bottom: 20px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid color-mix(in srgb, var(--outline-var) 15%, transparent);
+  letter-spacing: -.01em;
+}
+h3 { font-size: 14px; font-weight: 500; color: var(--on-surface); margin: 28px 0 12px; }
+h4 {
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--on-surface-var);
+  margin: 20px 0 8px;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+}
+p { color: var(--on-surface-var); margin-bottom: 12px; line-height: 1.7; }
+
+/* ── CALLOUT ──────────────────────────────────────────── */
+.callout {
+  border-left: 2px solid var(--primary);
+  background: color-mix(in srgb, var(--primary) 8%, transparent);
+  padding: 10px 14px;
+  border-radius: 0 8px 8px 0;
+  margin: 16px 0;
+  font-size: 12.5px;
+  color: color-mix(in srgb, var(--primary) 80%, var(--on-surface));
+}
+.callout.warn {
+  border-left-color: var(--error);
+  background: color-mix(in srgb, var(--error) 8%, transparent);
+  color: #f0a89c;
+}
+.callout.info {
+  border-left-color: var(--secondary);
+  background: color-mix(in srgb, var(--secondary) 8%, transparent);
+  color: color-mix(in srgb, var(--secondary) 80%, var(--on-surface));
+}
+
+/* ── TABLES ───────────────────────────────────────────── */
+.tbl-wrap { overflow-x: auto; margin: 16px 0; }
+table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+th {
+  text-align: left;
+  padding: 8px 12px;
+  background: var(--surface-card);
+  color: var(--on-surface-var);
+  font-weight: 500;
+  border-bottom: 1px solid color-mix(in srgb, var(--outline-var) 20%, transparent);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  white-space: nowrap;
+}
+td {
+  padding: 8px 12px;
+  border-bottom: 1px solid color-mix(in srgb, var(--outline-var) 10%, transparent);
+  color: var(--on-surface-var);
+  vertical-align: top;
+}
+tr:hover td { background: color-mix(in srgb, var(--surface-card) 40%, transparent); }
+td code, th code { font-family: var(--font-mono); font-size: 11.5px; color: var(--primary); background: none; }
+td.pk   { color: var(--primary); font-family: var(--font-mono); font-size: 11.5px; }
+td.fk   { color: #89b8e8; font-family: var(--font-mono); font-size: 11.5px; }
+td.type { font-family: var(--font-mono); font-size: 11.5px; color: var(--tertiary); }
+td.nn   { color: var(--error); font-size: 11px; font-family: var(--font-mono); }
+td.note { color: var(--outline); font-size: 11.5px; font-style: italic; }
+td.method { font-family: var(--font-mono); font-size: 11.5px; font-weight: 600; }
+td.get  { color: var(--primary); }
+td.post { color: var(--secondary); }
+td.tier-stellar  { color: var(--primary); font-size: 11px; font-family: var(--font-mono); }
+td.tier-cel      { color: var(--tertiary); font-size: 11px; font-family: var(--font-mono); }
+td.tier-any      { color: var(--outline); font-size: 11px; font-family: var(--font-mono); }
+
+/* ── CODE ─────────────────────────────────────────────── */
+pre {
+  background: var(--surface-card);
+  border-radius: 10px;
+  padding: 16px 18px;
+  overflow-x: auto;
+  margin: 12px 0 20px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.7;
+  color: var(--on-surface-var);
+}
+.kw  { color: var(--tertiary); }
+.str { color: #a8d8a0; }
+.ty  { color: #89b8e8; }
+.cm  { color: var(--outline); font-style: italic; }
+.acc { color: var(--primary); }
+.num { color: var(--secondary); }
+.fn  { color: var(--secondary); }
+
+/* ── BADGES ───────────────────────────────────────────── */
+.badge {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 500;
+  font-family: var(--font-mono);
+  padding: 1px 7px;
+  border-radius: 20px;
+  letter-spacing: .04em;
+}
+.b-stellar  { background: color-mix(in srgb, var(--primary) 12%, transparent); color: var(--primary); border: 1px solid color-mix(in srgb, var(--primary) 35%, transparent); }
+.b-cel      { background: color-mix(in srgb, var(--tertiary) 12%, transparent); color: var(--tertiary); border: 1px solid color-mix(in srgb, var(--tertiary) 35%, transparent); }
+.b-any      { background: var(--surface-high); color: var(--on-surface-var); border: 1px solid var(--outline-var); }
+.b-auth     { background: color-mix(in srgb, var(--error) 12%, transparent); color: #f0a89c; border: 1px solid color-mix(in srgb, var(--error) 35%, transparent); }
+.b-pub      { background: color-mix(in srgb, var(--secondary) 12%, transparent); color: var(--secondary); border: 1px solid color-mix(in srgb, var(--secondary) 35%, transparent); }
+
+/* ── SEQUENCE DIAGRAMS ────────────────────────────────── */
+.seq {
+  background: var(--surface-card);
+  border-radius: 10px;
+  padding: 20px;
+  margin: 16px 0;
+  overflow-x: auto;
+}
+.seq-actors { display: flex; gap: 0; margin-bottom: 8px; }
+.actor { flex: 1; min-width: 100px; text-align: center; }
+.actor-box {
+  display: inline-block;
+  border: 1px solid var(--outline-var);
+  background: var(--surface-low);
+  border-radius: 6px;
+  padding: 5px 10px;
+  font-size: 11px;
+  font-family: var(--font-mono);
+  font-weight: 500;
+  color: var(--on-surface);
+  white-space: nowrap;
+}
+.actor-box.browser { border-color: #185fa5; color: #89b8e8; }
+.actor-box.server  { border-color: var(--secondary); color: var(--secondary); }
+.actor-box.db      { border-color: var(--primary); color: var(--primary); }
+.actor-line { width: 1px; background: color-mix(in srgb, var(--outline-var) 30%, transparent); margin: 0 auto; }
+
+.seq-steps { display: flex; flex-direction: column; gap: 0; }
+.seq-row {
+  display: grid;
+  min-height: 32px;
+  align-items: center;
+  position: relative;
+  font-size: 11.5px;
+}
+.seq-row.r4 { grid-template-columns: 1fr 1fr 1fr 1fr; }
+.seq-row.r3 { grid-template-columns: 1fr 1fr 1fr; }
+.seq-cell {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-height: 32px;
+  border-left: 1px dashed color-mix(in srgb, var(--outline-var) 30%, transparent);
+  padding: 0 4px;
+}
+.seq-cell:first-child { border-left: none; }
+.arrow {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-family: var(--font-mono);
+  white-space: nowrap;
+  padding: 3px 0;
+}
+.arrow-line {
+  flex: 1;
+  height: 1px;
+  background: currentColor;
+  position: relative;
+  min-width: 40px;
+}
+.arrow-line::after {
+  content: '';
+  position: absolute;
+  right: -1px; top: -3px;
+  border: 4px solid transparent;
+  border-left-color: currentColor;
+}
+.arrow-line.left::after { display: none; }
+.arrow-line.left::before {
+  content: '';
+  position: absolute;
+  left: -1px; top: -3px;
+  border: 4px solid transparent;
+  border-right-color: currentColor;
+}
+.arrow.fwd { color: var(--primary); }
+.arrow.ret { color: var(--outline); }
+
+/* ── SCHEMA BLOCKS ────────────────────────────────────── */
+.schema-table {
+  border: 1px solid color-mix(in srgb, var(--outline-var) 20%, transparent);
+  border-radius: 10px;
+  overflow: hidden;
+  margin: 20px 0;
+}
+.schema-header {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  padding: 10px 14px;
+  background: var(--surface-card);
+  border-bottom: 1px solid color-mix(in srgb, var(--outline-var) 20%, transparent);
+}
+.schema-name {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--primary);
+}
+.schema-desc { font-size: 12px; color: var(--outline); }
+
+/* ── ENCRYPTION FLOW ──────────────────────────────────── */
+.enc-flow { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin: 16px 0; }
+.enc-box {
+  background: var(--surface-card);
+  border: 1px solid color-mix(in srgb, var(--outline-var) 20%, transparent);
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 11.5px;
+  min-width: 120px;
+}
+.enc-box.green { border-color: color-mix(in srgb, var(--secondary) 40%, transparent); }
+.enc-box .label { font-size: 10px; color: var(--outline); text-transform: uppercase; letter-spacing: .08em; margin-bottom: 4px; }
+.enc-box .val { font-family: var(--font-mono); color: var(--on-surface-var); font-size: 12px; }
+.enc-arrow { color: var(--outline); font-size: 18px; }
+
+/* ── MIDDLEWARE STACK ─────────────────────────────────── */
+.mw-stack { display: flex; flex-direction: column; gap: 2px; margin: 16px 0; }
+.mw-layer {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 14px;
+  background: var(--surface-card);
+  border-radius: 6px;
+  font-size: 12px;
+}
+.mw-num { font-family: var(--font-mono); color: var(--outline); width: 20px; flex-shrink: 0; }
+.mw-name { color: var(--primary); font-family: var(--font-mono); font-weight: 500; min-width: 160px; }
+.mw-desc { color: var(--on-surface-var); }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-logo">
+    <div class="name">PHAVO</div>
+    <div class="sub">Arch Spec v3.0 · 2026-04-07</div>
+  </div>
+
+  <div class="nav-label">Overview</div>
+  <a href="#overview">Overview</a>
+  <a href="#monorepo">Monorepo Structure</a>
+  <a href="#request-lifecycle">Request Lifecycle</a>
+
+  <div class="nav-label">Backend</div>
+  <a href="#hono-routing">Hono Routing</a>
+  <a href="#middleware">Middleware Stack</a>
+  <a href="#auth">Auth &amp; Session</a>
+  <a href="#tier-enforcement">Tier Enforcement</a>
+
+  <div class="nav-label">Database</div>
+  <a href="#schema">DB Schema</a>
+  <a href="#plugin-data">plugin_data Table</a>
+  <a href="#encryption">Encryption Model</a>
+  <a href="#migrations">Migrations</a>
+
+  <div class="nav-label">Frontend</div>
+  <a href="#sveltekit">SvelteKit Shell</a>
+  <a href="#stores">Svelte Stores</a>
+  <a href="#widget-system">Widget System</a>
+  <a href="#bento-grid">BentoGrid</a>
+  <a href="#design-tokens">Design Tokens</a>
+
+  <div class="nav-label">Features</div>
+  <a href="#license">License Activation</a>
+  <a href="#notifications">Notifications</a>
+  <a href="#export-import">Export / Import</a>
+  <a href="#update-mechanism">Update Mechanism</a>
+  <a href="#plugin-system">Plugin System</a>
+
+  <div class="nav-label">Infrastructure</div>
+  <a href="#docker">Docker</a>
+  <a href="#env">Environment</a>
+  <a href="#mobile">Mobile / Responsive</a>
+  <a href="#csp">CSP</a>
+  <a href="#rate-limits">Rate Limits</a>
+  <a href="#sec-decisions">Security Decisions</a>
+</nav>
+
+<main>
+
+<div class="doc-header">
+  <h1>Phavo — <span>Technical Architecture Spec</span></h1>
+  <div class="doc-meta">
+    <span>Version <b>3.0</b></span>
+    <span>Date <b>2026-04-07</b></span>
+    <span>PRD <b>v4.0</b></span>
+    <span>Roadmap <b>v5.0</b></span>
+    <span>Design <b>Celestial Wish</b></span>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<section id="overview">
+<h2>Overview</h2>
+
+<p>Phavo is a self-hosted personal dashboard. It runs entirely locally — no cloud account, no subscription, no phone-home. Two tiers: <strong>Stellar</strong> (free) and <strong>Celestial</strong> (one-time purchase, Ed25519 offline license).</p>
+
+<div class="callout info">
+  <strong>Key architectural invariant:</strong> The app never makes outbound network calls at runtime except for user-initiated actions (update check, weather API, RSS feeds, Pi-hole). There is no phavo.net account backend. License validation is fully offline via Ed25519 signature verification against an embedded public key.
+</div>
+
+<p>The web app (<code>apps/web/</code>) is the only active runtime target. Desktop (<code>apps/desktop/</code>) and mobile stubs exist for future Tauri integration.</p>
+
+<div class="tbl-wrap"><table>
+<thead><tr><th>Tier</th><th>Code ID</th><th>License</th><th>Pages</th><th>Widgets</th><th>AI</th></tr></thead>
+<tbody>
+  <tr><td><strong>Stellar</strong></td><td class="tier-stellar">stellar</td><td class="note">None required</td><td class="note">1 (Home)</td><td class="note">7 base widgets</td><td class="note">✗</td></tr>
+  <tr><td><strong>Celestial</strong></td><td class="tier-cel">celestial</td><td class="note">Ed25519 key via Gumroad</td><td class="note">Unlimited</td><td class="note">All 14+ widgets</td><td class="note">✓</td></tr>
+</tbody>
+</table></div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<section id="monorepo">
+<h2>Monorepo Structure</h2>
+
+<pre>phavo/
+├── apps/
+│   ├── web/                    <span class="cm">← SvelteKit — the only active runtime</span>
+│   │   ├── src/
+│   │   │   ├── routes/
+│   │   │   │   ├── +layout.server.ts    <span class="cm">← DB init, session, redirect logic</span>
+│   │   │   │   ├── +layout.svelte       <span class="cm">← Shell: Sidebar + Header + slot</span>
+│   │   │   │   ├── (app)/+page.svelte   <span class="cm">← Dashboard / BentoGrid</span>
+│   │   │   │   ├── setup/+page.svelte   <span class="cm">← Setup wizard</span>
+│   │   │   │   ├── login/+page.svelte   <span class="cm">← Auth page</span>
+│   │   │   │   └── api/v1/[...path]/+server.ts  <span class="cm">← Hono catch-all</span>
+│   │   │   ├── lib/
+│   │   │   │   ├── stores/              <span class="cm">← Svelte 5 Runes stores</span>
+│   │   │   │   └── components/          <span class="cm">← Page-level Svelte components</span>
+│   │   │   └── hooks.server.ts          <span class="cm">← DB bootstrap, session pruning</span>
+│   ├── desktop/                <span class="cm">← Tauri stub (v1.1+, inactive)</span>
+│   └── mobile/                 <span class="cm">← Mobile stub (future)</span>
+├── packages/
+│   ├── ui/                     <span class="cm">← @phavo/ui</span>
+│   │   └── src/
+│   │       ├── theme.css        <span class="cm">← @theme block — Celestial Wish tokens</span>
+│   │       ├── index.ts         <span class="cm">← component exports</span>
+│   │       ├── icons.ts         <span class="cm">← Icon abstraction</span>
+│   │       ├── Sidebar.svelte
+│   │       ├── Header.svelte
+│   │       ├── BentoGrid.svelte
+│   │       ├── WidgetCard.svelte
+│   │       ├── WishStar.svelte  <span class="cm">← decorative 4-pointed star motif</span>
+│   │       └── ...
+│   ├── db/                     <span class="cm">← @phavo/db</span>
+│   │   └── src/
+│   │       ├── schema.ts        <span class="cm">← Drizzle schema</span>
+│   │       ├── client.ts        <span class="cm">← libSQL client + migration runner</span>
+│   │       ├── crypto.ts        <span class="cm">← AES-256-GCM + HKDF</span>
+│   │       └── migrations/
+│   ├── types/                  <span class="cm">← @phavo/types</span>
+│   └── agent/                  <span class="cm">← @phavo/agent — metrics collectors</span>
+└── docs/
+    ├── prd.md
+    ├── archspec.html            <span class="cm">← this file</span>
+    ├── roadmap.html
+    ├── design.md                <span class="cm">← Celestial Wish Design System</span>
+    └── rules.md</pre>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<section id="request-lifecycle">
+<h2>Request Lifecycle</h2>
+
+<h3>Browser → API (authenticated mutation)</h3>
+<div class="seq">
+  <div class="seq-actors">
+    <div class="actor"><div class="actor-box browser">Browser</div><div class="actor-line" style="height:300px"></div></div>
+    <div class="actor"><div class="actor-box server">SvelteKit hook</div><div class="actor-line" style="height:300px"></div></div>
+    <div class="actor"><div class="actor-box server">Hono middleware</div><div class="actor-line" style="height:300px"></div></div>
+    <div class="actor"><div class="actor-box db">DB (libSQL)</div><div class="actor-line" style="height:300px"></div></div>
+  </div>
+  <div class="seq-steps">
+    <div class="seq-row r4">
+      <div class="seq-cell"><div class="arrow fwd"><div class="arrow-line"></div>POST /api/v1/config</div></div>
+      <div class="seq-cell"></div><div class="seq-cell"></div><div class="seq-cell"></div>
+    </div>
+    <div class="seq-row r4">
+      <div class="seq-cell"></div>
+      <div class="seq-cell"><div class="arrow fwd"><div class="arrow-line"></div>authMiddleware</div></div>
+      <div class="seq-cell"></div><div class="seq-cell"></div>
+    </div>
+    <div class="seq-row r4">
+      <div class="seq-cell"></div><div class="seq-cell"></div>
+      <div class="seq-cell"><div class="arrow fwd"><div class="arrow-line"></div>SELECT session</div></div>
+      <div class="seq-cell"></div>
+    </div>
+    <div class="seq-row r4">
+      <div class="seq-cell"></div><div class="seq-cell"></div><div class="seq-cell"></div>
+      <div class="seq-cell"><div class="arrow ret"><div class="arrow-line left"></div>session + tier</div></div>
+    </div>
+    <div class="seq-row r4">
+      <div class="seq-cell"></div>
+      <div class="seq-cell"><div class="arrow fwd"><div class="arrow-line"></div>csrfMiddleware</div></div>
+      <div class="seq-cell"></div><div class="seq-cell"></div>
+    </div>
+    <div class="seq-row r4">
+      <div class="seq-cell"></div>
+      <div class="seq-cell"><div class="arrow fwd"><div class="arrow-line"></div>rateLimitMiddleware</div></div>
+      <div class="seq-cell"></div><div class="seq-cell"></div>
+    </div>
+    <div class="seq-row r4">
+      <div class="seq-cell"></div>
+      <div class="seq-cell"><div class="arrow fwd"><div class="arrow-line"></div>route handler</div></div>
+      <div class="seq-cell"></div><div class="seq-cell"></div>
+    </div>
+    <div class="seq-row r4">
+      <div class="seq-cell"></div>
+      <div class="seq-cell"></div>
+      <div class="seq-cell"><div class="arrow fwd"><div class="arrow-line"></div>UPDATE config</div></div>
+      <div class="seq-cell"></div>
+    </div>
+    <div class="seq-row r4">
+      <div class="seq-cell"><div class="arrow ret"><div class="arrow-line left"></div>{ ok: true, data }</div></div>
+      <div class="seq-cell"></div><div class="seq-cell"></div><div class="seq-cell"></div>
+    </div>
+  </div>
+</div>
+
+<h3>Response Envelope (all endpoints)</h3>
+<pre><span class="cm">// Success</span>
+{ <span class="acc">ok</span>: <span class="kw">true</span>, <span class="acc">data</span>: T }
+
+<span class="cm">// Error</span>
+{ <span class="acc">ok</span>: <span class="kw">false</span>, <span class="acc">error</span>: <span class="str">"Human-readable message"</span> }</pre>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<section id="hono-routing">
+<h2>Hono Routing</h2>
+
+<p>All API traffic enters via a single SvelteKit catch-all at <code>apps/web/src/routes/api/v1/[...path]/+server.ts</code>, which mounts the Hono app. Route modules are registered on startup.</p>
+
+<div class="tbl-wrap"><table>
+<thead><tr><th>Module</th><th>Prefix</th><th>Responsibility</th></tr></thead>
+<tbody>
+  <tr><td><code>auth.ts</code></td><td><code>/auth</code></td><td class="note">Login, logout, session, TOTP setup/verify, password change</td></tr>
+  <tr><td><code>config.ts</code></td><td><code>/config</code></td><td class="note">Dashboard config GET/POST, export, import</td></tr>
+  <tr><td><code>tabs.ts</code></td><td><code>/tabs</code></td><td class="note">Pages CRUD, per-page widget list</td></tr>
+  <tr><td><code>widgets.ts</code></td><td><code>/widgets</code></td><td class="note">Manifest (tier-filtered), instances CRUD, config</td></tr>
+  <tr><td><code>metrics.ts</code></td><td><code>/metrics</code></td><td class="note">cpu, memory, disk, network, temperature, uptime, weather</td></tr>
+  <tr><td><code>integrations.ts</code></td><td><code>/integrations</code></td><td class="note">pihole, rss, links</td></tr>
+  <tr><td><code>license.ts</code></td><td><code>/license</code></td><td class="note">Celestial key activate / deactivate / status</td></tr>
+  <tr><td><code>ai.ts</code></td><td><code>/ai</code></td><td class="note">AI provider config, status, chat (Celestial only)</td></tr>
+  <tr><td><code>notifications.ts</code></td><td><code>/notifications</code></td><td class="note">Queue drain, mark-read</td></tr>
+  <tr><td><code>plugins.ts</code></td><td><code>/plugins</code></td><td class="note">List, upload .phwidget, delete, status</td></tr>
+  <tr><td><code>system.ts</code></td><td><code>/system</code></td><td class="note">health (public), about, update check/apply</td></tr>
+</tbody>
+</table></div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<section id="middleware">
+<h2>Middleware Stack</h2>
+
+<p>Every authenticated, non-GET route passes through this stack in order:</p>
+
+<div class="mw-stack">
+  <div class="mw-layer"><span class="mw-num">1</span><span class="mw-name">authMiddleware</span><span class="mw-desc">Reads session cookie → SELECT sessions WHERE id = token AND expiresAt > now(). Injects ctx.session. Returns 401 if missing.</span></div>
+  <div class="mw-layer"><span class="mw-num">2</span><span class="mw-name">csrfMiddleware</span><span class="mw-desc">Double-submit HMAC pattern. All non-GET mutations require X-CSRF-Token header derived from session ID. Returns 403 on mismatch.</span></div>
+  <div class="mw-layer"><span class="mw-num">3</span><span class="mw-name">rateLimitMiddleware</span><span class="mw-desc">Per-IP (unauthenticated) or per-session (authenticated) counters. In-memory (Phase 1). Endpoint-specific limits. Returns 429 on breach.</span></div>
+  <div class="mw-layer"><span class="mw-num">4</span><span class="mw-name">requireTier(tier)</span><span class="mw-desc">Applied per-route. Re-reads tier from licenseActivation table — never from cookie. Returns 403 if session.tier is below required tier.</span></div>
+</div>
+
+<h3>CSRF — fetchWithCsrf()</h3>
+<pre><span class="cm">// Client-side helper — all mutating store methods use this</span>
+<span class="kw">async function</span> <span class="fn">fetchWithCsrf</span>(url: <span class="ty">string</span>, options: <span class="ty">RequestInit</span>) {
+  <span class="kw">const</span> token = <span class="fn">deriveToken</span>(sessionId)  <span class="cm">// HMAC-SHA256(sessionId, secret)</span>
+  <span class="kw">return</span> <span class="fn">fetch</span>(url, {
+    ...options,
+    headers: { ...(options.headers ?? {}), <span class="str">'X-CSRF-Token'</span>: token }
+  })
+}</pre>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<section id="auth">
+<h2>Auth &amp; Session</h2>
+
+<div class="callout">
+  <strong>Local auth only.</strong> There is no phavo.net OAuth, no external identity provider, no cloud account. Username + password, hashed with Argon2id.
+</div>
+
+<h3>Login flow</h3>
+<pre>POST /api/v1/auth/login  { username, password }
+
+1. SELECT user WHERE username = ?
+2. argon2id.verify(storedHash, password)  → 401 on fail
+3. INSERT sessions { id: randomBytes(32), userId, tier, expiresAt: +7days }
+4. Set-Cookie: phavo_session=&lt;sessionId&gt;; HttpOnly; SameSite=Strict; Secure
+5. Return { ok: true, data: { loggedIn: true } }
+   <span class="cm">// tier is NOT returned to client — never serialised into HTML or stores</span></pre>
+
+<h3>Session record</h3>
+<div class="callout info">
+  <strong>sessions.tier</strong> is the single source of truth. It is derived from the <code>licenseActivation</code> table on login. Cookie modification has no effect — tier is re-read from DB on every requireTier() call.
+</div>
+
+<h3>TOTP (optional 2FA)</h3>
+<pre>POST /api/v1/auth/totp/setup   → returns QR code + backup codes (AES-encrypted at rest)
+POST /api/v1/auth/totp/verify  { token }  → validates TOTP before completing login</pre>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<section id="tier-enforcement">
+<h2>Tier Enforcement</h2>
+
+<h3>requireTier() — how it works</h3>
+<pre><span class="kw">function</span> <span class="fn">requireTier</span>(minTier: <span class="str">'stellar'</span> | <span class="str">'celestial'</span>) {
+  <span class="kw">return async</span> (c: <span class="ty">Context</span>, next: <span class="ty">Next</span>) => {
+    <span class="kw">const</span> session = c.get(<span class="str">'session'</span>)           <span class="cm">// injected by authMiddleware</span>
+    <span class="kw">const</span> rank = { stellar: <span class="num">0</span>, celestial: <span class="num">1</span> }
+    <span class="kw">if</span> (rank[session.tier] &lt; rank[minTier])
+      <span class="kw">return</span> c.json({ ok: <span class="kw">false</span>, error: <span class="str">'Celestial tier required'</span> }, <span class="num">403</span>)
+    <span class="kw">await</span> <span class="fn">next</span>()
+  }
+}</pre>
+
+<h3>Widget manifest tier-filtering</h3>
+<pre><span class="cm">// GET /api/v1/widgets</span>
+<span class="cm">// Stellar clients receive teasers for locked widgets — never dataEndpoint or permissions</span>
+<span class="kw">const</span> manifest = registry.<span class="fn">getAll</span>().<span class="fn">map</span>(w =>
+  w.tier === <span class="str">'celestial'</span> && session.tier === <span class="str">'stellar'</span>
+    ? { id: w.id, name: w.name, description: w.description, tier: w.tier, locked: <span class="kw">true</span> }
+    : w  <span class="cm">// full WidgetDefinition including dataEndpoint, configSchema, permissions</span>
+)</pre>
+
+<h3>No tier in client HTML</h3>
+<pre><span class="cm">// +layout.server.ts — tier is never serialised to the browser</span>
+<span class="kw">return</span> {
+  loggedIn: <span class="kw">true</span>,
+  dashboardName: config.<span class="fn">get</span>(<span class="str">'dashboardName'</span>),
+  <span class="cm">// tier: ❌ never here</span>
+}</pre>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<section id="schema">
+<h2>DB Schema</h2>
+
+<div class="callout warn">
+  <strong>Tier is never stored in the users or config tables.</strong> An attacker with DB access cannot elevate tier by editing a row. Tier flows exclusively via: licenseActivation record → login → sessions.tier → authMiddleware → requireTier().
+</div>
+
+<div class="schema-table">
+  <div class="schema-header">
+    <span class="schema-name">users</span>
+    <span class="schema-desc">Single-user system. One row expected at all times after setup.</span>
+  </div>
+  <table>
+    <thead><tr><th>Column</th><th>Type</th><th>Null</th><th>Notes</th></tr></thead>
+    <tbody>
+      <tr><td class="pk">id</td><td class="type">text PK</td><td class="nn">NOT NULL</td><td class="note">UUID v4</td></tr>
+      <tr><td>username</td><td class="type">text</td><td class="nn">NOT NULL UNIQUE</td><td class="note">1–40 chars, case-insensitive</td></tr>
+      <tr><td>passwordHash</td><td class="type">text</td><td class="nn">NOT NULL</td><td class="note">Argon2id encoded string</td></tr>
+      <tr><td>totpSecret</td><td class="type">text</td><td>nullable</td><td class="note">AES-256-GCM encrypted. Set only if TOTP enabled.</td></tr>
+      <tr><td>totpBackupCodes</td><td class="type">text</td><td>nullable</td><td class="note">AES-256-GCM encrypted JSON array. 8 one-time codes.</td></tr>
+      <tr><td>createdAt</td><td class="type">integer</td><td class="nn">NOT NULL</td><td class="note">Unix ms</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="schema-table">
+  <div class="schema-header">
+    <span class="schema-name">sessions</span>
+    <span class="schema-desc">Active session tokens. sessions.tier is the single source of truth for tier enforcement.</span>
+  </div>
+  <table>
+    <thead><tr><th>Column</th><th>Type</th><th>Null</th><th>Notes</th></tr></thead>
+    <tbody>
+      <tr><td class="pk">id</td><td class="type">text PK</td><td class="nn">NOT NULL</td><td class="note">32-byte random base64url — the cookie value</td></tr>
+      <tr><td class="fk">userId</td><td class="type">text FK</td><td class="nn">NOT NULL</td><td class="note">→ users.id</td></tr>
+      <tr><td>tier</td><td class="type">text</td><td class="nn">NOT NULL</td><td class="note">'stellar' | 'celestial' — set by server on login from licenseActivation</td></tr>
+      <tr><td>expiresAt</td><td class="type">integer</td><td class="nn">NOT NULL</td><td class="note">Unix ms. Hard expiry — 7 days from creation.</td></tr>
+      <tr><td>createdAt</td><td class="type">integer</td><td class="nn">NOT NULL</td><td class="note">Unix ms</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="schema-table">
+  <div class="schema-header">
+    <span class="schema-name">config</span>
+    <span class="schema-desc">Key-value store for dashboard settings. No tier key — tier flows through licenseActivation only.</span>
+  </div>
+  <table>
+    <thead><tr><th>Column</th><th>Type</th><th>Null</th><th>Notes</th></tr></thead>
+    <tbody>
+      <tr><td class="pk">key</td><td class="type">text PK</td><td class="nn">NOT NULL</td><td class="note">e.g. 'dashboardName', 'location', 'setupComplete'</td></tr>
+      <tr><td>value</td><td class="type">text</td><td class="nn">NOT NULL</td><td class="note">JSON-serialised value</td></tr>
+      <tr><td>updatedAt</td><td class="type">integer</td><td class="nn">NOT NULL</td><td class="note">Unix ms</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="schema-table">
+  <div class="schema-header">
+    <span class="schema-name">tabs</span>
+    <span class="schema-desc">Named dashboard pages. Stellar: server enforces max 1 tab via requireTier.</span>
+  </div>
+  <table>
+    <thead><tr><th>Column</th><th>Type</th><th>Null</th><th>Notes</th></tr></thead>
+    <tbody>
+      <tr><td class="pk">id</td><td class="type">text PK</td><td class="nn">NOT NULL</td><td class="note">UUID</td></tr>
+      <tr><td>label</td><td class="type">text</td><td class="nn">NOT NULL</td><td class="note">Display name, 1–40 chars</td></tr>
+      <tr><td>order</td><td class="type">integer</td><td class="nn">NOT NULL</td><td class="note">Sort order, 0-indexed</td></tr>
+      <tr><td>createdAt</td><td class="type">integer</td><td class="nn">NOT NULL</td><td class="note">Unix ms</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="schema-table">
+  <div class="schema-header">
+    <span class="schema-name">widgetInstances</span>
+    <span class="schema-desc">Placed widgets per tab. Per-instance config encrypted at rest.</span>
+  </div>
+  <table>
+    <thead><tr><th>Column</th><th>Type</th><th>Null</th><th>Notes</th></tr></thead>
+    <tbody>
+      <tr><td class="pk">id</td><td class="type">text PK</td><td class="nn">NOT NULL</td><td class="note">UUID</td></tr>
+      <tr><td>widgetId</td><td class="type">text</td><td class="nn">NOT NULL</td><td class="note">References WidgetDefinition.id (not a DB FK — registry is in-memory)</td></tr>
+      <tr><td class="fk">tabId</td><td class="type">text FK</td><td class="nn">NOT NULL</td><td class="note">→ tabs.id ON DELETE CASCADE</td></tr>
+      <tr><td>size</td><td class="type">text</td><td class="nn">NOT NULL</td><td class="note">'S' | 'M' | 'L' | 'XL'</td></tr>
+      <tr><td>positionX</td><td class="type">integer</td><td class="nn">NOT NULL</td><td class="note">Grid column (0–11)</td></tr>
+      <tr><td>positionY</td><td class="type">integer</td><td class="nn">NOT NULL</td><td class="note">Grid row</td></tr>
+      <tr><td>configEncrypted</td><td class="type">text</td><td>nullable</td><td class="note">AES-256-GCM JSON blob. Non-credential config only.</td></tr>
+      <tr><td>configSchemaVersion</td><td class="type">text</td><td>nullable</td><td class="note">Widget semver at time of last save. Detects breaking schema changes on startup.</td></tr>
+      <tr><td>createdAt</td><td class="type">integer</td><td class="nn">NOT NULL</td><td class="note">Unix ms</td></tr>
+      <tr><td>updatedAt</td><td class="type">integer</td><td class="nn">NOT NULL</td><td class="note">Unix ms</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="schema-table">
+  <div class="schema-header">
+    <span class="schema-name">credentials</span>
+    <span class="schema-desc">Sensitive integration secrets. Always encrypted. Never returned to frontend.</span>
+  </div>
+  <table>
+    <thead><tr><th>Column</th><th>Type</th><th>Null</th><th>Notes</th></tr></thead>
+    <tbody>
+      <tr><td class="pk">id</td><td class="type">text PK</td><td class="nn">NOT NULL</td><td class="note">UUID</td></tr>
+      <tr><td>key</td><td class="type">text</td><td class="nn">NOT NULL UNIQUE</td><td class="note">e.g. 'pihole_token', 'rss_feed_1_auth'</td></tr>
+      <tr><td>valueEncrypted</td><td class="type">text</td><td class="nn">NOT NULL</td><td class="note">AES-256-GCM. base64(iv + authTag + ciphertext)</td></tr>
+      <tr><td>createdAt</td><td class="type">integer</td><td class="nn">NOT NULL</td><td class="note">Unix ms</td></tr>
+      <tr><td>updatedAt</td><td class="type">integer</td><td class="nn">NOT NULL</td><td class="note">Unix ms</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="schema-table">
+  <div class="schema-header">
+    <span class="schema-name">licenseActivation</span>
+    <span class="schema-desc">Celestial tier activation. Ed25519-signed key stored and verified locally — no network call.</span>
+  </div>
+  <table>
+    <thead><tr><th>Column</th><th>Type</th><th>Null</th><th>Notes</th></tr></thead>
+    <tbody>
+      <tr><td class="pk">id</td><td class="type">text PK</td><td class="nn">NOT NULL</td><td class="note">UUID</td></tr>
+      <tr><td>licenseKey</td><td class="type">text</td><td class="nn">NOT NULL UNIQUE</td><td class="note">Raw key as provided by Gumroad email</td></tr>
+      <tr><td>tier</td><td class="type">text</td><td class="nn">NOT NULL</td><td class="note">'celestial'</td></tr>
+      <tr><td>licenseId</td><td class="type">text</td><td class="nn">NOT NULL</td><td class="note">UUID from key payload (extracted after Ed25519 verification)</td></tr>
+      <tr><td>issuedAt</td><td class="type">text</td><td class="nn">NOT NULL</td><td class="note">ISO 8601 from key payload</td></tr>
+      <tr><td>activatedAt</td><td class="type">integer</td><td class="nn">NOT NULL</td><td class="note">Unix ms — local activation timestamp</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="schema-table">
+  <div class="schema-header">
+    <span class="schema-name">notifications</span>
+    <span class="schema-desc">DB-persisted notifications. Survive restarts (unlike the old in-memory queue).</span>
+  </div>
+  <table>
+    <thead><tr><th>Column</th><th>Type</th><th>Null</th><th>Notes</th></tr></thead>
+    <tbody>
+      <tr><td class="pk">id</td><td class="type">text PK</td><td class="nn">NOT NULL</td><td class="note">UUID</td></tr>
+      <tr><td>type</td><td class="type">text</td><td class="nn">NOT NULL</td><td class="note">'update' | 'widget-error' | 'widget-warning' | 'system-alert' | 'info'</td></tr>
+      <tr><td>title</td><td class="type">text</td><td class="nn">NOT NULL</td><td class="note"></td></tr>
+      <tr><td>body</td><td class="type">text</td><td class="nn">NOT NULL</td><td class="note"></td></tr>
+      <tr><td>widgetId</td><td class="type">text</td><td>nullable</td><td class="note">Links to widget if applicable</td></tr>
+      <tr><td>read</td><td class="type">integer</td><td class="nn">NOT NULL</td><td class="note">0 | 1 (SQLite boolean)</td></tr>
+      <tr><td>timestamp</td><td class="type">integer</td><td class="nn">NOT NULL</td><td class="note">Unix ms</td></tr>
+    </tbody>
+  </table>
+</div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<section id="plugin-data">
+<h2>plugin_data Table</h2>
+
+<p>Key-value store for plugin persistence. Plugins cannot create DB tables — all persistent data goes through <code>WidgetContext.store</code>.</p>
+
+<div class="schema-table">
+  <div class="schema-header">
+    <span class="schema-name">plugin_data</span>
+    <span class="schema-desc">Plugin key-value persistence. Namespaced per plugin_id. Composite PK.</span>
+  </div>
+  <table>
+    <thead><tr><th>Column</th><th>Type</th><th>Null</th><th>Notes</th></tr></thead>
+    <tbody>
+      <tr><td class="pk">plugin_id</td><td class="type">text PK</td><td class="nn">NOT NULL</td><td class="note">Reverse-DNS widget ID (e.g. "net.phavo.cpu"). Composite PK with key.</td></tr>
+      <tr><td class="pk">key</td><td class="type">text PK</td><td class="nn">NOT NULL</td><td class="note">Arbitrary string key. Composite PK with plugin_id.</td></tr>
+      <tr><td>value</td><td class="type">text</td><td>nullable</td><td class="note">JSON-serialised value. null = deleted.</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<pre><span class="cm">// ctx.store API (never raw SQL from plugins)</span>
+<span class="kw">await</span> ctx.store.<span class="fn">set</span>(<span class="str">'lastRun'</span>, <span class="ty">JSON</span>.<span class="fn">stringify</span>(Date.now()))
+<span class="kw">await</span> ctx.store.<span class="fn">get</span>(<span class="str">'lastRun'</span>)        <span class="cm">// → string | null</span>
+<span class="kw">await</span> ctx.store.<span class="fn">delete</span>(<span class="str">'lastRun'</span>)
+
+<span class="cm">// Quota: 10MB per plugin_id enforced in ctx.store.set()</span>
+<span class="cm">// → { ok: false, error: 'Plugin data quota exceeded (10MB)' } on breach</span>
+<span class="cm">// Cleanup: plugin deletion cascades to all plugin_data rows for that plugin_id</span></pre>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<section id="encryption">
+<h2>Encryption Model</h2>
+
+<div class="callout info">
+  <strong>Algorithm scope:</strong>
+  AES-256-GCM = data at rest (credentials, config exports).
+  Ed25519 = digital signatures only (license key verification, plugin signing, Tauri updates).
+  Argon2id = password hashing (one-way).
+  PBKDF2-SHA256 = passphrase-protected config export key derivation only.
+</div>
+
+<h3>Key Derivation (data at rest)</h3>
+<div class="enc-flow">
+  <div class="enc-box"><div class="label">Source</div><div class="val">PHAVO_SECRET<br><span style="color:var(--outline);font-size:10px">env var / Docker secret</span></div></div>
+  <div class="enc-arrow">→</div>
+  <div class="enc-box"><div class="label">HKDF-SHA256</div><div class="val">256-bit key<br><span style="color:var(--outline);font-size:10px">info: "phavo-aes-key"</span></div></div>
+  <div class="enc-arrow">→</div>
+  <div class="enc-box green"><div class="label">AES-256-GCM Key</div><div class="val">CryptoKey object<br><span style="color:var(--outline);font-size:10px">cached in memory</span></div></div>
+</div>
+
+<h3>Encrypt / Decrypt</h3>
+<pre><span class="kw">async function</span> <span class="fn">encrypt</span>(plaintext: <span class="ty">string</span>): <span class="ty">Promise</span>&lt;<span class="ty">string</span>&gt; {
+  <span class="kw">const</span> iv  = crypto.<span class="fn">getRandomValues</span>(<span class="kw">new</span> <span class="ty">Uint8Array</span>(<span class="num">12</span>))
+  <span class="kw">const</span> enc = <span class="kw">await</span> crypto.subtle.<span class="fn">encrypt</span>({ name: <span class="str">'AES-GCM'</span>, iv }, aesKey, <span class="fn">encode</span>(plaintext))
+  <span class="kw">return</span> btoa([ ...iv, ...<span class="kw">new</span> <span class="ty">Uint8Array</span>(enc) ].<span class="fn">join</span>(<span class="str">','</span>))  <span class="cm">// iv(12) + ciphertext+authTag</span>
+}
+
+<span class="kw">async function</span> <span class="fn">decrypt</span>(stored: <span class="ty">string</span>): <span class="ty">Promise</span>&lt;<span class="ty">string</span>&gt; {
+  <span class="kw">const</span> bytes = <span class="kw">new</span> <span class="ty">Uint8Array</span>(atob(stored).<span class="fn">split</span>(<span class="str">','</span>).<span class="fn">map</span>(Number))
+  <span class="kw">const</span> iv  = bytes.<span class="fn">slice</span>(<span class="num">0</span>, <span class="num">12</span>)
+  <span class="kw">const</span> ct  = bytes.<span class="fn">slice</span>(<span class="num">12</span>)
+  <span class="kw">const</span> dec = <span class="kw">await</span> crypto.subtle.<span class="fn">decrypt</span>({ name: <span class="str">'AES-GCM'</span>, iv }, aesKey, ct)
+  <span class="kw">return</span> <span class="fn">decode</span>(dec)
+}</pre>
+
+<h3>PHAVO_SECRET Bootstrap</h3>
+<pre><span class="cm">// hooks.server.ts — on every server start</span>
+<span class="kw">const</span> secret = process.env.PHAVO_SECRET
+  ?? <span class="kw">await</span> <span class="fn">readOrCreateSecret</span>(<span class="str">`${PHAVO_DATA_DIR}/secret.key`</span>)
+<span class="cm">// If env var absent: generate 32-byte random, persist to volume.
+// User-provided env var overrides — required if PHAVO_DATA_DIR is ephemeral.</span></pre>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<section id="migrations">
+<h2>Migrations</h2>
+
+<p>Drizzle migrations run automatically on server start via <code>runMigrations()</code> in <code>hooks.server.ts</code>. Each migration is a pure SQL file. Always additive — no destructive DDL on existing columns.</p>
+
+<div class="tbl-wrap"><table>
+<thead><tr><th>File</th><th>Change</th></tr></thead>
+<tbody>
+  <tr><td><code>0001_spicy_clea.sql</code></td><td class="note">Initial schema: users, sessions, config, tabs, widgetInstances, credentials, licenseActivation</td></tr>
+  <tr><td><code>0002_keen_luminals.sql</code></td><td class="note">Add notifications table, plugin_data table</td></tr>
+  <tr><td><code>0003_auth_mode_rename.sql</code></td><td class="note">Migrate authMode 'phavo-io' → 'local' in sessions</td></tr>
+  <tr><td><code>0004_tier_rename.sql</code></td><td class="note">Rename tier values: free→stellar, standard→celestial, local→celestial. Remove graceUntil + validatedAt columns from sessions. Drop phavo-net authMode support.</td></tr>
+</tbody>
+</table></div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<section id="sveltekit">
+<h2>SvelteKit Shell</h2>
+
+<h3>hooks.server.ts — startup sequence</h3>
+<pre><span class="num">1.</span> Connect libSQL client (<span class="fn">createClient</span>({ url: PHAVO_DB_PATH }))
+<span class="num">2.</span> Run Drizzle migrations
+<span class="num">3.</span> Bootstrap PHAVO_SECRET → derive AES key → cache in module scope
+<span class="num">4.</span> Derive installMethod from PHAVO_ENV → write to config table if not present
+<span class="num">5.</span> Register graceful shutdown (SIGTERM, SIGINT)
+<span class="num">6.</span> Schedule session pruning (expired sessions deleted hourly)</pre>
+
+<h3>+layout.server.ts — per-request</h3>
+<pre><span class="kw">export const</span> load: <span class="ty">LayoutServerLoad</span> = <span class="kw">async</span> ({ cookies, url }) => {
+  <span class="kw">const</span> token   = cookies.<span class="fn">get</span>(<span class="str">'phavo_session'</span>)
+  <span class="kw">const</span> session = token ? <span class="kw">await</span> db.<span class="fn">getSession</span>(token) : <span class="kw">null</span>
+
+  <span class="kw">if</span> (!session && url.pathname !== <span class="str">'/login'</span> && !url.pathname.<span class="fn">startsWith</span>(<span class="str">'/setup'</span>))
+    <span class="kw">throw</span> <span class="fn">redirect</span>(<span class="num">302</span>, <span class="str">'/login'</span>)
+
+  <span class="kw">const</span> config = <span class="kw">await</span> db.<span class="fn">getConfig</span>()
+  <span class="kw">if</span> (session && !config.setupComplete && url.pathname !== <span class="str">'/setup'</span>)
+    <span class="kw">throw</span> <span class="fn">redirect</span>(<span class="num">302</span>, <span class="str">'/setup'</span>)
+
+  <span class="cm">// tier is intentionally NOT returned — upgrade prompts are cosmetic</span>
+  <span class="kw">return</span> { loggedIn: !!session, dashboardName: config.dashboardName }
+}</pre>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<section id="stores">
+<h2>Svelte Stores</h2>
+
+<p>All stores use Svelte 5 Runes (<code>$state</code>, <code>$derived</code>). No legacy writable/readable stores.</p>
+
+<div class="tbl-wrap"><table>
+<thead><tr><th>Store file</th><th>Exports</th><th>Responsibility</th></tr></thead>
+<tbody>
+  <tr><td><code>widgets.svelte.ts</code></td><td><code>widgetStore</code></td><td class="note">Widget instances, polling loop, state management (active/loading/error/stale/unconfigured)</td></tr>
+  <tr><td><code>config.svelte.ts</code></td><td><code>configStore</code></td><td class="note">Dashboard config, settings mutations via fetchWithCsrf()</td></tr>
+  <tr><td><code>session.svelte.ts</code></td><td><code>sessionStore</code></td><td class="note">Login state, username — no tier</td></tr>
+  <tr><td><code>notifications.svelte.ts</code></td><td><code>notifStore</code></td><td class="note">Notification list, unread count, mark-read</td></tr>
+  <tr><td><code>ai.svelte.ts</code></td><td><code>aiStore</code></td><td class="note">AI chat state, provider config (Celestial only)</td></tr>
+</tbody>
+</table></div>
+
+<h3>Widget polling pattern</h3>
+<pre><span class="cm">// widgets.svelte.ts — simplified</span>
+<span class="kw">class</span> <span class="ty">WidgetStore</span> {
+  instances = <span class="fn">$state</span>&lt;<span class="ty">WidgetInstance</span>[]&gt;([])
+
+  <span class="fn">startPolling</span>(instance: <span class="ty">WidgetInstance</span>) {
+    <span class="kw">const</span> poll = <span class="kw">async</span> () => {
+      instance.status = <span class="str">'loading'</span>
+      <span class="kw">try</span> {
+        <span class="kw">const</span> res = <span class="kw">await</span> <span class="fn">fetch</span>(instance.definition.dataEndpoint)
+        instance.data   = <span class="kw">await</span> res.<span class="fn">json</span>()
+        instance.status = <span class="str">'active'</span>
+        instance.lastUpdated = Date.now()
+      } <span class="kw">catch</span> {
+        instance.status = Date.now() - instance.lastUpdated &gt; <span class="num">2</span> * instance.definition.refreshInterval
+          ? <span class="str">'stale'</span> : <span class="str">'error'</span>
+      }
+    }
+    <span class="fn">poll</span>()
+    <span class="kw">return</span> <span class="fn">setInterval</span>(poll, instance.definition.refreshInterval)
+  }
+}</pre>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<section id="widget-system">
+<h2>Widget System</h2>
+
+<h3>WidgetDefinition contract</h3>
+<pre><span class="kw">interface</span> <span class="ty">WidgetDefinition</span> {
+  id:              <span class="ty">string</span>           <span class="cm">// reverse-DNS: "net.phavo.cpu"</span>
+  name:            <span class="ty">string</span>
+  description:     <span class="ty">string</span>
+  version:         <span class="ty">string</span>           <span class="cm">// semver</span>
+  author:          <span class="ty">string</span>           <span class="cm">// "phavo" for built-ins</span>
+  category:        <span class="str">'system'</span> | <span class="str">'consumer'</span> | <span class="str">'integration'</span> | <span class="str">'utility'</span> | <span class="str">'custom'</span>
+  tier:            <span class="str">'stellar'</span> | <span class="str">'celestial'</span>
+  sizes:           (<span class="str">'S'</span> | <span class="str">'M'</span> | <span class="str">'L'</span> | <span class="str">'XL'</span>)[]
+  configSchema?:   <span class="ty">ZodSchema</span>        <span class="cm">// drives auto-rendered settings panel</span>
+  dataEndpoint:    <span class="ty">string</span>           <span class="cm">// relative API path</span>
+  refreshInterval: <span class="ty">number</span>           <span class="cm">// ms, minimum 1000</span>
+  permissions:     <span class="ty">WidgetPermission</span>[]
+  notifications?:  { condition: <span class="ty">string</span>; type: <span class="ty">Notification</span>[<span class="str">'type'</span>] }[]
+}
+
+<span class="cm">// Teaser — sent to Stellar clients for locked Celestial widgets</span>
+<span class="kw">interface</span> <span class="ty">WidgetTeaserDefinition</span> {
+  id:          <span class="ty">string</span>
+  name:        <span class="ty">string</span>
+  description: <span class="ty">string</span>
+  tier:        <span class="str">'celestial'</span>
+  locked:      <span class="kw">true</span>
+  <span class="cm">// No dataEndpoint, configSchema, permissions</span>
+}</pre>
+
+<h3>Widget states</h3>
+<div class="tbl-wrap"><table>
+<thead><tr><th>State</th><th>Trigger</th><th>WidgetCard treatment</th></tr></thead>
+<tbody>
+  <tr><td><code>active</code></td><td class="note">Data loaded successfully</td><td class="note">Default surface — var(--surface-card)</td></tr>
+  <tr><td><code>loading</code></td><td class="note">First fetch in progress</td><td class="note">CSS skeleton shimmer (no JS)</td></tr>
+  <tr><td><code>error</code></td><td class="note">Fetch or config error</td><td class="note">var(--error-container) bg + icon + message</td></tr>
+  <tr><td><code>unconfigured</code></td><td class="note">configSchema present, not filled</td><td class="note">Muted surface + configure CTA button</td></tr>
+  <tr><td><code>stale</code></td><td class="note">Data age &gt; 2× refreshInterval</td><td class="note">2px top border stripe var(--outline)</td></tr>
+</tbody>
+</table></div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<section id="bento-grid">
+<h2>BentoGrid</h2>
+
+<pre><span class="cm">/* packages/ui/src/BentoGrid.svelte */</span>
+.bento-grid {
+  display: grid;
+  grid-template-columns: repeat(<span class="num">12</span>, 1fr);
+  gap: var(--space-4);    <span class="cm">/* 16px */</span>
+  align-items: start;
+}
+@media (max-width: <span class="num">1024</span>px) { .bento-grid { grid-template-columns: repeat(<span class="num">6</span>, 1fr); } }
+@media (max-width:  <span class="num">640</span>px) { .bento-grid { grid-template-columns: <span class="num">1</span>fr; } }</pre>
+
+<div class="tbl-wrap"><table>
+<thead><tr><th>Size</th><th>colSpan</th><th>rowSpan</th><th>Content depth</th></tr></thead>
+<tbody>
+  <tr><td>S</td><td>3</td><td>1</td><td class="note">Number + label only</td></tr>
+  <tr><td>M</td><td>4</td><td>2</td><td class="note">Stat + progress + subtitle</td></tr>
+  <tr><td>L</td><td>6</td><td>2</td><td class="note">Stat + chart or list</td></tr>
+  <tr><td>XL</td><td>8</td><td>3</td><td class="note">Full data story + nebula glow + WishStar</td></tr>
+</tbody>
+</table></div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<section id="design-tokens">
+<h2>Design Tokens</h2>
+
+<div class="callout warn">
+  <strong>Iron rule:</strong> Zero hardcoded hex/rgb/hsl values in <code>@phavo/ui</code>. Every color comes from a CSS token. No exceptions. Violations fail code review.
+</div>
+
+<p>All tokens are defined in <code>packages/ui/src/theme.css</code> using a Tailwind v4 <code>@theme</code> block. Tokens are dual-valid — usable as utility classes (<code>bg-surface</code>) and CSS variables (<code>var(--color-surface)</code>).</p>
+
+<h3>Surface tier order (bottom → top)</h3>
+<pre>--color-surface-dim        <span class="cm">#0a0e1a  ← page background (deepest void)</span>
+--color-surface            <span class="cm">#0f131f  ← main content area</span>
+--color-surface-low        <span class="cm">#171b28  ← sidebar, secondary panels</span>
+--color-surface-card       <span class="cm">#1b1f2c  ← widget cards (base)</span>
+--color-surface-high       <span class="cm">#262a37  ← widget cards (hover / raised)</span>
+--color-surface-bright     <span class="cm">#353946  ← modals, glass overlays</span></pre>
+
+<h3>Accent palette</h3>
+<pre>--color-primary            <span class="cm">#dcc66e  ← Soft Gold — wordmark, hero stats, active nav</span>
+--color-secondary          <span class="cm">#3fc8a0  ← Teal — progress bars, system online</span>
+--color-tertiary           <span class="cm">#a89cf5  ← Cosmic Purple — nebula glows, gradient accents</span></pre>
+
+<h3>Glassmorphism + Pi 3/4 fallback</h3>
+<pre>.glass {
+  background: color-mix(<span class="kw">in srgb</span>, var(--color-surface-bright) <span class="num">50%</span>, transparent);
+  backdrop-filter: blur(<span class="num">20px</span>);
+}
+<span class="cm">/* Pi 3/4 at 1x: no GPU backdrop-filter support */</span>
+@media (prefers-reduced-motion: reduce), (max-resolution: <span class="num">1.5</span>dppx) {
+  .glass {
+    background: var(--color-surface-high);
+    backdrop-filter: none;
+  }
+}</pre>
+
+<h3>Typography scale</h3>
+<div class="tbl-wrap"><table>
+<thead><tr><th>Role</th><th>Size</th><th>Weight</th><th>Letter-spacing</th><th>Color</th></tr></thead>
+<tbody>
+  <tr><td>Page title</td><td>32px</td><td>300</td><td>-0.02em</td><td class="note">--color-on-surface</td></tr>
+  <tr><td>Hero stat</td><td>48–64px</td><td>300</td><td>-0.03em</td><td class="note">--color-primary</td></tr>
+  <tr><td>Stat unit</td><td>20px</td><td>400</td><td>0</td><td class="note">--color-on-surface-var</td></tr>
+  <tr><td>Section heading</td><td>16px</td><td>500</td><td>-0.01em</td><td class="note">--color-on-surface</td></tr>
+  <tr><td>Category label</td><td>11px</td><td>500</td><td>0.1em</td><td class="note">--color-on-surface-var (ALL CAPS)</td></tr>
+  <tr><td>Body</td><td>13px</td><td>400</td><td>0</td><td class="note">--color-on-surface-var</td></tr>
+  <tr><td>Caption</td><td>11px</td><td>400</td><td>0</td><td class="note">--color-outline</td></tr>
+</tbody>
+</table></div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<section id="license">
+<h2>License Activation (Celestial)</h2>
+
+<h3>Key format</h3>
+<pre><span class="cm">// base64url( ed25519_signature(64 bytes) || utf8(json_payload) )</span>
+
+<span class="cm">// Payload:</span>
+{
+  <span class="str">"tier"</span>:      <span class="str">"celestial"</span>,
+  <span class="str">"licenseId"</span>: <span class="str">"&lt;uuid&gt;"</span>,
+  <span class="str">"issuedAt"</span>:  <span class="str">"&lt;iso8601&gt;"</span>
+}</pre>
+
+<h3>Activation flow</h3>
+<pre>POST /api/v1/license/activate  { key: string }
+
+<span class="num">1.</span> <span class="fn">base64urlDecode</span>(key) → signature(64 bytes) + payload bytes
+<span class="num">2.</span> <span class="fn">ed25519Verify</span>(signature, payloadBytes, embeddedPublicKey)  → 400 on fail
+<span class="num">3.</span> <span class="fn">JSON</span>.<span class="fn">parse</span>(payloadBytes) → { tier, licenseId, issuedAt }
+<span class="num">4.</span> INSERT licenseActivation { licenseKey: key, tier, licenseId, issuedAt, activatedAt: now() }
+<span class="num">5.</span> UPDATE sessions SET tier = 'celestial' WHERE id = currentSessionId
+<span class="num">6.</span> <span class="kw">return</span> { ok: <span class="kw">true</span>, data: { tier: 'celestial', licenseId, issuedAt } }
+
+<span class="cm">// On every server start:</span>
+<span class="cm">// SELECT licenseActivation. If present: re-verify Ed25519. Fail → fall back to stellar.</span></pre>
+
+<h3>Ed25519 key management</h3>
+<pre><span class="cm">// Two public keys embedded in binary (current + next) for rotation</span>
+<span class="kw">const</span> EMBEDDED_PUBLIC_KEYS = [
+  <span class="str">'&lt;base64-current-pubkey&gt;'</span>,
+  <span class="str">'&lt;base64-next-pubkey&gt;'</span>,   <span class="cm">// pre-loaded for zero-downtime rotation</span>
+]
+
+<span class="cm">// Private key: GitHub Actions Secrets only — never in repo</span>
+<span class="cm">// Rotation: promote next→current, generate new next, ship in next release</span></pre>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<section id="notifications">
+<h2>Notifications</h2>
+
+<p>DB-persisted (not in-memory). Survive restarts. Pushed via widgets and core modules using the <code>notify()</code> function.</p>
+
+<pre><span class="cm">// @phavo/types</span>
+<span class="kw">export type</span> <span class="ty">NotifyFn</span> = (n: <span class="ty">Omit</span>&lt;<span class="ty">Notification</span>, <span class="str">'id'</span> | <span class="str">'timestamp'</span> | <span class="str">'read'</span>&gt;) => <span class="ty">Promise</span>&lt;<span class="kw">void</span>&gt;
+
+<span class="cm">// Built-in triggers:</span>
+<span class="cm">// Disk usage &gt;90%         → widget-warning</span>
+<span class="cm">// CPU temp &gt;80°C          → system-alert</span>
+<span class="cm">// Pi-hole 3 failed polls  → widget-error</span>
+<span class="cm">// RSS consistently failing→ widget-error</span>
+<span class="cm">// Update available        → update</span></pre>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<section id="export-import">
+<h2>Export / Import</h2>
+
+<h3>Export format (.phavo)</h3>
+<pre>{
+  <span class="str">"version"</span>: <span class="num">1</span>,
+  <span class="str">"exportedAt"</span>: <span class="str">"&lt;iso8601&gt;"</span>,
+  <span class="str">"dashboardName"</span>: <span class="str">"My Dashboard"</span>,
+  <span class="str">"tabs"</span>: [ ... ],
+  <span class="str">"widgetInstances"</span>: [ ... ],        <span class="cm">// config included, credentials excluded by default</span>
+  <span class="str">"credentials"</span>: <span class="str">"&lt;aes-gcm-blob&gt;"</span>   <span class="cm">// optional: user-passphrase encrypted</span>
+}</pre>
+
+<h3>Import edge cases</h3>
+<div class="tbl-wrap"><table>
+<thead><tr><th>Scenario</th><th>Behaviour</th></tr></thead>
+<tbody>
+  <tr><td>Stellar imports config with 3 pages</td><td class="note">Server caps at 1 page, discards rest. Returns <code>{ warnings: ['Page count reduced to 1 (Stellar limit)'] }</code></td></tr>
+  <tr><td>Import contains Celestial widgets on Stellar session</td><td class="note">Widgets added to DB but data endpoints return 403 — appear locked until upgrade</td></tr>
+  <tr><td>Import has credentials but no passphrase provided</td><td class="note">Credentials blob ignored. Widgets show 'unconfigured' state.</td></tr>
+  <tr><td>Import file is malformed JSON</td><td class="note">Client-side check — "Invalid file" error, no request sent</td></tr>
+  <tr><td>Import version mismatch</td><td class="note">Version 1 always accepted. Future: migration applied or 400.</td></tr>
+</tbody>
+</table></div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<section id="update-mechanism">
+<h2>Update Mechanism</h2>
+
+<pre><span class="cm">// GET /api/v1/system/update/check — user-initiated, 1h server-side cache</span>
+<span class="kw">const</span> res = <span class="kw">await</span> <span class="fn">fetch</span>(<span class="str">'https://api.github.com/repos/getphavo/phavo/releases/latest'</span>)
+<span class="kw">const</span> { tag_name, body } = <span class="kw">await</span> res.<span class="fn">json</span>()
+<span class="kw">return</span> { updateAvailable: <span class="fn">semverGt</span>(tag_name, PHAVO_VERSION), version: tag_name, changelog: body }
+
+<span class="cm">// installMethod determines what the update panel shows:</span>
+<span class="cm">// 'docker-compose' → Docker Compose pull snippet + optional one-click (if socket available)</span>
+<span class="cm">// 'bun-direct'     → Bun CLI snippet</span>
+<span class="cm">// 'tauri'          → "Updates handled automatically by the app"</span></pre>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<section id="plugin-system">
+<h2>Plugin System</h2>
+
+<h3>Plugin file structure (.phwidget ZIP)</h3>
+<pre>my-widget.phwidget/
+├── manifest.json      <span class="cm">← id, name, version, tier, permissions, configSchema, ...</span>
+├── handler.ts         <span class="cm">← Hono route handler (server-side)</span>
+└── Widget.svelte      <span class="cm">← Svelte 5 component (frontend)</span></pre>
+
+<h3>Import allowlist (enforced at load time)</h3>
+<pre><span class="kw">const</span> ALLOWED_IMPORTS = [
+  <span class="str">'@phavo/types'</span>, <span class="str">'@phavo/agent'</span>, <span class="str">'@phavo/plugin-sdk'</span>,
+  <span class="str">'hono'</span>, <span class="str">'zod'</span>,
+  <span class="cm">// Node/Bun built-ins: 'node:fs', 'node:path', 'node:crypto', etc.</span>
+]
+<span class="cm">// Static analysis at load time. Import outside allowlist → plugin rejected, error logged.</span></pre>
+
+<h3>Rate limits</h3>
+<pre>POST /api/v1/plugins/upload   → 5 complete uploads per 10 minutes per session
+plugin_data per plugin_id     → 10MB quota enforced server-side</pre>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<section id="docker">
+<h2>Docker</h2>
+
+<pre><span class="cm"># docker-compose.yml (recommended)</span>
+services:
+  phavo:
+    image: getphavo/phavo:latest
+    ports:
+      - <span class="str">"3000:3000"</span>
+      - <span class="str">"3443:3443"</span>
+    volumes:
+      - phavo-data:/data
+    environment:
+      - PHAVO_SECRET=<span class="str">&lt;your-secret&gt;</span>    <span class="cm"># optional — auto-generated if absent</span>
+    restart: unless-stopped
+    <span class="cm"># Optional: Docker socket for container restart widget + one-click updates</span>
+    <span class="cm"># volumes: - /var/run/docker.sock:/var/run/docker.sock:ro</span>
+
+volumes:
+  phavo-data:</pre>
+
+<div class="tbl-wrap"><table>
+<thead><tr><th>Property</th><th>Value</th></tr></thead>
+<tbody>
+  <tr><td>Base image</td><td class="note">oven/bun:alpine</td></tr>
+  <tr><td>Architectures</td><td class="note">linux/amd64, linux/arm64 (Raspberry Pi 3/4/5)</td></tr>
+  <tr><td>User</td><td class="note">Non-root <code>phavo</code> system user</td></tr>
+  <tr><td>Filesystem</td><td class="note">Read-only except /data volume</td></tr>
+  <tr><td>HEALTHCHECK</td><td class="note"><code>GET /api/v1/system/health</code> (public endpoint)</td></tr>
+  <tr><td>Docker Hub</td><td class="note">getphavo/phavo — tagged :VERSION + :latest on release</td></tr>
+</tbody>
+</table></div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<section id="env">
+<h2>Environment Variables</h2>
+
+<div class="tbl-wrap"><table>
+<thead><tr><th>Variable</th><th>Default (Docker)</th><th>Tauri value</th><th>Purpose</th></tr></thead>
+<tbody>
+  <tr><td><code>PHAVO_DB_PATH</code></td><td class="note">/data/phavo.db</td><td class="note">OS app data dir + /phavo.db</td><td class="note">libSQL database path</td></tr>
+  <tr><td><code>PHAVO_DATA_DIR</code></td><td class="note">/data</td><td class="note">OS app data dir</td><td class="note">Parent for DB, certs, plugins, secret.key</td></tr>
+  <tr><td><code>PHAVO_PORT</code></td><td class="note">3000</td><td class="note">Dynamic free port</td><td class="note">HTTP port</td></tr>
+  <tr><td><code>PHAVO_HTTPS_PORT</code></td><td class="note">3443</td><td class="note">Not used</td><td class="note">HTTPS port</td></tr>
+  <tr><td><code>PHAVO_ENV</code></td><td class="note">docker</td><td class="note">tauri</td><td class="note">Platform identifier → installMethod</td></tr>
+  <tr><td><code>PHAVO_SECRET</code></td><td class="note">auto-generated</td><td class="note">auto-generated</td><td class="note">AES key source. Override for ephemeral volumes.</td></tr>
+  <tr><td><code>PHAVO_TRUST_PROXY</code></td><td class="note">false</td><td class="note">false</td><td class="note">true when behind nginx/Caddy/Traefik — reads X-Forwarded-For for rate limiting</td></tr>
+  <tr><td><code>PHAVO_PLUGIN_DEV_DIR</code></td><td class="note">unset</td><td class="note">unset</td><td class="note">Hot-reload from local dir. Dev env only.</td></tr>
+</tbody>
+</table></div>
+
+<div class="callout warn">
+  <strong>Iron rule:</strong> Never use <code>/data/</code> as a literal string anywhere in <code>packages/</code> or <code>apps/web/src/lib/server/</code>. Always read from <code>process.env.PHAVO_DATA_DIR</code>.
+</div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<section id="mobile">
+<h2>Mobile / Responsive</h2>
+
+<div class="tbl-wrap"><table>
+<thead><tr><th>Element</th><th>Mobile (&lt;640px)</th><th>Tablet (640–1024px)</th><th>Desktop (&gt;1024px)</th></tr></thead>
+<tbody>
+  <tr><td>Sidebar</td><td class="note">Hidden → bottom nav bar (tab icons)</td><td class="note">Icon-only rail (64px), hover tooltip</td><td class="note">Full sidebar (240px) with labels</td></tr>
+  <tr><td>Widget grid</td><td class="note">1 column, full width</td><td class="note">6-column (half)</td><td class="note">12-column BentoGrid</td></tr>
+  <tr><td>Widget S/M</td><td class="note">Expand to full width</td><td class="note">Span adjusted</td><td class="note">Native colSpan</td></tr>
+  <tr><td>Header</td><td class="note">Logo + bell + hamburger</td><td class="note">Full header (clock, bell, avatar)</td><td class="note">Full header</td></tr>
+  <tr><td>Settings</td><td class="note">Tab list stacks vertically</td><td class="note">Horizontal tab bar</td><td class="note">Horizontal tab bar</td></tr>
+  <tr><td>Notification panel</td><td class="note">Full-screen overlay</td><td class="note">380px right drawer</td><td class="note">380px right drawer</td></tr>
+  <tr><td>Widget drawer</td><td class="note">Bottom sheet</td><td class="note">Right drawer</td><td class="note">Right drawer</td></tr>
+</tbody>
+</table></div>
+
+<pre><span class="cm">Touch targets:  min 44×44px (WCAG 2.1 AA)
+Drag-and-drop:  disabled on mobile — tap-to-select + arrow buttons instead
+Font size:      minimum 13px body, 11px labels
+Horizontal scroll: never, tested at 375px (iPhone SE)</span></pre>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<section id="csp">
+<h2>Content Security Policy</h2>
+
+<p>Applied as HTTP response header on all dashboard pages via Hono middleware.</p>
+
+<pre><span class="acc">Content-Security-Policy:</span>
+  default-src 'self';
+  script-src  'self';                  <span class="cm">/* no inline scripts */</span>
+  style-src   'self';                  <span class="cm">/* @fontsource served from self — no CDN */</span>
+  font-src    'self';                  <span class="cm">/* Geist + Geist Mono via @fontsource, self-hosted */</span>
+  img-src     'self' data: https:;    <span class="cm">/* data: for widget icons */</span>
+  connect-src 'self'
+              https://api.open-meteo.com    <span class="cm">/* weather */</span>
+              https://api.github.com;       <span class="cm">/* update check only */</span>
+  frame-src   'none';
+  object-src  'none';
+  base-uri    'self';
+  form-action 'self';</pre>
+
+<div class="callout info">
+  Fonts are self-hosted via <code>@fontsource/geist</code> and <code>@fontsource/geist-mono</code>.
+  The CSP does not allowlist <code>fonts.googleapis.com</code> or <code>fonts.gstatic.com</code> — Google Fonts CDN is never used.
+</div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<section id="rate-limits">
+<h2>Rate Limits</h2>
+
+<p>In-memory counters (Phase 1, single instance). Per-IP for unauthenticated, per-session for authenticated endpoints.</p>
+
+<div class="callout info">
+  Set <code>PHAVO_TRUST_PROXY=true</code> when running behind nginx/Caddy/Traefik to read <code>X-Forwarded-For</code> for real client IP. Default: false (use socket IP directly).
+</div>
+
+<div class="tbl-wrap"><table>
+<thead><tr><th>Endpoint</th><th>Limit</th><th>Window</th><th>Key</th></tr></thead>
+<tbody>
+  <tr><td><code>POST /auth/login</code></td><td>10 req</td><td>5 min</td><td>per IP + per account</td></tr>
+  <tr><td><code>POST /auth/totp/*</code></td><td>5 req</td><td>5 min</td><td>per IP</td></tr>
+  <tr><td><code>POST /auth/*</code> (other)</td><td>30 req</td><td>1 min</td><td>per IP</td></tr>
+  <tr><td>Integration endpoints</td><td>60 req</td><td>1 min</td><td>per session</td></tr>
+  <tr><td><code>GET /system/update/check</code></td><td>1 req</td><td>1 hour</td><td>per session (cached)</td></tr>
+  <tr><td><code>POST /config/import</code></td><td>5 req</td><td>10 min</td><td>per session</td></tr>
+  <tr><td><code>POST /config</code></td><td>20 req</td><td>1 min</td><td>per session</td></tr>
+  <tr><td>Metric endpoints</td><td>60 req</td><td>1 min</td><td>per session</td></tr>
+  <tr><td><code>POST /plugins/upload</code></td><td>5 uploads</td><td>10 min</td><td>per session</td></tr>
+  <tr><td><code>POST /license/activate</code></td><td>5 req</td><td>1 hour</td><td>per IP</td></tr>
+</tbody>
+</table></div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<section id="sec-decisions">
+<h2>Security Decisions Summary</h2>
+
+<div class="tbl-wrap"><table>
+<thead><tr><th>#</th><th>Decision</th><th>Rationale</th></tr></thead>
+<tbody>
+  <tr><td>1</td><td class="note">requireTier() re-reads tier from DB on every request via licenseActivation lookup</td><td class="note">Cookie modification has zero effect — tier is server-controlled</td></tr>
+  <tr><td>2</td><td class="note">Session token is 32-byte random base64url — no JWT, no payload</td><td class="note">Nothing to decode, nothing to forge</td></tr>
+  <tr><td>3</td><td class="note">No tier column in users or config tables</td><td class="note">DB editing cannot elevate tier</td></tr>
+  <tr><td>4</td><td class="note">License key is Ed25519-signed payload — verified locally against two embedded public keys (current + next) on activation and on every server start</td><td class="note">Fully offline. Tampered key fails signature verification → stellar behaviour.</td></tr>
+  <tr><td>5</td><td class="note">Widget manifest returns teasers (no dataEndpoint) for locked Celestial widgets when session is stellar</td><td class="note">Client has no information to call locked endpoints even with devtools</td></tr>
+  <tr><td>6</td><td class="note">Tier never serialised into client HTML or Svelte stores</td><td class="note">Upgrade prompts are cosmetic UX only — server enforces access independently</td></tr>
+  <tr><td>7</td><td class="note">Fonts self-hosted via @fontsource — CSP allowlists no external font CDN</td><td class="note">Eliminates Google Fonts network dependency and privacy concern</td></tr>
+  <tr><td>8</td><td class="note">Plugin import allowlist enforced by static analysis at load time</td><td class="note">Malicious plugins rejected before any code executes</td></tr>
+  <tr><td>9</td><td class="note">Plugin permissions declared in manifest.json — undeclared capabilities blocked at runtime</td><td class="note">Defense-in-depth alongside import allowlist</td></tr>
+  <tr><td>10</td><td class="note">No telemetry. No analytics. No outbound calls at runtime except user-initiated actions.</td><td class="note">Privacy by design — zero data leaves the device unless user explicitly triggers it</td></tr>
+  <tr><td>11</td><td class="note">SSRF guard on all user-provided URLs — private IP ranges, localhost, and cloud metadata endpoints blocked</td><td class="note">Prevents widgets from being used to attack internal network</td></tr>
+  <tr><td>12</td><td class="note">execFile() used for all subprocesses — never exec()</td><td class="note">Prevents shell injection in update and Docker socket commands</td></tr>
+</tbody>
+</table></div>
+
+<p style="margin-top:24px;font-size:12px;color:var(--outline)">
+  Phavo Architecture Spec v3.0 · phavo.net · github.com/getphavo/phavo
+</p>
+</section>
+
+</main>
+
+<script>
+const sections = document.querySelectorAll('section[id]')
+const links = document.querySelectorAll('nav a')
+const obs = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      links.forEach(l => l.classList.remove('active'))
+      const active = document.querySelector(`nav a[href="#${e.target.id}"]`)
+      if (active) active.classList.add('active')
+    }
+  })
+}, { rootMargin: '-20% 0px -75% 0px' })
+sections.forEach(s => obs.observe(s))
+</script>
+</body>
+</html>

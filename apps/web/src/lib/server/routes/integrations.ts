@@ -87,7 +87,7 @@ function buildRssFeedAuth(
 }
 
 export function registerIntegrationRoutes(app: Hono<{ Variables: AppVariables }>): void {
-  app.get('/pihole', requireTier('standard'), async (c) => {
+  app.get('/pihole', requireTier('celestial'), async (c) => {
     try {
       const credentials = await findConfiguredPiholeCredentials();
 
@@ -96,9 +96,9 @@ export function registerIntegrationRoutes(app: Hono<{ Variables: AppVariables }>
           serverNotify({
             type: 'widget-error',
             title: 'Pi-hole not configured',
-            body: 'Add your Pi-hole URL and token in Settings.',
+            message: 'Add your Pi-hole URL and token in Settings.',
             widgetId: 'pihole',
-            settingsTab: 'widgets',
+            actionUrl: '/settings?tab=widgets',
           });
           piholeMissingConfigNotified = true;
         }
@@ -118,9 +118,9 @@ export function registerIntegrationRoutes(app: Hono<{ Variables: AppVariables }>
         serverNotify({
           type: 'widget-error',
           title: 'Pi-hole unreachable',
-          body: 'Phavo could not reach your Pi-hole instance after 3 attempts.',
+          message: 'Phavo could not reach your Pi-hole instance after 3 attempts.',
           widgetId: 'pihole',
-          settingsTab: 'widgets',
+          actionUrl: '/settings?tab=widgets',
         });
         piholeFailureCount = 0;
       }
@@ -129,7 +129,7 @@ export function registerIntegrationRoutes(app: Hono<{ Variables: AppVariables }>
     }
   });
 
-  app.post('/pihole/test', requireTier('standard'), async (c) => {
+  app.post('/pihole/test', requireTier('celestial'), async (c) => {
     try {
       let rawBody: unknown;
       try {
@@ -160,7 +160,7 @@ export function registerIntegrationRoutes(app: Hono<{ Variables: AppVariables }>
     }
   });
 
-  app.get('/rss', requireTier('standard'), async (c) => {
+  app.get('/rss', requireTier('celestial'), async (c) => {
     try {
       const instances = await db
         .select()
@@ -212,7 +212,7 @@ export function registerIntegrationRoutes(app: Hono<{ Variables: AppVariables }>
     }
   });
 
-  app.get('/links', requireTier('standard'), async (c) => {
+  app.get('/links', requireTier('celestial'), async (c) => {
     try {
       const instances = await db
         .select()

@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { env } from '@phavo/types/env';
 import { sveltekit } from '@sveltejs/kit/vite';
+import tailwindcss from '@tailwindcss/vite';
 import { defineConfig, loadEnv } from 'vite';
 
 // Read root package.json for the monorepo version. The try/catch guards against
@@ -27,7 +28,7 @@ export default defineConfig(({ mode }) => {
   };
 
   return {
-    plugins: [sveltekit()],
+    plugins: [tailwindcss(), sveltekit()],
     define: processEnvDefines,
     server: {
       port: env.port,

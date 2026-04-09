@@ -1,10 +1,9 @@
 <script lang="ts">
-  import { Badge, Button, Input, icons } from '@phavo/ui';
+  import { Badge, Button, Icon, Input } from '@phavo/ui';
   import en from '$lib/i18n/en.json';
   import { fetchWithCsrf } from '$lib/utils/api';
-  import SettingsSection from './SettingsSection.svelte';
 
-  type Tier = 'free' | 'standard' | 'local';
+  type Tier = 'stellar' | 'celestial';
   type AuthMode = 'phavo-net' | 'local' | null;
 
   interface Props {
@@ -23,14 +22,12 @@
   let successMessage = $state('');
 
   function tierVariant(value: Tier) {
-    if (value === 'standard') return 'accent';
-    if (value === 'local') return 'success';
+    if (value === 'celestial') return 'accent';
     return 'default';
   }
 
   function tierLabel(value: Tier) {
-    if (value === 'standard') return en.settings.tierStandard;
-    if (value === 'local') return en.settings.tierLocal;
+    if (value === 'celestial') return en.settings.tierStandard;
     return en.settings.tierFree;
   }
 
@@ -109,175 +106,162 @@
   }
 </script>
 
-<div class="licence-stack">
-  <SettingsSection
-    eyebrow="Licence"
-    title="Current entitlement"
-    description="Review the active tier and the masked key attached to this installation."
-  >
-    <div class="licence-summary">
-      <div class="licence-card">
-        <span class="setting-label">{en.settings.tier}</span>
+<div class="licence-layout">
+  <div class="settings-hero-card">
+    <span class="settings-card-label">LICENCE TIER</span>
+    <h2 class="settings-hero-value">{tierLabel(tier)}</h2>
+    <p class="settings-hero-sub">{tier === 'celestial' ? 'Full access to all widgets and features' : 'Base tier — upgrade to unlock all widgets'}</p>
+    <div class="licence-badge-row">
+      <Badge variant={tierVariant(tier)}>{tierLabel(tier)}</Badge>
+    </div>
+  </div>
+
+  <div class="settings-form-card">
+    <h3 class="settings-form-title">Current Entitlement</h3>
+    <div class="licence-meta-grid">
+      <div class="licence-meta-item">
+        <span class="settings-field-label">{en.settings.tier}</span>
         <Badge variant={tierVariant(tier)}>{tierLabel(tier)}</Badge>
       </div>
-      <div class="licence-card">
-        <span class="setting-label">{en.settings.licenseKey}</span>
-        <p class="licence-key" class:mono={!!licenseKeyMasked}>
+      <div class="licence-meta-item">
+        <span class="settings-field-label">{en.settings.licenseKey}</span>
+        <p class="licence-key-value" class:licence-key-mono={!!licenseKeyMasked}>
           {licenseKeyMasked ?? en.settings.noLicense}
         </p>
       </div>
     </div>
 
-    {#if authMode === 'phavo-net' && tier !== 'local'}
-      <div class="info-panel">
+    {#if authMode === 'phavo-net'}
+      <div class="licence-info-panel">
         <p>{en.settings.manageLicenseHosted}</p>
-        <a class="external-link" href={manageUrl} target="_blank" rel="noreferrer">
-          <span>{en.settings.manageLicense}</span>
-          <span class="external-icon">{@html icons.external()}</span>
+        <a class="settings-help-link" href={manageUrl} target="_blank" rel="noreferrer">
+          {en.settings.manageLicense}
+          <Icon name="external-link" size={14} />
         </a>
       </div>
     {/if}
-  </SettingsSection>
+  </div>
 
-  {#if tier !== 'local'}
-    <SettingsSection
-      title={en.settings.activateLicense}
-      description={en.settings.licenseActivationHint}
-      tone="accent"
-    >
-      <div class="form-panel">
+  {#if authMode !== 'local'}
+    <div class="settings-form-card">
+      <h3 class="settings-form-title">{en.settings.activateLicense}</h3>
+      <p class="licence-hint">{en.settings.licenseActivationHint}</p>
+      <div>
+        <label class="settings-field-label">{en.settings.enterLicenseKey}</label>
         <Input
-          label={en.settings.enterLicenseKey}
           placeholder={en.settings.licenseKeyPlaceholder}
           bind:value={licenseKey}
         />
       </div>
-
-      {#snippet footer()}
-        <Button onclick={activateLicense} disabled={activating}>
+      <div class="settings-form-actions">
+        <span></span>
+        <button class="settings-btn-primary" type="button" onclick={activateLicense} disabled={activating}>
           {activating ? en.settings.activatingLicense : en.settings.activateLicense}
-        </Button>
-      {/snippet}
-    </SettingsSection>
-  {:else}
-    <SettingsSection
-      title={en.settings.localLicenseActive}
-      description={en.settings.licenseDeactivateHint}
-      tone="danger"
-    >
-      <div class="info-panel">
-        <p>{en.settings.licenseDeactivateHint}</p>
+        </button>
       </div>
-
-      {#snippet footer()}
-        <Button variant="danger" onclick={deactivateLicense} disabled={deactivating}>
+    </div>
+  {:else}
+    <div class="settings-form-card">
+      <h3 class="settings-form-title">{en.settings.localLicenseActive}</h3>
+      <p class="licence-hint">{en.settings.licenseDeactivateHint}</p>
+      <div class="settings-form-actions">
+        <span></span>
+        <button class="settings-btn-danger" type="button" onclick={deactivateLicense} disabled={deactivating}>
+          <Icon name="shield-off" size={14} />
           {deactivating ? en.settings.deactivatingLicense : en.settings.deactivateLicense}
-        </Button>
-      {/snippet}
-    </SettingsSection>
+        </button>
+      </div>
+    </div>
   {/if}
 
   {#if successMessage}
-    <p class="status-message status-success">{successMessage}</p>
+    <div class="licence-msg licence-msg-success">{successMessage}</div>
   {/if}
 
   {#if errorMessage}
-    <p class="status-message status-error">{errorMessage}</p>
+    <div class="licence-msg licence-msg-error">{errorMessage}</div>
   {/if}
 </div>
 
 <style>
-  .licence-stack {
+  .licence-layout {
     display: flex;
     flex-direction: column;
     gap: var(--space-4);
   }
 
-  .licence-summary {
+  .licence-badge-row {
+    margin-top: var(--space-2);
+  }
+
+  .licence-meta-grid {
     display: grid;
     gap: var(--space-4);
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .licence-card {
+  .licence-meta-item {
     display: flex;
     flex-direction: column;
     gap: var(--space-2);
-    padding: var(--space-4);
-    border-radius: calc(var(--radius-xl) - 4px);
-    border: 1px solid var(--color-border-subtle);
-    background: color-mix(in srgb, var(--color-bg-base) 24%, transparent);
   }
 
-  .setting-label {
-    color: var(--color-text-muted);
-    display: block;
-    font-size: 0.8rem;
-    text-transform: uppercase;
-    letter-spacing: 0.16em;
-  }
-
-  .licence-key {
+  .licence-key-value {
     margin: 0;
-    color: var(--color-text-primary);
-    font-family: var(--font-ui);
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--color-on-surface);
   }
 
-  .form-panel,
-  .info-panel {
+  .licence-key-mono {
+    font-family: var(--font-mono);
+  }
+
+  .licence-info-panel {
     display: flex;
     flex-direction: column;
     gap: var(--space-3);
-  }
-
-  .info-panel {
     padding: var(--space-4);
-    border-radius: calc(var(--radius-xl) - 4px);
-    border: 1px solid var(--color-border-subtle);
-    background: color-mix(in srgb, var(--color-bg-base) 24%, transparent);
-    color: var(--color-text-secondary);
+    border-radius: 1.5rem;
+    border: 1px solid color-mix(in srgb, var(--color-outline-variant) 10%, transparent);
+    background: color-mix(in srgb, var(--color-surface-dim) 60%, transparent);
+    color: var(--color-on-surface-variant);
   }
 
-  .info-panel p {
+  .licence-info-panel p {
     margin: 0;
     line-height: 1.6;
+    font-size: 13px;
   }
 
-  .external-link {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--space-2);
-    color: var(--color-accent-text);
-    text-decoration: none;
-    font-weight: 600;
-  }
-
-  .external-icon {
-    display: inline-flex;
-  }
-
-  .status-message {
+  .licence-hint {
+    font-size: 13px;
+    color: var(--color-on-surface-variant);
     margin: 0;
+    line-height: 1.5;
+  }
+
+  .licence-msg {
     padding: var(--space-3) var(--space-4);
-    border-radius: calc(var(--radius-xl) - 4px);
+    border-radius: 1.5rem;
     border: 1px solid transparent;
     font-size: 13px;
   }
 
-  .status-success {
-    color: var(--color-success);
-    border-color: color-mix(in srgb, var(--color-success) 28%, transparent);
-    background: color-mix(in srgb, var(--color-accent-t) 62%, transparent);
+  .licence-msg-success {
+    color: var(--color-secondary);
+    border-color: color-mix(in srgb, var(--color-secondary) 28%, transparent);
+    background: color-mix(in srgb, var(--color-secondary) 8%, transparent);
   }
 
-  .status-error {
-    color: var(--color-danger);
-    border-color: color-mix(in srgb, var(--color-danger) 28%, transparent);
-    background: color-mix(in srgb, var(--color-danger-subtle) 78%, transparent);
+  .licence-msg-error {
+    color: var(--color-error);
+    border-color: color-mix(in srgb, var(--color-error) 28%, transparent);
+    background: color-mix(in srgb, var(--color-error) 8%, transparent);
   }
 
   @media (max-width: 639px) {
-    .licence-summary {
+    .licence-meta-grid {
       grid-template-columns: 1fr;
     }
   }

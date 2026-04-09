@@ -3,7 +3,7 @@ import type { Notification, NotifyFn } from '@phavo/types';
 /**
  * Server-side in-memory notification queue.
  * Notifications are produced by server-side triggers (update check, etc.) and
- * consumed by the client via GET /api/v1/notifications, which drains the queue.
+ * consumed by the client via GET /api/v1/notifications, which flushes to DB.
  */
 const MAX_QUEUE = 100;
 const _queue: Notification[] = [];
@@ -16,11 +16,11 @@ export function registerNotify(fn: NotifyFn): void {
 }
 
 /** Push a notification to the server queue and invoke any registered callback. */
-export function serverNotify(n: Omit<Notification, 'id' | 'timestamp' | 'read'>): void {
+export function serverNotify(n: Omit<Notification, 'id' | 'createdAt' | 'read'>): void {
   const notification: Notification = {
     ...n,
     id: crypto.randomUUID(),
-    timestamp: Date.now(),
+    createdAt: Date.now(),
     read: false,
   };
   _queue.push(notification);
@@ -30,7 +30,7 @@ export function serverNotify(n: Omit<Notification, 'id' | 'timestamp' | 'read'>)
 
 /**
  * Returns all queued notifications and clears the queue.
- * Called by GET /api/v1/notifications so the client takes ownership.
+ * Called by GET /api/v1/notifications so the route can flush to DB.
  */
 export function drainQueue(): Notification[] {
   return _queue.splice(0);

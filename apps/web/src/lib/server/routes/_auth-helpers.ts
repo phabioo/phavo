@@ -129,7 +129,7 @@ export async function verifyTotpCode(secret: string, code: string): Promise<bool
 /** Partial sessions for the TOTP 2FA flow: partialToken → pending session data. */
 export interface PendingSession {
   userId: string;
-  tier: 'free' | 'standard' | 'local';
+  tier: 'stellar' | 'celestial';
   authMode: 'phavo-net' | 'local';
   graceUntil: number | null;
   expiresMs: number; // absolute timestamp when this partial session expires

@@ -16,14 +16,14 @@ let { padding = 'md', elevated = false, children }: Props = $props();
 
 <style>
   .card {
-    background: var(--color-bg-surface);
-    border: 1px solid var(--color-border-subtle);
+    background: var(--color-surface);
+    border: 1px solid color-mix(in srgb, var(--color-outline-variant) 10%, transparent);
     border-radius: var(--radius-xl);
     box-shadow: var(--shadow-sm);
   }
 
   .card.elevated {
-    background: var(--color-bg-elevated);
+    background: var(--color-surface-card);
   }
 
   .card-padding-none { padding: 0; }

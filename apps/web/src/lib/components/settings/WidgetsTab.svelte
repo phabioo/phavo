@@ -3,7 +3,7 @@
   import {
     Badge,
     Button,
-    Card,
+    Icon,
     Input,
     SchemaRenderer,
     WidgetCard,
@@ -278,6 +278,26 @@
     return '✗';
   }
 
+  function getWidgetIcon(widgetId: string): string {
+    const iconMap: Record<string, string> = {
+      cpu: 'cpu',
+      memory: 'memory-stick',
+      disk: 'hard-drive',
+      network: 'wifi',
+      temperature: 'thermometer',
+      uptime: 'clock',
+      weather: 'cloud-sun',
+      pihole: 'shield',
+      rss: 'rss',
+      links: 'link',
+      docker: 'container',
+      'service-health': 'activity',
+      speedtest: 'gauge',
+      calendar: 'calendar',
+    };
+    return iconMap[widgetId] ?? 'puzzle';
+  }
+
   function getStatusLabel(status: WidgetStatus): string {
     if (status === 'active') return 'Active';
     if (status === 'unconfigured') return 'Needs configuration';
@@ -344,399 +364,313 @@
   }
 </script>
 
-<Card padding="none">
-  <div class="widgets-tab">
-    <aside class="widgets-list" class:widgets-list-hidden={isMobile && selectedWidget !== null}>
-      <div class="widgets-list-toolbar">
-        <Input ariaLabel="Search widgets" placeholder="Search widgets..." bind:value={search} />
-        <div class="filter-chips">
-          {#each filterOptions as option (option.value)}
-            <button
-              class="filter-chip"
-              class:filter-chip-active={categoryFilter === option.value}
-              type="button"
-              onclick={() => (categoryFilter = option.value)}
-            >
-              {option.label}
-            </button>
-          {/each}
+<div class="wt-shell">
+  <aside class="wt-master" class:wt-master-hidden={isMobile && selectedWidget !== null}>
+    <div class="wt-toolbar">
+      <Input ariaLabel="Search widgets" placeholder="Search widgets..." bind:value={search} />
+      <div class="wt-filter-chips">
+        {#each filterOptions as option (option.value)}
+          <button
+            class="wt-filter-chip"
+            class:wt-filter-chip-active={categoryFilter === option.value}
+            type="button"
+            onclick={() => (categoryFilter = option.value)}
+          >
+            {option.label}
+          </button>
+        {/each}
+      </div>
+    </div>
+
+    {#if loading}
+      <p class="wt-panel-msg">Loading widgets...</p>
+    {:else if loadError}
+      <p class="wt-panel-msg wt-panel-error">{loadError}</p>
+    {:else if filteredWidgets.length === 0}
+      <p class="wt-panel-msg">No configured widget instances yet.</p>
+    {:else}
+      <div class="wt-list-scroll">
+        {#each filteredWidgets as widget (widget.id)}
+          <button
+            class="settings-item"
+            class:settings-item-active={selectedWidget?.id === widget.id}
+            type="button"
+            onclick={() => selectWidget(widget.id)}
+          >
+            <div class="settings-item-icon" class:settings-item-icon-active={selectedWidget?.id === widget.id}>
+              <Icon name={getWidgetIcon(widget.def.id)} size={20} />
+            </div>
+            <div class="settings-item-info">
+              <span class="settings-item-name">{widget.def.name}</span>
+              <div class="settings-item-status">
+                <span class="settings-status-dot settings-status-{widget.status === 'active' ? 'active' : widget.status === 'unconfigured' ? 'warning' : 'error'}"></span>
+                <span class="settings-status-label">{getStatusLabel(widget.status)}</span>
+              </div>
+            </div>
+            <Icon name="chevron-right" size={16} class="settings-item-chevron" />
+          </button>
+        {/each}
+      </div>
+    {/if}
+  </aside>
+
+  <section class="wt-detail" class:wt-detail-full={isMobile && selectedWidget !== null}>
+    {#if selectedWidget}
+      {@const widget = selectedWidget}
+      {#if isMobile}
+        <div class="wt-mobile-back">
+          <button class="settings-btn-ghost" type="button" onclick={() => (selectedId = null)}>
+            <Icon name="arrow-left" size={16} />
+            Back
+          </button>
+        </div>
+      {/if}
+
+      <div class="widgets-detail-top">
+        <div class="settings-preview-card">
+          <span class="settings-card-label">LIVE PREVIEW</span>
+          <div class="settings-preview-content">
+            <div class="wt-preview-scale">
+              <WidgetCard
+                title={widget.def.name}
+                size={widget.def.defaultSize.w >= 6 ? 'L' : 'M'}
+                loading={previewLoading}
+                error={widget.status === 'unconfigured' ? null : previewError || null}
+              >
+                {#if widget.status === 'unconfigured'}
+                  <div class="wt-preview-empty">Configure this widget to see a live preview.</div>
+                {:else if widget.def.id === 'cpu' && previewData}
+                  <CpuWidget data={previewData as CpuMetrics} />
+                {:else if widget.def.id === 'memory' && previewData}
+                  <MemoryWidget data={previewData as MemoryMetrics} />
+                {:else if widget.def.id === 'disk' && previewData}
+                  <DiskWidget data={previewData as DiskMetrics[]} />
+                {:else if widget.def.id === 'network' && previewData}
+                  <NetworkWidget data={previewData as NetworkMetrics} />
+                {:else if widget.def.id === 'temperature' && previewData}
+                  <TemperatureWidget data={previewData as TemperatureMetrics} />
+                {:else if widget.def.id === 'uptime' && previewData}
+                  <UptimeWidget data={previewData as UptimeMetrics} />
+                {:else if widget.def.id === 'weather' && previewData}
+                  <WeatherWidget data={previewData as WeatherMetrics} />
+                {:else if widget.def.id === 'pihole' && previewData}
+                  <PiholeWidget data={previewData as PiholeMetrics} />
+                {:else if widget.def.id === 'rss' && previewData}
+                  <RssWidget data={previewData as RssFeedResult} />
+                {:else if widget.def.id === 'links' && previewData}
+                  <LinksWidget data={previewData as LinksPreviewData} />
+                {:else}
+                  <div class="wt-preview-empty">No preview data available.</div>
+                {/if}
+              </WidgetCard>
+            </div>
+          </div>
+        </div>
+
+        <div class="settings-hero-card">
+          <span class="settings-card-label">STATUS</span>
+          <h2 class="settings-hero-value">{getStatusLabel(widget.status)}</h2>
+          <p class="settings-hero-sub">{getStatusDescription(widget)}</p>
+          <div class="wt-hero-meta">
+            <Badge variant="default">{widget.def.category}</Badge>
+            <Badge variant={widget.def.tier === 'celestial' ? 'accent' : 'default'}>
+              {widget.def.tier}
+            </Badge>
+            {#if widget.isPlugin}
+              <Badge variant="default">Plugin</Badge>
+            {/if}
+            <span class="wt-instance-count">{widget.instances.length} instance(s)</span>
+          </div>
         </div>
       </div>
 
-      {#if loading}
-        <p class="panel-message">Loading widgets...</p>
-      {:else if loadError}
-        <p class="panel-message panel-error">{loadError}</p>
-      {:else if filteredWidgets.length === 0}
-        <p class="panel-message">No configured widget instances yet.</p>
-      {:else}
-        <div class="widgets-list-scroll">
-          {#each filteredWidgets as widget (widget.id)}
-            <button
-              class="widget-row"
-              class:widget-row-active={selectedWidget?.id === widget.id}
-              type="button"
-              onclick={() => selectWidget(widget.id)}
-            >
-              <div class="widget-row-main">
-                <span class="widget-row-title">{widget.def.name}</span>
-                <span class="widget-row-description">{widget.def.description}</span>
-              </div>
-              <div class="widget-row-meta">
-                {#if widget.isPlugin}
-                  <Badge variant="default">Plugin</Badge>
-                {/if}
-                <span class="status-dot status-{widget.status}">{getStatusGlyph(widget.status)}</span>
-              </div>
-            </button>
-          {/each}
-        </div>
-      {/if}
-    </aside>
-
-    <section class="widget-detail" class:widget-detail-full={isMobile && selectedWidget !== null}>
-      {#if selectedWidget}
-        {@const widget = selectedWidget}
-        {#if isMobile}
-          <div class="mobile-back-row">
-            <Button variant="ghost" onclick={() => (selectedId = null)}>Back</Button>
-          </div>
-        {/if}
-
-        <div class="detail-header">
-          <div>
-            <h2 class="detail-title">{widget.def.name}</h2>
-            <div class="detail-badges">
-              <Badge variant="default">{widget.def.category}</Badge>
-              <Badge variant={widget.def.tier === 'standard' ? 'accent' : 'default'}>
-                {widget.def.tier}
-              </Badge>
-              {#if widget.isPlugin}
-                <Badge variant="default">Plugin</Badge>
-              {/if}
-            </div>
-          </div>
-          <div class="instance-count">{widget.instances.length} instance(s)</div>
-        </div>
-
-        <div class="preview-shell">
-          <div class="preview-scale">
-            <WidgetCard
-              title={widget.def.name}
-              size={widget.def.defaultSize.w >= 6 ? 'L' : 'M'}
-              loading={previewLoading}
-              error={widget.status === 'unconfigured' ? null : previewError || null}
-            >
-              {#if widget.status === 'unconfigured'}
-                <div class="preview-empty">Configure this widget to see a live preview.</div>
-              {:else if widget.def.id === 'cpu' && previewData}
-                <CpuWidget data={previewData as CpuMetrics} />
-              {:else if widget.def.id === 'memory' && previewData}
-                <MemoryWidget data={previewData as MemoryMetrics} />
-              {:else if widget.def.id === 'disk' && previewData}
-                <DiskWidget data={previewData as DiskMetrics[]} />
-              {:else if widget.def.id === 'network' && previewData}
-                <NetworkWidget data={previewData as NetworkMetrics} />
-              {:else if widget.def.id === 'temperature' && previewData}
-                <TemperatureWidget data={previewData as TemperatureMetrics} />
-              {:else if widget.def.id === 'uptime' && previewData}
-                <UptimeWidget data={previewData as UptimeMetrics} />
-              {:else if widget.def.id === 'weather' && previewData}
-                <WeatherWidget data={previewData as WeatherMetrics} />
-              {:else if widget.def.id === 'pihole' && previewData}
-                <PiholeWidget data={previewData as PiholeMetrics} />
-              {:else if widget.def.id === 'rss' && previewData}
-                <RssWidget data={previewData as RssFeedResult} />
-              {:else if widget.def.id === 'links' && previewData}
-                <LinksWidget data={previewData as LinksPreviewData} />
-              {:else}
-                <div class="preview-empty">No preview data available.</div>
-              {/if}
-            </WidgetCard>
-          </div>
-        </div>
-
-        <div class="detail-status">
-          <span class="detail-status-label">{getStatusLabel(widget.status)}</span>
-          <p class="detail-status-description">{getStatusDescription(widget)}</p>
-        </div>
-
-        {#if widget.def.configSchema}
+      {#if widget.def.configSchema}
+        <div class="settings-form-card">
+          <h3 class="settings-form-title">Configuration</h3>
           <SchemaRenderer
             schema={asZodSchema(widget.def.configSchema)}
             instanceId={widget.instances[0]?.id ?? ''}
             currentConfig={getCurrentConfig(widget)}
             onSaved={handleSaved}
           />
-        {:else}
-          <p class="no-config">This widget needs no configuration.</p>
-        {/if}
-
-        <div class="detail-footer">
-          {#if confirmRemove}
-            <div class="confirm-row">
-              <span>Remove all instances of this widget?</span>
-              <div class="confirm-actions">
-                <Button variant="danger" onclick={() => removeAllInstances(widget)} disabled={removing}>
-                  {removing ? 'Removing...' : 'Confirm remove'}
-                </Button>
-                <Button variant="ghost" onclick={() => (confirmRemove = false)}>Cancel</Button>
-              </div>
-            </div>
-          {:else}
-            <Button variant="danger" onclick={() => (confirmRemove = true)}>Remove all instances</Button>
-          {/if}
         </div>
       {:else}
-        <div class="empty-detail">Select a widget to configure.</div>
+        <div class="settings-form-card">
+          <h3 class="settings-form-title">Configuration</h3>
+          <p class="wt-no-config">This widget needs no configuration.</p>
+        </div>
       {/if}
-    </section>
-  </div>
-</Card>
+
+      <div class="settings-form-actions">
+        {#if confirmRemove}
+          <span class="wt-confirm-text">Remove all instances of this widget?</span>
+          <div class="wt-confirm-actions">
+            <button class="settings-btn-danger" type="button" onclick={() => removeAllInstances(widget)} disabled={removing}>
+              <Icon name="trash-2" size={14} />
+              {removing ? 'Removing...' : 'Confirm remove'}
+            </button>
+            <button class="settings-btn-ghost" type="button" onclick={() => (confirmRemove = false)}>Cancel</button>
+          </div>
+        {:else}
+          <button class="settings-btn-danger" type="button" onclick={() => (confirmRemove = true)}>
+            <Icon name="trash-2" size={14} />
+            Remove all instances
+          </button>
+          <span></span>
+        {/if}
+      </div>
+    {:else}
+      <div class="settings-form-card">
+        <p class="wt-no-config">Select a widget to configure.</p>
+      </div>
+    {/if}
+  </section>
+</div>
 
 <style>
-  .widgets-tab {
+  .wt-shell {
     display: grid;
-    grid-template-columns: minmax(280px, 340px) minmax(0, 1fr);
+    grid-template-columns: 280px 1fr;
+    gap: var(--space-6);
     min-height: 720px;
   }
 
-  .widgets-list {
-    border-right: 1px solid var(--color-border-subtle);
-    display: flex;
-    flex-direction: column;
-    min-height: 0;
-  }
-
-  .widgets-list-toolbar {
+  .wt-master {
     display: flex;
     flex-direction: column;
     gap: var(--space-3);
-    padding: var(--space-4);
-    border-bottom: 1px solid var(--color-border-subtle);
+    overflow-y: auto;
   }
 
-  .filter-chips {
+  .wt-toolbar {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    padding-bottom: var(--space-3);
+    border-bottom: 1px solid color-mix(in srgb, var(--color-outline-variant) 10%, transparent);
+  }
+
+  .wt-filter-chips {
     display: flex;
     flex-wrap: wrap;
     gap: var(--space-2);
   }
 
-  .filter-chip {
-    border: 1px solid var(--color-border);
-    background: var(--color-bg-base);
-    border-radius: 999px;
-    color: var(--color-text-secondary);
+  .wt-filter-chip {
+    border: 1px solid color-mix(in srgb, var(--color-outline-variant) 25%, transparent);
+    background: none;
+    border-radius: var(--radius-full);
+    color: var(--color-on-surface-variant);
     cursor: pointer;
     font-size: 12px;
+    font-weight: 700;
     padding: var(--space-1) var(--space-3);
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
   }
 
-  .filter-chip-active {
-    border-color: var(--color-accent);
-    background: var(--color-accent-subtle);
-    color: var(--color-bg);
+  .wt-filter-chip:hover {
+    background: color-mix(in srgb, var(--color-surface-high) 60%, transparent);
   }
 
-  .widgets-list-scroll {
+  .wt-filter-chip-active {
+    border-color: color-mix(in srgb, var(--color-primary-fixed) 40%, transparent);
+    background: color-mix(in srgb, var(--color-primary-fixed) 12%, transparent);
+    color: var(--color-primary-fixed);
+  }
+
+  .wt-list-scroll {
     display: flex;
     flex-direction: column;
     gap: var(--space-2);
     overflow-y: auto;
-    padding: var(--space-3);
   }
 
-  .widget-row {
-    align-items: center;
-    background: var(--color-bg-surface);
-    border: 1px solid var(--color-border-subtle);
-    border-radius: var(--radius-md);
-    cursor: pointer;
-    display: flex;
-    gap: var(--space-3);
-    justify-content: space-between;
-    padding: var(--space-3);
-    text-align: left;
-  }
-
-  .widget-row-active {
-    border-color: var(--color-accent);
-    background: var(--color-accent-subtle);
-  }
-
-  .widget-row-main {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    min-width: 0;
-  }
-
-  .widget-row-title {
-    color: var(--color-text-primary);
-    font-size: 14px;
-    font-weight: 600;
-  }
-
-  .widget-row-description {
-    color: var(--color-text-muted);
-    font-size: 12px;
-  }
-
-  .widget-row-meta {
-    align-items: center;
-    display: flex;
-    gap: var(--space-2);
-  }
-
-  .status-dot {
-    align-items: center;
-    border-radius: 999px;
-    display: inline-flex;
-    font-size: 13px;
-    height: 24px;
-    justify-content: center;
-    width: 24px;
-  }
-
-  .status-active {
-    color: var(--color-success);
-  }
-
-  .status-unconfigured {
-    color: var(--color-accent-text);
-  }
-
-  .status-error {
-    color: var(--color-danger);
-  }
-
-  .widget-detail {
+  .wt-detail {
     display: flex;
     flex-direction: column;
     gap: var(--space-4);
-    min-width: 0;
-    padding: var(--space-5);
+    overflow-y: auto;
   }
 
-  .detail-header {
-    align-items: flex-start;
-    display: flex;
-    justify-content: space-between;
+  .widgets-detail-top {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
     gap: var(--space-4);
   }
 
-  .detail-title {
-    color: var(--color-text-primary);
-    font-size: 22px;
-    font-weight: 700;
-    margin: 0;
-  }
-
-  .detail-badges {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--space-2);
-    margin-top: var(--space-2);
-  }
-
-  .instance-count {
-    color: var(--color-text-muted);
-    font-size: 12px;
-    white-space: nowrap;
-  }
-
-  .preview-shell {
-    overflow: hidden;
-  }
-
-  .preview-scale {
+  .wt-preview-scale {
     transform: scale(0.8);
     transform-origin: top left;
     width: 125%;
   }
 
-  .preview-empty,
-  .no-config,
-  .empty-detail {
-    color: var(--color-text-muted);
+  .wt-preview-empty,
+  .wt-no-config {
+    color: var(--color-on-surface-variant);
     font-size: 14px;
   }
 
-  .panel-message {
-    padding: 32px 16px;
+  .wt-panel-msg {
+    padding: var(--space-8) var(--space-4);
     text-align: center;
-    color: var(--color-text-muted);
+    color: var(--color-on-surface-variant);
     font-size: 13px;
     line-height: 1.5;
   }
 
-  .panel-error {
-    color: var(--color-danger);
+  .wt-panel-error {
+    color: var(--color-error);
   }
 
-  .detail-status {
+  .wt-hero-meta {
     display: flex;
-    flex-direction: column;
-    gap: var(--space-1);
-  }
-
-  .detail-status-label {
-    color: var(--color-text-primary);
-    font-size: 14px;
-    font-weight: 600;
-  }
-
-  .detail-status-description {
-    color: var(--color-text-secondary);
-    margin: 0;
-  }
-
-  .detail-footer {
-    border-top: 1px solid var(--color-border-subtle);
-    margin-top: auto;
-    padding-top: var(--space-4);
-  }
-
-  .confirm-row {
     align-items: center;
-    display: flex;
+    gap: var(--space-2);
     flex-wrap: wrap;
-    gap: var(--space-3);
-    justify-content: space-between;
+    margin-top: var(--space-2);
   }
 
-  .confirm-actions {
+  .wt-instance-count {
+    font-size: 12px;
+    font-weight: 700;
+    font-family: var(--font-mono);
+    color: color-mix(in srgb, var(--color-on-primary-fixed) 60%, transparent);
+  }
+
+  .wt-confirm-text {
+    font-size: 13px;
+    color: var(--color-on-surface-variant);
+  }
+
+  .wt-confirm-actions {
     display: flex;
     gap: var(--space-2);
   }
 
-  .mobile-back-row {
+  .wt-mobile-back {
     display: none;
   }
 
-  @media (max-width: 639px) {
-    .widgets-tab {
+  @media (max-width: 768px) {
+    .wt-shell {
       grid-template-columns: 1fr;
       min-height: auto;
     }
 
-    .widgets-list-hidden {
+    .wt-master-hidden {
       display: none;
     }
 
-    .widget-detail-full {
+    .wt-detail-full {
       min-height: 100dvh;
     }
 
-    .mobile-back-row {
+    .wt-mobile-back {
       display: block;
     }
 
-    .detail-header,
-    .confirm-row,
-    .confirm-actions {
-      flex-direction: column;
-      align-items: stretch;
+    .widgets-detail-top {
+      grid-template-columns: 1fr;
     }
   }
 </style>

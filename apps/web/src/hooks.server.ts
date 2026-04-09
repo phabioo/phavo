@@ -101,8 +101,8 @@ function buildCsp(nonce: string | undefined): string {
     // 'unsafe-inline' required for Svelte's runtime
     // style injection. Nonce-based styles are not yet
     // supported by SvelteKit. Tracked for future removal.
-    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-    "font-src 'self' https://fonts.gstatic.com",
+    "style-src 'self' 'unsafe-inline'",
+    "font-src 'self'",
     "img-src 'self' data: https:",
     [
       "connect-src 'self'",
