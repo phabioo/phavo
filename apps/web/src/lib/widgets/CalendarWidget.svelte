@@ -10,6 +10,7 @@
   let { data, size = 'M' }: Props = $props();
 
   const next = $derived(data.events[0] ?? null);
+  const total = $derived(data.events.length);
 
   function fmtDate(iso: string) {
     const d = new Date(iso);
@@ -54,6 +55,11 @@
         <span class="cal-next-time">{fmtDate(next.startTime)}</span>
       </div>
 
+      <div class="cal-meta">
+        <span>{total} upcoming</span>
+        <span>{next.calendarName}</span>
+      </div>
+
       {#if data.events.length > 1}
         <div class="cal-list">
           {#each data.events.slice(1, 4) as evt (evt.title + evt.startTime)}
@@ -85,6 +91,11 @@
       <div class="cal-next">
         <span class="cal-next-title hero-glow">{next.title}</span>
         <span class="cal-next-time">{fmtDate(next.startTime)}</span>
+      </div>
+
+      <div class="cal-meta">
+        <span>{total} upcoming</span>
+        <span>{next.calendarName}</span>
       </div>
 
       {#if data.events.length > 1}
@@ -179,12 +190,17 @@
     display: flex;
     flex-direction: column;
     gap: var(--space-2);
+    min-height: 0;
+    overflow: hidden;
   }
 
   .cal-row {
     display: flex;
     align-items: flex-start;
     gap: var(--space-2);
+    padding: var(--space-2) var(--space-3);
+    border-radius: var(--radius-md);
+    background: color-mix(in srgb, var(--color-surface-high) 45%, transparent);
   }
 
   .cal-dot {
@@ -214,5 +230,14 @@
   .cal-event-time {
     font-size: 11px;
     color: var(--color-secondary);
+  }
+
+  .cal-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-3);
+    font-size: 11px;
+    font-family: var(--font-mono);
+    color: var(--color-on-surface-variant);
   }
 </style>

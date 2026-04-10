@@ -1,10 +1,13 @@
 # PHAVO — Celestial Wish Design System
-## Definitive Reference v2.0
+## Definitive Reference v2.1
 
 > This document supersedes all previous design notes.
 > All values are extracted directly from the Celestial Wish mockup source code.
 > Every agent working on PHAVO UI must follow this document exactly.
 > When in doubt: this document wins over any other reference.
+
+> Updated for v0.8.0 UI shell polish: header scroll-state styling and sidebar
+> page-delete affordances are now part of the baseline implementation.
 
 ---
 
@@ -218,7 +221,7 @@ All cards: `border-radius: 2rem` (32px)
 
 ### Hover
 ```css
-transition: transform 0.3s ease;
+transition: transform var(--motion-component);
 &:hover { transform: scale(1.02); }
 ```
 

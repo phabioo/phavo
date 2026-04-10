@@ -18,7 +18,12 @@ import type { AppVariables } from './auth.js';
 const CSRF_EXEMPT_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 
 // Must mirror PUBLIC_PATHS in auth.ts — these have no session, so CSRF is N/A.
-const PUBLIC_PATHS = new Set(['/api/v1/system/health', '/api/v1/auth/login', '/api/v1/auth/totp']);
+const PUBLIC_PATHS = new Set([
+  '/api/v1/system/health',
+  '/api/v1/auth/login',
+  '/api/v1/auth/totp',
+  '/api/v1/webhooks/gumroad',
+]);
 
 // Cached CSRF HMAC key (derived once from PHAVO_SECRET via HKDF).
 let _csrfKey: CryptoKey | null = null;

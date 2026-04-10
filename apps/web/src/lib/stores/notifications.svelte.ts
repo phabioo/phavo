@@ -1,4 +1,5 @@
 import type { Notification, NotifyFn } from '@phavo/types';
+import { fetchWithCsrf } from '$lib/utils/api';
 
 let _notifications = $state<Notification[]>([]);
 let _panelOpen = $state(false);
@@ -40,7 +41,7 @@ export const notify: NotifyFn = (n) => {
 
 export function markRead(id: string): void {
   _notifications = _notifications.map((n) => (n.id === id ? { ...n, read: true } : n));
-  void fetch(`/api/v1/notifications/${id}`, {
+  void fetchWithCsrf(`/api/v1/notifications/${id}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ read: true }),
@@ -49,7 +50,7 @@ export function markRead(id: string): void {
 
 export function markAllRead(): void {
   _notifications = _notifications.map((n) => ({ ...n, read: true }));
-  void fetch('/api/v1/notifications', {
+  void fetchWithCsrf('/api/v1/notifications', {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ readAll: true }),
@@ -58,12 +59,12 @@ export function markAllRead(): void {
 
 export function dismiss(id: string): void {
   _notifications = _notifications.filter((n) => n.id !== id);
-  void fetch(`/api/v1/notifications/${id}`, { method: 'DELETE' });
+  void fetchWithCsrf(`/api/v1/notifications/${id}`, { method: 'DELETE' });
 }
 
 export function clearAll(): void {
   _notifications = [];
-  void fetch('/api/v1/notifications', { method: 'DELETE' });
+  void fetchWithCsrf('/api/v1/notifications', { method: 'DELETE' });
 }
 
 export function clearHistory(): void {
@@ -76,7 +77,7 @@ export function getMuted(): boolean {
 
 export function toggleMute(): void {
   _muted = !_muted;
-  void fetch('/api/v1/notifications/mute', {
+  void fetchWithCsrf('/api/v1/notifications/mute', {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ muted: _muted }),
@@ -88,7 +89,7 @@ export function toggleMute(): void {
  */
 export async function syncFromServer(): Promise<void> {
   try {
-    const res = await fetch('/api/v1/notifications');
+    const res = await fetchWithCsrf('/api/v1/notifications');
     if (!res.ok) return;
     const json = (await res.json()) as { ok: boolean; data: Notification[] };
     if (json.ok && Array.isArray(json.data)) {

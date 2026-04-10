@@ -58,8 +58,6 @@ let { data, children }: Props = $props();
 
 let sidebarCollapsed = $state(false);
 let currentPathname = $state('/');
-let currentHash = $state('');
-let currentSearch = $state('');
 let tabLimitModalOpen = $state(false);
 let headerWeatherFallback = $state<{ temp: number; condition: string } | undefined>(undefined);
 let systemOnline = $state<boolean | null>(null);
@@ -71,6 +69,7 @@ const sidebarItems = [
   { id: 'import-export', label: 'Backup & Export', icon: 'archive', status: { type: 'active' as const, label: 'Ready' } },
   { id: 'license', label: 'Licence', icon: 'shield-check', status: { type: 'active' as const, label: 'Active' } },
   { id: 'account', label: 'Account', icon: 'user', status: { type: 'active' as const, label: 'Secured' } },
+  { id: 'ai', label: 'AI', icon: 'sparkles', status: { type: 'inactive' as const, label: 'Not Configured' } },
   { id: 'plugins', label: 'Plugins', icon: 'plug', status: { type: 'inactive' as const, label: 'Coming Soon' } },
   { id: 'about', label: 'About', icon: 'info', status: { type: 'active' as const, label: 'Up to Date' } },
 ];
@@ -301,9 +300,12 @@ async function loadAiStatus() {
     const json = (await resp.json()) as {
       ok: boolean;
       data?: {
+        aiProvider: import('$lib/stores/ai.svelte.js').AiProvider;
         ollama: boolean;
         openai: boolean;
         anthropic: boolean;
+        google: boolean;
+        custom: boolean;
         searchEngineUrl: string;
         searchEngineName: string;
       };
@@ -314,24 +316,47 @@ async function loadAiStatus() {
   } catch { /* AI status is optional — degrade gracefully */ }
 }
 
-async function handleAiChat(provider: 'ollama' | 'openai' | 'anthropic', query: string): Promise<string> {
+async function handleAiChat(provider: 'ollama' | 'openai' | 'anthropic' | 'google' | 'custom', query: string): Promise<string> {
   const resp = await fetchWithCsrf('/api/v1/ai/chat', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ provider, query }),
+    body: JSON.stringify({ prompt: query }),
   });
-  const json = (await resp.json()) as { ok: boolean; data?: { text: string }; error?: string };
-  if (!json.ok || !json.data) {
-    throw new Error(json.error ?? 'AI request failed');
+
+  if (!resp.ok || !resp.body) {
+    const json = (await resp.json().catch(() => null)) as { error?: string } | null;
+    throw new Error(json?.error ?? 'AI request failed');
   }
-  return json.data.text;
+
+  // Read SSE stream and accumulate text
+  const reader = resp.body.getReader();
+  const decoder = new TextDecoder();
+  let result = '';
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    const lines = decoder.decode(value).split('\n');
+    for (const line of lines) {
+      if (line.startsWith('data:')) {
+        try {
+          const data = JSON.parse(line.slice(5)) as { text?: string; done?: boolean; error?: string };
+          if (data.text) result += data.text;
+          if (data.done) return result;
+          if (data.error) throw new Error(data.error);
+        } catch (e) {
+          if (e instanceof Error && e.message === 'stream_failed') throw e;
+        }
+      }
+    }
+  }
+
+  return result;
 }
 
 onMount(() => {
   const syncLocation = () => {
     currentPathname = window.location.pathname;
-    currentHash = window.location.hash;
-    currentSearch = window.location.search;
   };
 
   syncLocation();
@@ -461,16 +486,13 @@ onMount(() => {
 function handleNotificationClick(n: Notification) {
   markRead(n.id);
   setPanelOpen(false);
+  if (n.type === 'widget-error' && n.widgetId) {
+    goto(`/settings?tab=widgets#widgets/${encodeURIComponent(n.widgetId)}`);
+    return;
+  }
+
   if (n.actionUrl) {
     goto(n.actionUrl);
-  } else if (n.type === 'widget-error' && n.widgetId) {
-    goto('/');
-    setTimeout(() => {
-      const el = document.querySelector(`[data-widget-id="${n.widgetId}"]`);
-      el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      el?.classList.add('widget-highlight');
-      setTimeout(() => el?.classList.remove('widget-highlight'), 2000);
-    }, 100);
   }
 }
 </script>
@@ -543,7 +565,7 @@ function handleNotificationClick(n: Notification) {
         <Icon name="lock" size={32} class="text-accent" />
         <h2 class="text-lg font-bold text-text">Page limit reached</h2>
         <p class="text-sm text-text-secondary max-w-[36ch] leading-relaxed">
-          Free tier supports 1 dashboard page. Upgrade to Standard to create unlimited pages.
+          Stellar tier supports 1 dashboard page. Upgrade to Celestial to create unlimited pages.
         </p>
         <div class="flex gap-3 mt-2">
           <Button variant="secondary" onclick={() => (tabLimitModalOpen = false)}>

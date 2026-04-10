@@ -458,16 +458,16 @@
               </Button>
             {/if}
             {#if descriptor.kind === 'password' && value === PRESERVE_CREDENTIAL_VALUE}
-              <Button variant="ghost" onclick={() => resetCredential(path)}>Reset</Button>
+              <Button variant="tertiary" onclick={() => resetCredential(path)}>Reset</Button>
             {/if}
           </div>
           {#if descriptor.kind === 'url' && value}
-            <span class="text-xs {hasError ? 'text-red-400' : 'text-primary'}">
+            <span class="text-xs {hasError ? 'text-error' : 'text-primary'}">
               {hasError ? '✗ Invalid URL' : '✓ Valid URL'}
             </span>
           {/if}
           {#if testStatuses[path]}
-            <span class="text-xs {testStatuses[path].ok ? 'text-primary' : 'text-red-400'}">
+            <span class="text-xs {testStatuses[path].ok ? 'text-primary' : 'text-error'}">
               {testStatuses[path].ok ? '✓' : '✗'} {testStatuses[path].message}
             </span>
           {/if}
@@ -479,7 +479,7 @@
             onchange={(nextValue) => setValueAtPath(path, nextValue)}
           />
         {:else if descriptor.kind === 'boolean'}
-          <div class="flex items-center justify-between gap-4 p-3 border border-border-subtle rounded-lg bg-base">
+          <div class="flex items-center justify-between gap-4 p-3 border border-border rounded-lg bg-surface-low">
             <span class="text-sm text-text">{descriptor.label}</span>
             <Switch
               checked={Boolean(value)}
@@ -493,16 +493,16 @@
                 <span class="block text-sm font-semibold text-text">{descriptor.label}</span>
                 <span class="block text-xs text-text-muted">Add or remove rows as needed.</span>
               </div>
-              <Button variant="ghost" onclick={() => addArrayRow(path, descriptor.children ?? [])}>
+              <Button variant="tertiary" onclick={() => addArrayRow(path, descriptor.children ?? [])}>
                 + Add row
               </Button>
             </div>
             <div class="flex flex-col gap-3">
               {#each getArrayRows(path) as row, rowIndex (String((row as { id?: string }).id ?? rowIndex))}
-                <div class="flex flex-col gap-3 p-4 border border-border-subtle rounded-lg bg-surface">
+                <div class="flex flex-col gap-3 p-4 border border-border rounded-lg bg-surface">
                   <div class="flex items-center justify-between gap-3">
                     <span class="text-xs font-semibold text-text-muted uppercase tracking-wider">Row {rowIndex + 1}</span>
-                    <Button variant="ghost" onclick={() => removeArrayRow(path, rowIndex)}>Remove</Button>
+                    <Button variant="tertiary" onclick={() => removeArrayRow(path, rowIndex)}>Remove</Button>
                   </div>
                   {@render renderFields(descriptor.children ?? [], `${path}.${rowIndex}`)}
                 </div>
@@ -517,7 +517,7 @@
   {@render renderFields(fieldDescriptors)}
 
   {#if saveError}
-    <p class="text-xs text-red-400">{saveError}</p>
+    <p class="text-xs text-error">{saveError}</p>
   {/if}
   {#if saveSuccess}
     <p class="text-xs text-primary">Saved.</p>

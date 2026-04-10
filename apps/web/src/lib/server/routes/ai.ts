@@ -1,27 +1,40 @@
+import { createAnthropic } from '@ai-sdk/anthropic';
+import { createGoogleGenerativeAI } from '@ai-sdk/google';
+import { createOpenAI } from '@ai-sdk/openai';
 import { decrypt, encrypt, schema } from '@phavo/db';
 import { err, ok } from '@phavo/types';
+import { streamText } from 'ai';
 import { eq } from 'drizzle-orm';
 import type { Hono } from 'hono';
+import { streamSSE } from 'hono/streaming';
+import { createOllama } from 'ollama-ai-provider';
 import { z } from 'zod';
 import { db } from '$lib/server/db.js';
 import type { AppVariables } from '$lib/server/middleware/auth.js';
-import { requireSession } from '$lib/server/middleware/auth.js';
+import { requireSession, requireTier } from '$lib/server/middleware/auth.js';
 import { assertNotCloudMetadata } from '$lib/server/security.js';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 const AiChatSchema = z.object({
-  provider: z.enum(['ollama', 'openai', 'anthropic']),
-  query: z.string().min(1).max(2000),
+  prompt: z.string().min(1).max(2000),
 });
 
 const AiConfigSchema = z.object({
+  aiProvider: z.enum(['ollama', 'openai', 'anthropic', 'google', 'custom']).nullable().optional(),
   searchEngine: z.enum(['duckduckgo', 'google', 'brave', 'custom']).optional(),
   customSearchUrl: z.string().max(500).optional(),
   ollamaUrl: z.string().max(500).optional(),
   ollamaModel: z.string().max(100).optional(),
   openaiKey: z.string().max(500).optional(),
+  openaiModel: z.string().max(100).optional(),
   anthropicKey: z.string().max(500).optional(),
+  anthropicModel: z.string().max(100).optional(),
+  googleKey: z.string().max(500).optional(),
+  googleModel: z.string().max(100).optional(),
+  customUrl: z.string().max(500).optional(),
+  customKey: z.string().max(500).optional(),
+  customModel: z.string().max(100).optional(),
 });
 
 const OllamaTestSchema = z.object({
@@ -33,6 +46,8 @@ const SEARCH_ENGINE_URLS: Record<string, { url: string; name: string }> = {
   google: { url: 'https://www.google.com/search?q={query}', name: 'Google' },
   brave: { url: 'https://search.brave.com/search?q={query}', name: 'Brave Search' },
 };
+
+const AI_SYSTEM_PROMPT = `You are a helpful assistant embedded in PHAVO, a self-hosted personal dashboard. You help users understand their system metrics, troubleshoot services, and answer questions concisely.`;
 
 async function loadAiCredential(key: string): Promise<string | null> {
   const rows = await db
@@ -49,16 +64,37 @@ async function loadAiCredential(key: string): Promise<string | null> {
   }
 }
 
+async function loadConfigEntries(): Promise<Record<string, string>> {
+  const configRows = await db
+    .select({ key: schema.config.key, value: schema.config.value })
+    .from(schema.config);
+  const entries: Record<string, string> = {};
+  for (const row of configRows) entries[row.key] = row.value;
+  return entries;
+}
+
+async function upsertCredential(key: string, plaintext: string): Promise<void> {
+  const valueEncrypted = await encrypt(plaintext);
+  await db
+    .insert(schema.credentials)
+    .values({ key, valueEncrypted, updatedAt: Date.now() })
+    .onConflictDoUpdate({
+      target: schema.credentials.key,
+      set: { valueEncrypted, updatedAt: Date.now() },
+    });
+}
+
+async function deleteCredential(key: string): Promise<void> {
+  await db.delete(schema.credentials).where(eq(schema.credentials.key, key));
+}
+
 // ─── Route registration ─────────────────────────────────────────────────────
 
 export function registerAiRoutes(app: Hono<{ Variables: AppVariables }>): void {
+  // GET /ai/status — returns provider availability and search engine config
   app.get('/ai/status', requireSession(), async (c) => {
     try {
-      const configRows = await db
-        .select({ key: schema.config.key, value: schema.config.value })
-        .from(schema.config);
-      const entries: Record<string, string> = {};
-      for (const row of configRows) entries[row.key] = row.value;
+      const entries = await loadConfigEntries();
 
       const engine = entries.search_engine ?? 'duckduckgo';
       const customUrl = entries.custom_search_url ?? '';
@@ -72,20 +108,32 @@ export function registerAiRoutes(app: Hono<{ Variables: AppVariables }>): void {
 
       const openaiKey = await loadAiCredential('ai:openai_key');
       const anthropicKey = await loadAiCredential('ai:anthropic_key');
+      const googleKey = await loadAiCredential('ai:google_key');
+      const customKey = await loadAiCredential('ai:custom_key');
 
       return c.json(
         ok({
+          aiProvider: entries.ai_provider ?? null,
           ollama: Boolean(entries.ollama_url),
           openai: Boolean(openaiKey),
           anthropic: Boolean(anthropicKey),
+          google: Boolean(googleKey),
+          custom: Boolean(entries.custom_ai_url) || Boolean(customKey),
           searchEngineUrl,
           searchEngineName,
           searchEngine: engine,
           customSearchUrl: customUrl,
           ollamaUrl: entries.ollama_url ?? '',
           ollamaModel: entries.ollama_model ?? '',
+          openaiModel: entries.openai_model ?? '',
+          anthropicModel: entries.anthropic_model ?? '',
+          googleModel: entries.google_model ?? '',
+          customAiUrl: entries.custom_ai_url ?? '',
+          customModel: entries.custom_ai_model ?? '',
           hasOpenaiKey: Boolean(openaiKey),
           hasAnthropicKey: Boolean(anthropicKey),
+          hasGoogleKey: Boolean(googleKey),
+          hasCustomKey: Boolean(customKey),
         }),
       );
     } catch (e) {
@@ -94,6 +142,7 @@ export function registerAiRoutes(app: Hono<{ Variables: AppVariables }>): void {
     }
   });
 
+  // POST /ai/config — persist AI provider settings
   app.post('/ai/config', requireSession(), async (c) => {
     const body = await c.req.json().catch(() => null);
     const parsed = AiConfigSchema.safeParse(body);
@@ -103,7 +152,10 @@ export function registerAiRoutes(app: Hono<{ Variables: AppVariables }>): void {
     const data = parsed.data;
 
     try {
+      // Config KV pairs (non-secret)
       const configPairs: Array<{ key: string; value: string }> = [];
+      if (data.aiProvider !== undefined)
+        configPairs.push({ key: 'ai_provider', value: data.aiProvider ?? '' });
       if (data.searchEngine !== undefined)
         configPairs.push({ key: 'search_engine', value: data.searchEngine });
       if (data.customSearchUrl !== undefined)
@@ -112,6 +164,16 @@ export function registerAiRoutes(app: Hono<{ Variables: AppVariables }>): void {
         configPairs.push({ key: 'ollama_url', value: data.ollamaUrl });
       if (data.ollamaModel !== undefined)
         configPairs.push({ key: 'ollama_model', value: data.ollamaModel });
+      if (data.openaiModel !== undefined)
+        configPairs.push({ key: 'openai_model', value: data.openaiModel });
+      if (data.anthropicModel !== undefined)
+        configPairs.push({ key: 'anthropic_model', value: data.anthropicModel });
+      if (data.googleModel !== undefined)
+        configPairs.push({ key: 'google_model', value: data.googleModel });
+      if (data.customUrl !== undefined)
+        configPairs.push({ key: 'custom_ai_url', value: data.customUrl });
+      if (data.customModel !== undefined)
+        configPairs.push({ key: 'custom_ai_model', value: data.customModel });
 
       for (const pair of configPairs) {
         await db
@@ -123,33 +185,21 @@ export function registerAiRoutes(app: Hono<{ Variables: AppVariables }>): void {
           });
       }
 
-      if (data.openaiKey !== undefined) {
-        if (data.openaiKey) {
-          const valueEncrypted = await encrypt(data.openaiKey);
-          await db
-            .insert(schema.credentials)
-            .values({ key: 'ai:openai_key', valueEncrypted, updatedAt: Date.now() })
-            .onConflictDoUpdate({
-              target: schema.credentials.key,
-              set: { valueEncrypted, updatedAt: Date.now() },
-            });
-        } else {
-          await db.delete(schema.credentials).where(eq(schema.credentials.key, 'ai:openai_key'));
-        }
-      }
+      // Encrypted credential pairs (API keys)
+      const credentialMap: Array<{ field: string | undefined; credKey: string }> = [
+        { field: data.openaiKey, credKey: 'ai:openai_key' },
+        { field: data.anthropicKey, credKey: 'ai:anthropic_key' },
+        { field: data.googleKey, credKey: 'ai:google_key' },
+        { field: data.customKey, credKey: 'ai:custom_key' },
+      ];
 
-      if (data.anthropicKey !== undefined) {
-        if (data.anthropicKey) {
-          const valueEncrypted = await encrypt(data.anthropicKey);
-          await db
-            .insert(schema.credentials)
-            .values({ key: 'ai:anthropic_key', valueEncrypted, updatedAt: Date.now() })
-            .onConflictDoUpdate({
-              target: schema.credentials.key,
-              set: { valueEncrypted, updatedAt: Date.now() },
-            });
-        } else {
-          await db.delete(schema.credentials).where(eq(schema.credentials.key, 'ai:anthropic_key'));
+      for (const { field, credKey } of credentialMap) {
+        if (field !== undefined) {
+          if (field) {
+            await upsertCredential(credKey, field);
+          } else {
+            await deleteCredential(credKey);
+          }
         }
       }
 
@@ -160,6 +210,7 @@ export function registerAiRoutes(app: Hono<{ Variables: AppVariables }>): void {
     }
   });
 
+  // POST /ai/test-ollama — test connectivity to an Ollama instance
   app.post('/ai/test-ollama', requireSession(), async (c) => {
     const body = await c.req.json().catch(() => null);
     const parsed = OllamaTestSchema.safeParse(body);
@@ -197,137 +248,100 @@ export function registerAiRoutes(app: Hono<{ Variables: AppVariables }>): void {
     }
   });
 
-  app.post('/ai/chat', requireSession(), async (c) => {
+  // POST /ai/chat — streaming AI chat via SSE (Celestial only)
+  app.post('/ai/chat', requireSession(), requireTier('celestial'), async (c) => {
     const body = await c.req.json().catch(() => null);
     const parsed = AiChatSchema.safeParse(body);
     if (!parsed.success) {
-      return c.json(err('Invalid request: provider and query are required'), 400);
+      return c.json(err('prompt required'), 400);
     }
-    const { provider, query } = parsed.data;
+    const { prompt } = parsed.data;
 
+    const entries = await loadConfigEntries();
+    const provider = entries.ai_provider;
+
+    if (!provider) {
+      return c.json(err('no_provider_configured'), 400);
+    }
+
+    // biome-ignore lint/suspicious/noExplicitAny: ollama-ai-provider returns LanguageModelV1, SDK v6 expects V2/V3 at type level but handles V1 at runtime
+    let model: any;
     try {
-      if (provider === 'ollama') {
-        const configRows = await db
-          .select({ key: schema.config.key, value: schema.config.value })
-          .from(schema.config);
-        const entries: Record<string, string> = {};
-        for (const row of configRows) entries[row.key] = row.value;
-        const ollamaUrl = entries.ollama_url;
-        if (!ollamaUrl) {
-          return c.json(err('Ollama URL not configured'), 400);
-        }
-
-        try {
+      switch (provider) {
+        case 'ollama': {
+          const ollamaUrl = entries.ollama_url;
+          if (!ollamaUrl) {
+            return c.json(err('Ollama URL not configured'), 400);
+          }
           assertNotCloudMetadata(ollamaUrl);
-        } catch {
-          return c.json(err('Invalid Ollama URL'), 400);
+          const ollama = createOllama({
+            baseURL: `${ollamaUrl.replace(/\/+$/, '')}/api`,
+          });
+          model = ollama(entries.ollama_model || 'llama3.2');
+          break;
         }
-
-        let parsedUrl: URL;
-        try {
-          parsedUrl = new URL('/api/generate', ollamaUrl);
-        } catch {
-          return c.json(err('Invalid Ollama URL'), 400);
+        case 'openai': {
+          const key = await loadAiCredential('ai:openai_key');
+          if (!key) return c.json(err('openai_key_missing'), 400);
+          const openai = createOpenAI({ apiKey: key });
+          model = openai(entries.openai_model || 'gpt-4o-mini');
+          break;
         }
-        if (parsedUrl.protocol !== 'http:' && parsedUrl.protocol !== 'https:') {
-          return c.json(err('Ollama URL must use http or https'), 400);
+        case 'anthropic': {
+          const key = await loadAiCredential('ai:anthropic_key');
+          if (!key) return c.json(err('anthropic_key_missing'), 400);
+          const anthropic = createAnthropic({ apiKey: key });
+          model = anthropic(entries.anthropic_model || 'claude-haiku-4-5-20251001');
+          break;
         }
-        const ollamaModel = entries.ollama_model ?? 'llama3.2';
-        const resp = await fetch(parsedUrl.toString(), {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ model: ollamaModel, prompt: query, stream: false }),
-          signal: AbortSignal.timeout(30_000),
-        });
-        if (!resp.ok) {
-          return c.json(err(`Ollama returned ${resp.status}`), 502);
+        case 'google': {
+          const key = await loadAiCredential('ai:google_key');
+          if (!key) return c.json(err('google_key_missing'), 400);
+          const google = createGoogleGenerativeAI({ apiKey: key });
+          model = google(entries.google_model || 'gemini-2.0-flash');
+          break;
         }
-        const data = await resp.json();
-        const OllamaResponseSchema = z.object({ response: z.string() });
-        const ollamaParsed = OllamaResponseSchema.safeParse(data);
-        if (!ollamaParsed.success) {
-          return c.json(err('Unexpected response from Ollama'), 502);
+        case 'custom': {
+          const key = await loadAiCredential('ai:custom_key');
+          const baseURL = entries.custom_ai_url;
+          if (baseURL) assertNotCloudMetadata(baseURL);
+          const openai = createOpenAI({
+            ...(baseURL ? { baseURL } : {}),
+            apiKey: key || 'none',
+          });
+          model = openai(entries.custom_ai_model || 'default');
+          break;
         }
-        return c.json(ok({ text: ollamaParsed.data.response }));
+        default:
+          return c.json(err('unknown_provider'), 400);
       }
-
-      if (provider === 'openai') {
-        const apiKey = await loadAiCredential('ai:openai_key');
-        if (!apiKey) {
-          return c.json(err('OpenAI API key not configured'), 400);
-        }
-        const resp = await fetch('https://api.openai.com/v1/chat/completions', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${apiKey}`,
-          },
-          body: JSON.stringify({
-            model: 'gpt-4o-mini',
-            messages: [{ role: 'user', content: query }],
-            max_tokens: 1024,
-          }),
-          signal: AbortSignal.timeout(30_000),
-        });
-        if (!resp.ok) {
-          return c.json(err(`OpenAI returned ${resp.status}`), 502);
-        }
-        const data = await resp.json();
-        const OpenAIResponseSchema = z.object({
-          choices: z.array(z.object({ message: z.object({ content: z.string() }) })).min(1),
-        });
-        const openaiParsed = OpenAIResponseSchema.safeParse(data);
-        if (!openaiParsed.success) {
-          return c.json(err('Unexpected response from OpenAI'), 502);
-        }
-        const firstChoice = openaiParsed.data.choices[0];
-        if (!firstChoice) {
-          return c.json(err('Empty response from OpenAI'), 502);
-        }
-        return c.json(ok({ text: firstChoice.message.content }));
-      }
-
-      if (provider === 'anthropic') {
-        const apiKey = await loadAiCredential('ai:anthropic_key');
-        if (!apiKey) {
-          return c.json(err('Anthropic API key not configured'), 400);
-        }
-        const resp = await fetch('https://api.anthropic.com/v1/messages', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-api-key': apiKey,
-            'anthropic-version': '2023-06-01',
-          },
-          body: JSON.stringify({
-            model: 'claude-sonnet-4-20250514',
-            max_tokens: 1024,
-            messages: [{ role: 'user', content: query }],
-          }),
-          signal: AbortSignal.timeout(30_000),
-        });
-        if (!resp.ok) {
-          return c.json(err(`Anthropic returned ${resp.status}`), 502);
-        }
-        const data = await resp.json();
-        const AnthropicResponseSchema = z.object({
-          content: z.array(z.object({ type: z.string(), text: z.string() })).min(1),
-        });
-        const anthropicParsed = AnthropicResponseSchema.safeParse(data);
-        if (!anthropicParsed.success) {
-          return c.json(err('Unexpected response from Anthropic'), 502);
-        }
-        const textBlock = anthropicParsed.data.content.find((b) => b.type === 'text');
-        return c.json(ok({ text: textBlock?.text ?? '' }));
-      }
-
-      return c.json(err('Unsupported provider'), 400);
-    } catch (e) {
-      if (e instanceof DOMException && e.name === 'AbortError') {
-        return c.json(err('AI provider request timed out'), 504);
-      }
-      console.error('[phavo]', e);
-      return c.json(err('Internal error'), 500);
+    } catch {
+      return c.json(err('provider_init_failed'), 500);
     }
+
+    return streamSSE(c, async (stream) => {
+      try {
+        const { textStream } = streamText({ model, system: AI_SYSTEM_PROMPT, prompt });
+        let id = 0;
+        for await (const chunk of textStream) {
+          await stream.writeSSE({
+            data: JSON.stringify({ text: chunk }),
+            event: 'chunk',
+            id: String(id++),
+          });
+        }
+        await stream.writeSSE({
+          data: JSON.stringify({ done: true }),
+          event: 'done',
+          id: String(id++),
+        });
+      } catch {
+        await stream.writeSSE({
+          data: JSON.stringify({ error: 'stream_failed' }),
+          event: 'error',
+          id: '0',
+        });
+      }
+    });
   });
 }

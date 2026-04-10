@@ -11,6 +11,17 @@
 PHAVO is a **product-grade UI**, not a prototype.
 Every change must improve clarity, improve consistency, and align with the Celestial Wish design system.
 
+## Source of Truth
+
+When documents disagree, resolve and align to this precedence:
+
+1. `CLAUDE.md` for architecture/runtime invariants and stack rules
+2. `docs/design.md` for visual/tokens/motion rules
+3. `docs/prd.md` for product scope and release requirements
+4. `docs/roadmap.html` for execution status only (never for normative architecture)
+
+Any mismatch found during implementation must be corrected in docs as part of the same change set.
+
 ---
 
 ## 1. CSS Token Iron Rule
@@ -131,9 +142,9 @@ If you see any of the forbidden strings in non-comment code, fix them.
 
 ---
 
-## 7. No Network Calls at Runtime
+## 7. Runtime Network Boundaries
 
-The app is fully offline. No outbound calls at runtime except user-initiated actions.
+The app should stay local-first. Outbound calls at runtime must be explicit and scoped.
 
 **Allowed outbound calls:**
 - `GET /api/v1/update/check` — user-initiated, 1h server-side cache
@@ -142,7 +153,6 @@ The app is fully offline. No outbound calls at runtime except user-initiated act
 - Pi-hole API — per widget poll cycle
 
 **Never:**
-- phavo.net for any purpose at runtime
 - telemetry, analytics, or any background phone-home
 - Any call not explicitly triggered by the user or a widget data fetch
 
@@ -184,6 +194,8 @@ Every use of `backdrop-filter: blur()` must include a Pi 3/4 fallback.
 - Data flows: store → widget component. Never widget → API
 - S/M/L size variants must be implemented with meaningful content differentiation
 - **XL is inactive** — exists in `WidgetSize` type but no widget registers it. Do not add XL to any `availableSizes` array.
+- `showControls={false} clipContent={false}` required in non-BentoGrid contexts (WidgetDrawer, Settings)
+- `staggerIndex` prop controls entrance animation delay (`staggerIndex * 60ms`)
 - Category labels are ALL CAPS with `letter-spacing: 0.1em`
 - Widget tray shows **S-size previews only**
 
@@ -305,7 +317,18 @@ Never:
 
 ---
 
-## 19. Definition of Done
+## 19. AI SDK Rules
+
+- Use Vercel AI SDK (`ai` package) for all AI features
+- Provider abstraction: `createOllama()` / `createOpenAI()` / `createAnthropic()`
+- Streaming via `streamText()` + Hono `streamSSE` — never buffer full response
+- Local Ollama: `baseURL` configurable via `PHAVO_OLLAMA_URL` env var
+- API keys stored encrypted in `credentials` table — never exposed to browser
+- AI features are Celestial-tier only — always behind `requireTier('celestial')`
+
+---
+
+## 20. Definition of Done
 
 A task is complete ONLY when ALL of these pass:
 

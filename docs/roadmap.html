@@ -122,7 +122,7 @@ body{font-family:var(--font-ui);background:var(--bg);color:var(--text);font-size
 <div class="doc-header">
   <div>
     <h1>Phavo — Road to v1.0</h1>
-    <div class="sub">S0–S9 + Audit + Infra complete · 3 Pre-Launch Milestones remaining · Updated 2026-04-09 · PRD v4.0 · Arch Spec v3.0 · Design: Celestial Wish</div>
+    <div class="sub">S0–S9 + Audit + Infra complete · 3 Pre-Launch Milestones remaining · Updated 2026-04-09 · Runtime aligned to v0.8.0 · PRD v4.1 · Arch Spec v3.1 · Design: Celestial Wish</div>
   </div>
   <div class="legend">
     <div class="leg-item"><div class="leg-dot" style="background:#3fc8a0"></div>Done</div>
@@ -134,8 +134,10 @@ body{font-family:var(--font-ui);background:var(--bg);color:var(--text);font-size
 
 <div class="progress-bar">
   <span class="progress-label">Overall progress</span>
-  <div class="progress-track"><div class="progress-fill" style="width:65%"></div></div>
-  <span class="progress-label">~65% to v1.0 &nbsp;·&nbsp; MA ~75% done &nbsp;·&nbsp; MB + MC remaining</span>
+  <div class="progress-track"><div class="progress-fill" style="width:82%"></div></div>
+  <span class="progress-label"><b>~82%</b> to v1.0
+  &nbsp;·&nbsp; MA complete · MB in progress
+  &nbsp;·&nbsp; MC remaining</span>
 </div>
 
 <div class="main">
@@ -154,8 +156,8 @@ body{font-family:var(--font-ui);background:var(--bg);color:var(--text);font-size
   <a href="#audit"     class="done">Audit Fixes</a>
   <a href="#infra"     class="done">Infrastructure</a>
   <div class="sidebar-label">Pre-Launch</div>
-  <a href="#ma"  class="active">MA — Design &amp; Experience</a>
-  <a href="#mb"  class="upcoming">MB — Backend &amp; Activation</a>
+  <a href="#ma"  class="done">MA — Design &amp; Experience</a>
+  <a href="#mb"  class="active">MB — Backend &amp; Activation</a>
   <a href="#mc"  class="upcoming">MC — Launch</a>
   <a href="#launch">v1.0 Checklist</a>
   <div class="sidebar-label">Post-v1.0</div>
@@ -278,8 +280,8 @@ body{font-family:var(--font-ui);background:var(--bg);color:var(--text);font-size
 <div class="phase-divider"><span class="phase-divider-label">Pre-Launch — MA through MC</span><div class="phase-divider-line"></div></div>
 
 <!-- MA -->
-<div class="session active" id="ma">
-  <div class="session-header"><span class="session-num">MA</span><span class="session-title">Design &amp; Experience</span><span class="session-subtitle">active</span></div>
+<div class="session done" id="ma">
+  <div class="session-header"><span class="session-num">MA</span><span class="session-title">Design &amp; Experience</span><span class="session-subtitle">done</span></div>
   <div class="session-body">
   <div class="callout gold" style="margin-bottom:12px">Design milestone. All visual work must be complete before MB begins. MA produces the hero screenshot — the primary marketing asset.</div>
   <div class="tasks">
@@ -289,34 +291,38 @@ body{font-family:var(--font-ui);background:var(--bg);color:var(--text);font-size
     <div class="task task-done"><div class="task-icon">✅</div><div class="task-text">Notification panel (right-side slide-in) — Celestial Wish surface, filter tabs, bell badge</div><span class="task-tag tag-ui">ui</span></div>
     <div class="task task-done"><div class="task-icon">✅</div><div class="task-text">Notification categories: update, security, widget-error, widget-warning, task, info</div><span class="task-tag tag-ux">ux</span></div>
     <div class="task task-done"><div class="task-icon">✅</div><div class="task-text">Mark-read / clear-all / deep-link to widget</div><span class="task-tag tag-ux">ux</span></div>
-    <div class="task"><div class="task-icon">⬜</div><div class="task-text">Final visual consistency pass — every component checked against <code>docs/design.md</code></div><span class="task-tag tag-design">design</span></div>
-    <div class="task"><div class="task-icon">⬜</div><div class="task-text">BentoGrid — fix any remaining snap/layout edge cases</div><span class="task-tag tag-ux">ux</span></div>
-    <div class="task"><div class="task-icon">⬜</div><div class="task-text">Header glassmorphism on scroll (IntersectionObserver, Pi fallback)</div><span class="task-tag tag-design">design</span></div>
-    <div class="task"><div class="task-icon">⬜</div><div class="task-text">Button component — primary pill, secondary ghost, tertiary text-only</div><span class="task-tag tag-design">design</span></div>
-    <div class="task"><div class="task-icon">⬜</div><div class="task-text">Populate dashboard for hero screenshot — representative widget layout</div><span class="task-tag tag-design">design</span></div>
-    <div class="task"><div class="task-icon">⬜</div><div class="task-text">Capture hero screenshot at 1440px</div><span class="task-tag tag-design">design</span></div>
-    <div class="task"><div class="task-icon">⬜</div><div class="task-text">Verify Docker, Service Health, Speedtest, Calendar widget components are visually complete and Celestial Wish compliant (components already exist — UI polish only)</div><span class="task-tag tag-design">design</span></div>
+    <div class="task task-done"><div class="task-icon">✅</div><div class="task-text">Final visual consistency pass — every component checked against <code>docs/design.md</code></div><span class="task-tag tag-design">design</span></div>
+    <div class="task task-done"><div class="task-icon">✅</div><div class="task-text">BentoGrid — fix any remaining snap/layout edge cases</div><span class="task-tag tag-ux">ux</span></div>
+    <div class="task task-done"><div class="task-icon">✅</div><div class="task-text">Header glassmorphism on scroll (IntersectionObserver, Pi fallback)</div><span class="task-tag tag-design">design</span></div>
+    <div class="task task-done"><div class="task-icon">✅</div><div class="task-text">Button component — primary pill, secondary ghost, tertiary text-only</div><span class="task-tag tag-design">design</span></div>
+    <div class="task task-done"><div class="task-icon">✅</div><div class="task-text">Verify Docker, Service Health, Speedtest, Calendar widget components are visually complete and Celestial Wish compliant (components already exist — UI polish only)</div><span class="task-tag tag-design">design</span></div>
   </div></div>
 </div>
 
 <!-- MB -->
-<div class="session upcoming" id="mb">
-  <div class="session-header"><span class="session-num">MB</span><span class="session-title">Backend &amp; Activation</span><span class="session-subtitle">upcoming</span></div>
+<div class="session active" id="mb">
+  <div class="session-header"><span class="session-num">MB</span><span class="session-title">Backend &amp; Activation</span><span class="session-subtitle">active</span></div>
   <div class="session-body">
   <div class="callout" style="margin-bottom:12px">Backend milestone. Activates the Celestial tier commercially. All API work, license flow, and database migrations live here.</div>
   <div class="tasks">
-    <div class="task"><div class="task-icon">⬜</div><div class="task-text">DB migration 0005 — rename tier values: <code>free→stellar</code>, <code>standard→celestial</code>, <code>local→celestial</code>; remove legacy columns</div><span class="task-tag tag-db">db</span></div>
-    <div class="task"><div class="task-icon">⬜</div><div class="task-text">Update Drizzle schema — sessions.tier enum: <code>'stellar' | 'celestial'</code>; remove phavo-net authMode</div><span class="task-tag tag-db">db</span></div>
-    <div class="task"><div class="task-icon">⬜</div><div class="task-text">Register Docker widget — wire <code>GET /api/v1/integrations/docker</code> handler (container list, CPU/RAM, restart)</div><span class="task-tag tag-api">api</span></div>
-    <div class="task"><div class="task-icon">⬜</div><div class="task-text">Register Service Health widget — wire <code>GET /api/v1/integrations/service-health</code> handler</div><span class="task-tag tag-api">api</span></div>
-    <div class="task"><div class="task-icon">⬜</div><div class="task-text">Register Speedtest widget — wire <code>POST /api/v1/integrations/speedtest</code>; rate-limit 1/5min; 30-result history</div><span class="task-tag tag-api">api</span></div>
-    <div class="task"><div class="task-icon">⬜</div><div class="task-text">Register Calendar widget — wire CalDAV handler; credentials in credentials table</div><span class="task-tag tag-api">api</span></div>
-    <div class="task"><div class="task-icon">⬜</div><div class="task-text">DB migration 0006 — add <code>plugin_data</code> table (required for Speedtest history)</div><span class="task-tag tag-db">db</span></div>
+    <div class="task task-done"><div class="task-icon">✅</div><div class="task-text">DB migration 0005 — cleanup legacy auth/tier leftovers in existing installs; canonical runtime values remain <code>stellar</code>/<code>celestial</code> and auth mode <code>local</code></div><span class="task-tag tag-db">db</span></div>
+    <div class="task task-done"><div class="task-icon">✅</div><div class="task-text">Update Drizzle schema — sessions.tier enum: <code>'stellar' | 'celestial'</code>; remove phavo-net authMode</div><span class="task-tag tag-db">db</span></div>
+    <div class="task task-done"><div class="task-icon">✅</div><div class="task-text">Register Docker widget — wire <code>GET /api/v1/integrations/docker</code> handler (container list, CPU/RAM, restart)</div><span class="task-tag tag-api">api</span></div>
+    <div class="task task-done"><div class="task-icon">✅</div><div class="task-text">Register Service Health widget — wire <code>GET /api/v1/integrations/service-health</code> handler</div><span class="task-tag tag-api">api</span></div>
+    <div class="task task-done"><div class="task-icon">✅</div><div class="task-text">Register Speedtest widget — wire <code>POST /api/v1/integrations/speedtest</code>; rate-limit 1/5min; 30-result history</div><span class="task-tag tag-api">api</span></div>
+    <div class="task task-done"><div class="task-icon">✅</div><div class="task-text">Register Calendar widget — wire CalDAV handler; credentials in credentials table</div><span class="task-tag tag-api">api</span></div>
+    <div class="task task-done"><div class="task-icon">✅</div><div class="task-text">DB migration 0006 — add <code>plugin_data</code> table (Speedtest history)</div><span class="task-tag tag-db">db</span></div>
     <div class="task"><div class="task-icon">⬜</div><div class="task-text">Ed25519 key generation — private key in GitHub Actions Secrets; two public keys embedded in binary</div><span class="task-tag tag-security">security</span></div>
-    <div class="task"><div class="task-icon">⬜</div><div class="task-text"><code>POST /api/v1/license/activate</code> — offline Ed25519 verification, no network call</div><span class="task-tag tag-api">api</span></div>
-    <div class="task"><div class="task-icon">⬜</div><div class="task-text"><code>POST /api/v1/license/deactivate</code></div><span class="task-tag tag-api">api</span></div>
-    <div class="task"><div class="task-icon">⬜</div><div class="task-text">Server startup re-verification of stored license key</div><span class="task-tag tag-security">security</span></div>
-    <div class="task"><div class="task-icon">⬜</div><div class="task-text">Settings → Licence page wired to activation endpoints</div><span class="task-tag tag-ui">ui</span></div>
+    <div class="task task-done"><div class="task-icon">✅</div><div class="task-text"><code>POST /api/v1/license/activate</code> — offline Ed25519 verification, no network call</div><span class="task-tag tag-api">api</span></div>
+    <div class="task task-done"><div class="task-icon">✅</div><div class="task-text"><code>POST /api/v1/license/deactivate</code></div><span class="task-tag tag-api">api</span></div>
+    <div class="task task-done"><div class="task-icon">✅</div><div class="task-text">Server startup re-verification of stored license key</div><span class="task-tag tag-security">security</span></div>
+    <div class="task task-done"><div class="task-icon">✅</div><div class="task-text">Settings → Licence page wired to activation endpoints</div><span class="task-tag tag-ui">ui</span></div>
+    <div class="task"><div class="task-icon">⬜</div><div class="task-text">
+  AI SDK integration — replace custom AI route with Vercel AI SDK (<code>ai</code> +
+  <code>ollama-ai-provider</code>); unified provider abstraction for Ollama (local),
+  OpenAI, and Anthropic; streaming via Hono SSE; searchbar AI uses stream
+</div><span class="task-tag tag-api">api</span></div>
+    <div class="task"><div class="task-icon">⬜</div><div class="task-text">Ed25519 key generation — private key in GitHub Actions Secrets; two public keys embedded in binary</div><span class="task-tag tag-security">security</span></div>
     <div class="task"><div class="task-icon">⬜</div><div class="task-text">Gumroad webhook → phavo.net key generation → email key to buyer</div><span class="task-tag tag-infra">infra</span></div>
   </div></div>
 </div>
@@ -327,6 +333,14 @@ body{font-family:var(--font-ui);background:var(--bg);color:var(--text);font-size
   <div class="session-body">
   <div class="callout" style="margin-bottom:12px">Launch milestone. Nothing ships until MA and MB are complete. MC produces phavo.net, the Gumroad product, and the first public release.</div>
   <div class="tasks">
+    <div class="task"><div class="task-icon">⬜</div><div class="task-text">
+  Populate dashboard for hero screenshot — representative widget layout
+  (CPU L, Memory M, Network M, Disk M, Weather M, RSS L)
+</div><span class="task-tag tag-design">design</span></div>
+    <div class="task"><div class="task-icon">⬜</div><div class="task-text">
+  Capture hero screenshot at 1440px — primary marketing asset for
+  phavo.net, Reddit, Discord, Product Hunt
+</div><span class="task-tag tag-design">design</span></div>
     <div class="task"><div class="task-icon">⬜</div><div class="task-text">Security pen-test — auth flows, CSRF bypass, rate limit evasion, tier enforcement bypass</div><span class="task-tag tag-security">security</span></div>
     <div class="task"><div class="task-icon">⬜</div><div class="task-text">Verify AES-256-GCM credential encryption at rest</div><span class="task-tag tag-security">security</span></div>
     <div class="task"><div class="task-icon">⬜</div><div class="task-text">Ed25519 license — test tampered payload rejection, tampered signature rejection</div><span class="task-tag tag-security">security</span></div>
@@ -351,7 +365,7 @@ body{font-family:var(--font-ui);background:var(--bg);color:var(--text);font-size
   <div class="launch-item done">GitHub Org — getphavo/phavo</div>
   <div class="launch-item done">Version management — release scripts + Docker CI working</div>
   <div class="launch-item">MA–MC milestones complete</div>
-  <div class="launch-item"><code>bun run release:minor</code> → v0.8.0 → Docker CI → getphavo/phavo:0.8.0 on Docker Hub</div>
+  <div class="launch-item"><code>bun run release:minor</code> → v1.0.0 → Docker CI → getphavo/phavo:1.0.0 on Docker Hub</div>
   <div class="launch-item">Raspberry Pi 4/5 arm64 smoke test — fresh docker compose up, all 14 widgets, full setup</div>
   <div class="launch-item">phavo.net landing page live — hero screenshot, Stellar/Celestial pricing</div>
   <div class="launch-item">Gumroad product live — Celestial €16.99 launch price, 14-day refund visible</div>

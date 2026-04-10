@@ -10,6 +10,7 @@ import {
   IMPORT_RULE,
   METRICS_RULE,
   TOTP_RULE,
+  WEBHOOK_RULE,
 } from '$lib/server/middleware/rate-limit.js';
 import { registerAiRoutes } from '$lib/server/routes/ai.js';
 import { registerAuthRoutes } from '$lib/server/routes/auth.js';
@@ -20,6 +21,7 @@ import { registerMetricsRoutes } from '$lib/server/routes/metrics.js';
 import { registerNotificationRoutes } from '$lib/server/routes/notifications.js';
 import { registerSystemRoutes } from '$lib/server/routes/system.js';
 import { registerTabRoutes } from '$lib/server/routes/tabs.js';
+import { registerWebhookRoutes } from '$lib/server/routes/webhook.js';
 import { registerWidgetRoutes } from '$lib/server/routes/widgets.js';
 
 const app = new Hono<{ Variables: AppVariables }>().basePath('/api/v1');
@@ -39,7 +41,18 @@ app.use('*', async (c, next) => {
   if (path === '/api/v1/system/health' || path === '/api/v1/auth/login') {
     return next();
   }
-
+  // Webhook has its own HMAC auth — uses dedicated rate limit rule.
+  if (path === '/api/v1/webhooks/gumroad') {
+    const ip = getClientIp(c.req);
+    const result = checkIpRateLimit(`${ip}:${path}`, WEBHOOK_RULE);
+    if (!result.allowed) {
+      const retryAfterSec = Math.ceil((result.retryAfterMs ?? 60_000) / 1000);
+      return c.json(err('Rate limit exceeded'), 429, {
+        'Retry-After': String(retryAfterSec),
+      });
+    }
+    return next();
+  }
   const ip = getClientIp(c.req);
 
   // Select the applicable rule based on route.
@@ -82,6 +95,7 @@ registerConfigRoutes(app);
 registerLicenseRoutes(app);
 registerAuthRoutes(app);
 registerAiRoutes(app);
+registerWebhookRoutes(app);
 
 // â”€â”€â”€ SvelteKit adapter â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 

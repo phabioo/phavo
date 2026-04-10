@@ -86,6 +86,7 @@
     display: flex;
     flex-direction: column;
     gap: var(--space-3);
+    height: 100%;
     position: relative;
   }
 

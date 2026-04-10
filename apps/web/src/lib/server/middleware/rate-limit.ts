@@ -71,6 +71,9 @@ export const IMPORT_RULE: RateLimitRule = { maxRequests: 5, windowMs: 10 * 60 * 
 /** Default for all other authenticated endpoints — 120 req / 1 min per IP. */
 export const DEFAULT_RULE: RateLimitRule = { maxRequests: 120, windowMs: 60 * 1000 };
 
+/** POST /webhooks/gumroad — 20 req / 1 min per IP. */
+export const WEBHOOK_RULE: RateLimitRule = { maxRequests: 20, windowMs: 60 * 1000 };
+
 /**
  * Extracts the client IP from a Hono request.
  * Trust x-forwarded-for only when PHAVO_TRUST_PROXY=true.
@@ -82,7 +85,10 @@ export function getClientIp(req: HonoRequest): string {
       // split(',')[0] is always defined when the source string is non-empty
       return (forwarded.split(',')[0] ?? forwarded).trim();
     }
+
+    const realIp = req.header('x-real-ip');
+    if (realIp) return realIp;
   }
 
-  return req.header('x-real-ip') ?? 'unknown';
+  return 'unknown';
 }

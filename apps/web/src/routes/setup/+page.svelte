@@ -35,9 +35,9 @@ type FullStep =
   | 'config'
   | 'done';
 type Tier = 'stellar' | 'celestial';
-type AuthMode = 'phavo-net' | 'local';
+type AuthMode = 'local';
 type ApiResponse<T> = { ok: true; data: T } | { ok: false; error: string };
-type SessionInfo = { authMode: AuthMode; validatedAt: number; graceUntil: number | null };
+type SessionInfo = { authMode: AuthMode; validatedAt: number };
 type LoginSuccess = { tier?: Tier; requiresTotp?: boolean; partialToken?: string };
 type GeoResult = { id: number; name: string; country: string; latitude: number; longitude: number };
 type SetupLocation = { name: string; latitude: number; longitude: number };
@@ -66,7 +66,6 @@ type PersistedFieldData = {
 
 // ── CONSTANTS ──────────────────────────────────────────────────────────────
 const SETUP_KEY = 'phavo_setup_state';
-const PHAVO_IO_URL = 'https://phavo.net';
 const QUICK_STEPS: QuickStep[] = ['auth', 'location', 'done'];
 const FULL_STEPS: FullStep[] = [
   'tier', 'auth', 'name', 'location', 'tabs', 'widgets', 'assign', 'config', 'done',
@@ -81,7 +80,6 @@ let quickStep = $state<QuickStep>('auth');
 let fullStep = $state<FullStep>('tier');
 
 // ── AUTH STATE ─────────────────────────────────────────────────────────────
-let quickAuthMethod = $state<'choice' | 'phavo-net' | 'local'>('choice');
 let selectedTier = $state<Tier>('stellar');
 let sessionTier = $state<Tier | null>(null);
 let currentAuthMode = $state<AuthMode | null>(null);
@@ -210,7 +208,6 @@ function setMode(newMode: 'quick' | 'full') {
   mode = newMode;
   quickStep = 'auth';
   fullStep = 'tier';
-  quickAuthMethod = 'choice';
   authError = '';
   window.history.replaceState({}, '', `/setup?mode=${newMode}`);
 }
@@ -247,48 +244,6 @@ function nextFullStep() {
 }
 
 // ── AUTH ───────────────────────────────────────────────────────────────────
-function encodeOauthState(nextMode: 'quick' | 'full'): string {
-  return btoa(JSON.stringify({ source: 'setup', mode: nextMode }));
-}
-
-async function startPhavoOauth(nextMode: 'quick' | 'full') {
-  authError = '';
-
-  if (data.devMode) {
-    authLoading = true;
-    try {
-      const resp = await apiRequest<LoginSuccess>('/api/v1/auth/login', {
-        method: 'POST',
-        body: { authMode: 'phavo-net', code: 'dev-mock' },
-      });
-      if (!resp.ok) {
-        authError = resp.error;
-        return;
-      }
-      const ok = await syncSessionContext();
-      if (!ok) return;
-      if (nextMode === 'quick') {
-        quickStep = 'location';
-        return;
-      }
-      fullStep = 'name';
-      return;
-    } catch {
-      authError = en.errors.networkError;
-      return;
-    } finally {
-      authLoading = false;
-    }
-  }
-
-  const redirectUri = `${window.location.origin}/auth/callback`;
-  const authorizeUrl = new URL(`${PHAVO_IO_URL}/oauth/authorize`);
-  authorizeUrl.searchParams.set('response_type', 'code');
-  authorizeUrl.searchParams.set('redirect_uri', redirectUri);
-  authorizeUrl.searchParams.set('state', encodeOauthState(nextMode));
-  window.location.assign(authorizeUrl.toString());
-}
-
 async function syncSessionContext(): Promise<boolean> {
   const resp = await apiRequest<SessionInfo>('/api/v1/auth/session');
   if (!resp.ok) { authError = resp.error; return false; }
@@ -326,21 +281,6 @@ async function submitLocalAuth(nextMode: 'quick' | 'full') {
   } finally {
     authLoading = false;
   }
-}
-
-async function handleOauthReturn(
-  status: string | null,
-  modeParam: string | null,
-  message: string | null,
-) {
-  if (!status) return;
-  const oauthMode: 'quick' | 'full' = modeParam === 'quick' ? 'quick' : 'full';
-  mode = oauthMode;
-  if (status === 'error') { authError = message ?? 'Authentication failed'; return; }
-  const ok = await syncSessionContext();
-  if (!ok) return;
-  if (oauthMode === 'quick') { quickStep = 'location'; return; }
-  fullStep = 'name';
 }
 
 // ── GEOCODING ──────────────────────────────────────────────────────────────
@@ -417,7 +357,6 @@ async function loadWidgetManifest() {
     const resp = await apiRequest<WidgetManifestEntry[]>('/api/v1/widgets');
     if (!resp.ok) { widgetManifestError = resp.error; return; }
     widgetManifest = resp.data;
-    if (currentAuthMode === 'local') { sessionTier = 'celestial'; return; }
     sessionTier = widgetManifest.some((e) => isWidgetTeaserDefinition(e)) ? 'stellar' : 'celestial';
   } catch {
     widgetManifestError = en.errors.networkError;
@@ -728,18 +667,6 @@ onMount(() => {
 
   hydrated = true;
 
-  // Handle phavo.net OAuth callback return
-  const oauthStatus = params.get('oauth');
-  if (oauthStatus) {
-    void handleOauthReturn(oauthStatus, urlMode, params.get('message'));
-    try {
-      const cleanUrl = new URL(window.location.href);
-      cleanUrl.searchParams.delete('oauth');
-      cleanUrl.searchParams.delete('message');
-      history.replaceState(history.state, '', cleanUrl.toString());
-    } catch { /* cosmetic only */ }
-  }
-
   // Persist field data whenever it changes — moved into $effect.root inside onMount
   // so the effect is created AFTER _hydrate completes, avoiding effect_orphan and
   // the "Cannot access 'component' before initialization" TDZ error.
@@ -791,47 +718,18 @@ onMount(() => {
       {#if quickStep === 'auth'}
         <h2 class="text-xl font-semibold text-text">{en.setup.steps.auth}</h2>
 
-        {#if quickAuthMethod === 'choice'}
-          <div class="flex flex-col gap-3">
-            <button type="button" class="flex flex-col gap-2 p-6 border border-border-subtle rounded-lg bg-surface text-left cursor-pointer text-text transition-colors hover:border-border" onclick={() => (quickAuthMethod = 'phavo-net')}>
-              <h3 class="text-lg font-semibold">{en.setup.auth.phavoIo}</h3>
-              <p class="text-sm text-text-muted">Continue with phavo.net to create or validate your account.</p>
-            </button>
-            <button type="button" class="flex flex-col gap-2 p-6 border border-border-subtle rounded-lg bg-surface text-left cursor-pointer text-text transition-colors hover:border-border" onclick={() => (quickAuthMethod = 'local')}>
-              <h3 class="text-lg font-semibold">{en.setup.auth.localAccount}</h3>
-              <p class="text-sm text-text-muted">Sign in with a local account stored only on this device.</p>
-            </button>
-          </div>
+        <div class="flex flex-col gap-3">
+          <Input label={en.setup.auth.username} placeholder={en.setup.auth.username} bind:value={authUsername} />
+          <Input label={en.setup.auth.password} type="password" placeholder={en.auth.passwordPlaceholder} bind:value={authPassword} />
+          <Input label={en.setup.auth.enterLicenseKey} placeholder={en.setup.auth.enterLicenseKey} bind:value={authLicenseKey} />
+          {#if authError}<p class="text-red-400 text-sm">{authError}</p>{/if}
           <div class="flex justify-end gap-3 flex-wrap mt-2">
-            <Button variant="ghost" onclick={backToWelcome}>{en.common.back}</Button>
+            <Button variant="tertiary" onclick={backToWelcome}>{en.common.back}</Button>
+            <Button onclick={() => submitLocalAuth('quick')} disabled={authLoading}>
+              {authLoading ? en.common.loading : en.auth.login}
+            </Button>
           </div>
-
-        {:else if quickAuthMethod === 'phavo-net'}
-          <div class="flex flex-col gap-3">
-            <p class="text-text-muted">
-              You'll be redirected to phavo.net to authenticate, then returned here automatically.
-            </p>
-            {#if authError}<p class="text-red-400 text-sm">{authError}</p>{/if}
-            <div class="flex justify-end gap-3 flex-wrap mt-2">
-              <Button variant="ghost" onclick={() => { quickAuthMethod = 'choice'; authError = ''; }}>{en.common.back}</Button>
-              <Button onclick={() => startPhavoOauth('quick')}>{en.setup.auth.phavoIo}</Button>
-            </div>
-          </div>
-
-        {:else}
-          <div class="flex flex-col gap-3">
-            <Input label={en.setup.auth.username} placeholder={en.setup.auth.username} bind:value={authUsername} />
-            <Input label={en.setup.auth.password} type="password" placeholder={en.auth.passwordPlaceholder} bind:value={authPassword} />
-            <Input label={en.setup.auth.enterLicenseKey} placeholder={en.setup.auth.enterLicenseKey} bind:value={authLicenseKey} />
-            {#if authError}<p class="text-red-400 text-sm">{authError}</p>{/if}
-            <div class="flex justify-end gap-3 flex-wrap mt-2">
-              <Button variant="ghost" onclick={() => { quickAuthMethod = 'choice'; authError = ''; }}>{en.common.back}</Button>
-              <Button onclick={() => submitLocalAuth('quick')} disabled={authLoading}>
-                {authLoading ? en.common.loading : en.auth.login}
-              </Button>
-            </div>
-          </div>
-        {/if}
+        </div>
 
       {:else if quickStep === 'location'}
         <h2 class="text-xl font-semibold text-text">{en.setup.steps.location}</h2>
@@ -869,8 +767,8 @@ onMount(() => {
         {#if locationError}<p class="text-red-400 text-sm">{locationError}</p>{/if}
 
         <div class="flex justify-end gap-3 flex-wrap mt-2">
-          <Button variant="ghost" onclick={prevQuickStep}>{en.common.back}</Button>
-          <Button variant="ghost" onclick={nextQuickStep}>{en.setup.location.skip}</Button>
+          <Button variant="tertiary" onclick={prevQuickStep}>{en.common.back}</Button>
+          <Button variant="tertiary" onclick={nextQuickStep}>{en.setup.location.skip}</Button>
           <Button onclick={nextQuickStep} disabled={!selectedLocation}>{en.common.next}</Button>
         </div>
 
@@ -880,7 +778,7 @@ onMount(() => {
         <p class="text-text-muted">{en.setup.done.subtitle}</p>
         {#if setupError}<p class="text-red-400 text-sm">{setupError}</p>{/if}
         <div class="flex justify-end gap-3 flex-wrap mt-2">
-          <Button variant="ghost" onclick={prevQuickStep}>{en.common.back}</Button>
+          <Button variant="tertiary" onclick={prevQuickStep}>{en.common.back}</Button>
           <Button onclick={finishSetup} disabled={setupSaving}>
             {setupSaving ? en.common.loading : en.setup.done.launch}
           </Button>
@@ -905,13 +803,13 @@ onMount(() => {
               {selectedTier === 'stellar' ? 'border-accent shadow-[0_0_0_1px_var(--color-accent)]' : 'border-border-subtle'}"
             onclick={() => { selectedTier = 'stellar'; nextFullStep(); }}
           >
-            <h3 class="text-lg font-semibold">{en.setup.auth.phavoIo}</h3>
-            <p class="text-sm text-text-muted">Sign in with phavo.net. Free to start — Standard unlocks all widgets.</p>
+            <h3 class="text-lg font-semibold">{en.setup.auth.localAccount}</h3>
+            <p class="text-sm text-text-muted">Create a local account. Start on Stellar, activate Celestial anytime with your key.</p>
           </button>
           <button
             type="button"
             class="flex flex-col gap-2 p-6 border rounded-lg bg-surface text-left cursor-pointer text-text transition-colors hover:border-border focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2
-              {selectedTier === 'celestial' && quickAuthMethod === 'local' ? 'border-accent shadow-[0_0_0_1px_var(--color-accent)]' : 'border-border-subtle'}"
+              {selectedTier === 'celestial' ? 'border-accent shadow-[0_0_0_1px_var(--color-accent)]' : 'border-border-subtle'}"
             onclick={() => { selectedTier = 'celestial'; nextFullStep(); }}
           >
             <h3 class="text-lg font-semibold">{en.setup.auth.localAccount}</h3>
@@ -919,33 +817,22 @@ onMount(() => {
           </button>
         </div>
         <div class="flex justify-end gap-3 flex-wrap mt-2">
-          <Button variant="ghost" onclick={backToWelcome}>{en.common.back}</Button>
+          <Button variant="tertiary" onclick={backToWelcome}>{en.common.back}</Button>
         </div>
 
       {:else if fullStep === 'auth'}
         <h2 class="text-xl font-semibold text-text">{en.setup.steps.auth}</h2>
         <div class="flex flex-col gap-3">
-          {#if selectedTier === 'stellar'}
-            <p class="text-text-muted">
-              You'll be redirected to phavo.net to authenticate, then returned here automatically.
-            </p>
-            {#if authError}<p class="text-red-400 text-sm">{authError}</p>{/if}
-            <div class="flex justify-end gap-3 flex-wrap mt-2">
-              <Button variant="ghost" onclick={prevFullStep}>{en.common.back}</Button>
-              <Button onclick={() => startPhavoOauth('full')}>{en.setup.auth.phavoIo}</Button>
-            </div>
-          {:else}
-            <Input label={en.setup.auth.username} placeholder={en.setup.auth.username} bind:value={authUsername} />
-            <Input label={en.setup.auth.password} type="password" placeholder={en.auth.passwordPlaceholder} bind:value={authPassword} />
-            <Input label={en.setup.auth.enterLicenseKey} placeholder={en.setup.auth.enterLicenseKey} bind:value={authLicenseKey} />
-            {#if authError}<p class="text-red-400 text-sm">{authError}</p>{/if}
-            <div class="flex justify-end gap-3 flex-wrap mt-2">
-              <Button variant="ghost" onclick={prevFullStep}>{en.common.back}</Button>
-              <Button onclick={() => submitLocalAuth('full')} disabled={authLoading}>
-                {authLoading ? en.common.loading : en.auth.login}
-              </Button>
-            </div>
-          {/if}
+          <Input label={en.setup.auth.username} placeholder={en.setup.auth.username} bind:value={authUsername} />
+          <Input label={en.setup.auth.password} type="password" placeholder={en.auth.passwordPlaceholder} bind:value={authPassword} />
+          <Input label={en.setup.auth.enterLicenseKey} placeholder={en.setup.auth.enterLicenseKey} bind:value={authLicenseKey} />
+          {#if authError}<p class="text-red-400 text-sm">{authError}</p>{/if}
+          <div class="flex justify-end gap-3 flex-wrap mt-2">
+            <Button variant="tertiary" onclick={prevFullStep}>{en.common.back}</Button>
+            <Button onclick={() => submitLocalAuth('full')} disabled={authLoading}>
+              {authLoading ? en.common.loading : en.auth.login}
+            </Button>
+          </div>
         </div>
 
       {:else if fullStep === 'name'}
@@ -953,7 +840,7 @@ onMount(() => {
         <div class="flex flex-col gap-3">
           <Input label={en.settings.dashboardName} placeholder={en.setup.name.placeholder} bind:value={dashboardName} />
           <div class="flex justify-end gap-3 flex-wrap mt-2">
-            <Button variant="ghost" onclick={prevFullStep}>{en.common.back}</Button>
+            <Button variant="tertiary" onclick={prevFullStep}>{en.common.back}</Button>
             <Button onclick={nextFullStep}>{en.common.next}</Button>
           </div>
         </div>
@@ -994,8 +881,8 @@ onMount(() => {
         {#if locationError}<p class="text-red-400 text-sm">{locationError}</p>{/if}
 
         <div class="flex justify-end gap-3 flex-wrap mt-2">
-          <Button variant="ghost" onclick={prevFullStep}>{en.common.back}</Button>
-          <Button variant="ghost" onclick={nextFullStep}>{en.setup.location.skip}</Button>
+          <Button variant="tertiary" onclick={prevFullStep}>{en.common.back}</Button>
+          <Button variant="tertiary" onclick={nextFullStep}>{en.setup.location.skip}</Button>
           <Button onclick={nextFullStep} disabled={!selectedLocation}>{en.common.next}</Button>
         </div>
 
@@ -1010,7 +897,7 @@ onMount(() => {
                 value={tab}
                 oninput={(e) => updateTabName(index, (e.currentTarget as HTMLInputElement).value)}
               />
-              <Button variant="ghost" onclick={() => removeTab(index)} disabled={tabs.length === 1}>
+              <Button variant="tertiary" onclick={() => removeTab(index)} disabled={tabs.length === 1}>
                 {en.common.delete}
               </Button>
             </div>
@@ -1033,7 +920,7 @@ onMount(() => {
         </div>
 
         <div class="flex justify-end gap-3 flex-wrap mt-2">
-          <Button variant="ghost" onclick={prevFullStep}>{en.common.back}</Button>
+          <Button variant="tertiary" onclick={prevFullStep}>{en.common.back}</Button>
           <Button onclick={handleFullTabsNext}>{en.common.next}</Button>
         </div>
 
@@ -1056,7 +943,7 @@ onMount(() => {
                     {selectedWidgets.includes(entry.id) ? 'border-accent shadow-[0_0_0_1px_var(--color-accent)]' : 'border-border hover:border-border-strong'}"
                   onclick={() => toggleWidgetSelection(entry)}
                 >
-                  <span class="text-[11px] px-2 py-0.5 rounded-full bg-base text-text-muted w-fit">{entry.tier === 'stellar' ? 'Free' : 'Standard'}</span>
+                  <span class="text-[11px] px-2 py-0.5 rounded-full bg-base text-text-muted w-fit">{entry.tier === 'stellar' ? 'Stellar' : 'Celestial'}</span>
                   <strong>{entry.name}</strong>
                   <p class="text-sm text-text-muted">{entry.description}</p>
                 </button>
@@ -1073,7 +960,7 @@ onMount(() => {
         {/if}
 
         <div class="flex justify-end gap-3 flex-wrap mt-2">
-          <Button variant="ghost" onclick={prevFullStep}>{en.common.back}</Button>
+          <Button variant="tertiary" onclick={prevFullStep}>{en.common.back}</Button>
           <Button onclick={() => goToFullStep('assign')}>{en.common.next}</Button>
         </div>
 
@@ -1096,7 +983,7 @@ onMount(() => {
           {/if}
         </div>
         <div class="flex justify-end gap-3 flex-wrap mt-2">
-          <Button variant="ghost" onclick={prevFullStep}>{en.common.back}</Button>
+          <Button variant="tertiary" onclick={prevFullStep}>{en.common.back}</Button>
           <Button onclick={handleFullAssignNext}>{en.common.next}</Button>
         </div>
 
@@ -1167,7 +1054,7 @@ onMount(() => {
                         oninput={(e) => updateRssFeed(index, { token: (e.currentTarget as HTMLInputElement).value })}
                       />
                     {/if}
-                    <Button variant="ghost" onclick={() => removeRssFeed(index)}>{en.common.delete}</Button>
+                    <Button variant="tertiary" onclick={() => removeRssFeed(index)}>{en.common.delete}</Button>
                   </div>
                 {/each}
                 <Button variant="secondary" onclick={addRssFeed}>{en.common.add}</Button>
@@ -1204,7 +1091,7 @@ onMount(() => {
         </div>
 
         <div class="flex justify-end gap-3 flex-wrap mt-2">
-          <Button variant="ghost" onclick={prevFullStep}>{en.common.back}</Button>
+          <Button variant="tertiary" onclick={prevFullStep}>{en.common.back}</Button>
           <Button onclick={nextFullStep}>{en.common.next}</Button>
         </div>
 
@@ -1214,7 +1101,7 @@ onMount(() => {
         <p class="text-text-muted">{en.setup.done.subtitle}</p>
         {#if setupError}<p class="text-red-400 text-sm">{setupError}</p>{/if}
         <div class="flex justify-end gap-3 flex-wrap mt-2">
-          <Button variant="ghost" onclick={() => goToFullStep(shouldSkipConfigStep() ? 'assign' : 'config')}>{en.common.back}</Button>
+          <Button variant="tertiary" onclick={() => goToFullStep(shouldSkipConfigStep() ? 'assign' : 'config')}>{en.common.back}</Button>
           <Button onclick={finishSetup} disabled={setupSaving}>
             {setupSaving ? en.common.loading : en.setup.done.launch}
           </Button>

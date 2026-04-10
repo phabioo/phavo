@@ -59,7 +59,7 @@ export const load = async ({ cookies, url }: ServerLoadEvent) => {
   // ── 2. Resolve session ──────────────────────────────────────────────────
   let session: ReturnType<typeof getMockSession> | null = null;
   if (DEV_MOCK_AUTH_ENABLED) {
-    // Dev bypass: synthetic mock-auth session, no phavo.net needed
+    // Dev bypass: synthetic mock-auth session
     session = getMockSession();
   } else {
     const sessionId = cookies.get('phavo_session');
@@ -68,11 +68,7 @@ export const load = async ({ cookies, url }: ServerLoadEvent) => {
       const row = rows[0];
       const now = Date.now();
 
-      if (
-        !row ||
-        row.expiresAt < now ||
-        (row.authMode === 'phavo-net' && row.graceUntil !== null && row.graceUntil < now)
-      ) {
+      if (!row || row.expiresAt < now) {
         if (row?.expiresAt && row.expiresAt < now) {
           await db.delete(schema.sessions).where(eq(schema.sessions.id, sessionId));
         }
@@ -87,7 +83,6 @@ export const load = async ({ cookies, url }: ServerLoadEvent) => {
         tier: row.tier,
         authMode: row.authMode,
         validatedAt: row.validatedAt,
-        graceUntil: row.graceUntil ?? undefined,
       };
     }
   }

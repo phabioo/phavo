@@ -11,6 +11,8 @@
 
   const up = $derived(data.services.filter(s => s.status === 'up').length);
   const total = $derived(data.services.length);
+  const down = $derived(data.services.filter(s => s.status === 'down' || s.status === 'timeout').length);
+  const upRatio = $derived(total > 0 ? (up / total) * 100 : 0);
 </script>
 
 {#if size === 'S'}
@@ -31,6 +33,14 @@
       <span class="sh-hero hero-glow">
         {up}<span class="sh-hero-unit">/{total}</span>
       </span>
+    </div>
+
+    <div class="sh-health">
+      <div class="sh-health-track"><div class="sh-health-fill" style:width={`${upRatio}%`}></div></div>
+      <div class="sh-health-meta">
+        <span>{up} online</span>
+        <span>{down} offline</span>
+      </div>
     </div>
 
     <div class="sh-list">
@@ -55,6 +65,14 @@
       <span class="sh-hero hero-glow">
         {up}<span class="sh-hero-unit">/{total}</span>
       </span>
+    </div>
+
+    <div class="sh-health">
+      <div class="sh-health-track"><div class="sh-health-fill" style:width={`${upRatio}%`}></div></div>
+      <div class="sh-health-meta">
+        <span>{up} online</span>
+        <span>{down} offline</span>
+      </div>
     </div>
 
     <div class="sh-list">
@@ -133,6 +151,8 @@
     display: flex;
     flex-direction: column;
     gap: var(--space-2);
+    min-height: 0;
+    overflow: hidden;
   }
 
   .sh-row {
@@ -140,6 +160,9 @@
     align-items: center;
     justify-content: space-between;
     gap: var(--space-2);
+    padding: var(--space-2) var(--space-3);
+    border-radius: var(--radius-md);
+    background: color-mix(in srgb, var(--color-surface-high) 45%, transparent);
   }
 
   .sh-row-info {
@@ -178,5 +201,34 @@
     color: var(--color-outline);
     font-family: var(--font-mono);
     flex-shrink: 0;
+  }
+
+  .sh-health {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+
+  .sh-health-track {
+    height: 6px;
+    border-radius: var(--radius-full);
+    background: color-mix(in srgb, var(--color-on-surface) 7%, transparent);
+    overflow: hidden;
+  }
+
+  .sh-health-fill {
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, var(--color-secondary), var(--color-secondary-fixed));
+    transition: width var(--motion-component);
+  }
+
+  .sh-health-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-3);
+    font-size: 11px;
+    font-family: var(--font-mono);
+    color: var(--color-on-surface-variant);
   }
 </style>

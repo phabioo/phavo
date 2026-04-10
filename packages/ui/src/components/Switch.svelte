@@ -2,11 +2,13 @@
 interface Props {
   checked?: boolean;
   label?: string;
+  ariaLabel?: string;
   disabled?: boolean;
   onchange?: (checked: boolean) => void;
 }
 
-let { checked = $bindable(false), label, disabled = false, onchange }: Props = $props();
+let { checked = $bindable(false), label, ariaLabel, disabled = false, onchange }: Props = $props();
+const resolvedAriaLabel = $derived(ariaLabel?.trim() || label?.trim() || 'Toggle switch');
 
 function toggle() {
   if (disabled) return;
@@ -20,7 +22,7 @@ function toggle() {
     type="button"
     role="switch"
     aria-checked={checked}
-    aria-label={label}
+    aria-label={resolvedAriaLabel}
     {disabled}
     class="relative w-10 h-6 rounded-full transition-colors duration-200 outline-none
       focus-visible:ring-2 focus-visible:ring-accent/50
@@ -28,7 +30,7 @@ function toggle() {
     onclick={toggle}
   >
     <span
-      class="absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-transform duration-200
+      class="absolute top-1 w-4 h-4 bg-primary rounded-full shadow transition-transform duration-200
         {checked ? 'translate-x-5' : 'translate-x-1'}"
     ></span>
   </button>

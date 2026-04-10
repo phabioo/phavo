@@ -46,37 +46,6 @@ export function clearSessionCookies(response: Response): void {
   appendSetCookie(response, `phavo_csrf=; Path=/; SameSite=Strict; Max-Age=0${secure}`);
 }
 
-/** Verifies an RS256-signed JWT using a base64-encoded SPKI public key.
- *  Returns false on any error (invalid signature, expired, malformed). */
-export async function verifyActivationJwt(jwt: string, pubKeyB64: string): Promise<boolean> {
-  const parts = jwt.split('.');
-  if (parts.length !== 3) return false;
-  const [headerB64, payloadB64, sigB64] = parts as [string, string, string];
-  try {
-    const pubKeyBytes = Uint8Array.from(atob(pubKeyB64), (c) => c.charCodeAt(0));
-    const sigBytes = Uint8Array.from(atob(sigB64.replace(/-/g, '+').replace(/_/g, '/')), (c) =>
-      c.charCodeAt(0),
-    );
-    const cryptoKey = await crypto.subtle.importKey(
-      'spki',
-      pubKeyBytes,
-      { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' },
-      false,
-      ['verify'],
-    );
-    const message = new TextEncoder().encode(`${headerB64}.${payloadB64}`);
-    const valid = await crypto.subtle.verify('RSASSA-PKCS1-v1_5', cryptoKey, sigBytes, message);
-    if (!valid) return false;
-    const payload = JSON.parse(atob(payloadB64.replace(/-/g, '+').replace(/_/g, '/'))) as {
-      exp?: number;
-    };
-    if (payload.exp && payload.exp * 1000 < Date.now()) return false;
-    return true;
-  } catch {
-    return false;
-  }
-}
-
 /** Base32 alphabet for TOTP secret decoding. */
 const BASE32 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
 
@@ -130,8 +99,7 @@ export async function verifyTotpCode(secret: string, code: string): Promise<bool
 export interface PendingSession {
   userId: string;
   tier: 'stellar' | 'celestial';
-  authMode: 'phavo-net' | 'local';
-  graceUntil: number | null;
+  authMode: 'local';
   expiresMs: number; // absolute timestamp when this partial session expires
 }
 

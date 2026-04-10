@@ -78,9 +78,10 @@ export function registerMetricsRoutes(app: Hono<{ Variables: AppVariables }>): v
       const config = parseConfigEntries(rows);
       const requestedLatitude = Number(c.req.query('latitude'));
       const requestedLongitude = Number(c.req.query('longitude'));
-      const hasConfiguredLocation = Boolean(
-        config.location?.latitude && config.location?.longitude,
-      );
+      const hasConfiguredLocation =
+        config.location != null &&
+        Number.isFinite(config.location.latitude) &&
+        Number.isFinite(config.location.longitude);
       const latitude = Number.isFinite(requestedLatitude)
         ? requestedLatitude
         : (config.location?.latitude ?? 52.52);

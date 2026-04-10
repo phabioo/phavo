@@ -109,7 +109,6 @@ function buildCsp(nonce: string | undefined): string {
       'https://api.open-meteo.com',
       'https://geocoding-api.open-meteo.com',
       'https://api.github.com',
-      'https://phavo.net',
     ].join(' '),
     "frame-ancestors 'none'",
     "base-uri 'self'",

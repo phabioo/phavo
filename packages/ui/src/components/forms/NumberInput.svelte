@@ -1,5 +1,6 @@
 <script lang="ts">
   interface Props {
+    id?: string;
     label?: string;
     placeholder?: string;
     value?: number | string;
@@ -12,6 +13,7 @@
   }
 
   let {
+    id,
     label,
     placeholder = '',
     value = $bindable(''),
@@ -23,7 +25,9 @@
     oninput,
   }: Props = $props();
 
-  const inputId = `number-${Math.random().toString(36).slice(2, 9)}`;
+  const componentId = $props.id();
+  const fallbackId = `number-${componentId}`;
+  const inputId = $derived(id ?? fallbackId);
 </script>
 
 <div class="flex flex-col gap-1">
@@ -37,12 +41,12 @@
   {/if}
   <input
     id={inputId}
-    class="bg-elevated border rounded-md px-3 py-2 text-sm font-mono outline-none transition-colors
+    class="bg-surface-card border rounded-md px-3 py-2 text-sm font-mono outline-none transition-colors
       {error
-        ? 'border-red-500 ring-1 ring-red-500/20'
+        ? 'border-error ring-1 ring-error/20'
         : 'border-border focus:border-accent focus:ring-1 focus:ring-accent/30'}
       {disabled ? 'opacity-50 cursor-not-allowed' : ''}
-      text-text placeholder:text-text-dim"
+      text-text placeholder:text-text-muted"
     type="number"
     {placeholder}
     {disabled}
@@ -55,6 +59,6 @@
     aria-describedby={error ? `${inputId}-error` : undefined}
   />
   {#if error}
-    <span id="{inputId}-error" class="text-xs text-red-400 mt-1">{error}</span>
+    <span id={`${inputId}-error`} class="text-xs text-error mt-1">{error}</span>
   {/if}
 </div>

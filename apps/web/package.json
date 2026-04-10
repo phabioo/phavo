@@ -9,13 +9,18 @@
     "typecheck": "node ./node_modules/svelte-check/bin/svelte-check --tsconfig ./tsconfig.json"
   },
   "dependencies": {
+    "@ai-sdk/anthropic": "^3.0.68",
+    "@ai-sdk/google": "^3.0.61",
+    "@ai-sdk/openai": "^3.0.52",
     "@phavo/agent": "workspace:*",
     "@phavo/db": "workspace:*",
     "@phavo/types": "workspace:*",
     "@phavo/ui": "workspace:*",
+    "ai": "^6.0.156",
     "better-auth": "^1",
     "drizzle-orm": "^0.45.1",
     "hono": "^4.3.0",
+    "ollama-ai-provider": "^1.2.0",
     "zod": "^3.23.0"
   },
   "devDependencies": {

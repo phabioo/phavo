@@ -32,7 +32,7 @@
       </div>
     {:else}
       <div class="rss-list">
-        {#each data.items.slice(0, 4) as item}
+        {#each data.items.slice(0, 4) as item (item.link ?? item.title)}
           <a class="rss-item" href={item.link} target="_blank" rel="noopener noreferrer">
             <span class="rss-item-title">{item.title}</span>
             <div class="rss-item-meta">
@@ -58,7 +58,7 @@
       </div>
     {:else}
       <div class="rss-list">
-        {#each data.items.slice(0, 8) as item}
+        {#each data.items.slice(0, 8) as item (item.link ?? item.title)}
           <a class="rss-item" href={item.link} target="_blank" rel="noopener noreferrer">
             <span class="rss-item-title">{item.title}</span>
             <div class="rss-item-meta">

@@ -1,42 +1,32 @@
-import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { decrypt, schema } from '@phavo/db';
 import { err, ok } from '@phavo/types';
-import { env } from '@phavo/types/env';
 import { hashPassword, verifyPassword } from 'better-auth/crypto';
 import { asc, eq } from 'drizzle-orm';
 import type { Hono } from 'hono';
 import { z } from 'zod';
 import { checkRateLimit, getLoginAttemptCount, recordLoginAttempt } from '$lib/server/auth.js';
 import { db } from '$lib/server/db.js';
-import { activateLocalLicense } from '$lib/server/license.js';
+import { activateOfflineLicense, verifyStoredLicenseActivation } from '$lib/server/license.js';
 import type { AppVariables } from '$lib/server/middleware/auth.js';
 import { requireSession } from '$lib/server/middleware/auth.js';
 import { getClientIp } from '$lib/server/middleware/rate-limit.js';
 import { DEV_MOCK_AUTH_ENABLED } from '$lib/server/mock-auth.js';
-import { paths } from '$lib/server/paths.js';
 import {
   clearSessionCookies,
   generateSessionToken,
   partialSessions,
   setSessionCookies,
-  verifyActivationJwt,
   verifyTotpCode,
 } from '$lib/server/routes/_auth-helpers.js';
 
 // ─── Zod schemas for request validation ──────────────────────────────────────
 
-const LoginSchema = z.discriminatedUnion('authMode', [
-  z.object({
-    authMode: z.literal('phavo-net'),
-    code: z.string().min(1),
-  }),
-  z.object({
-    authMode: z.literal('local'),
-    username: z.string().min(1),
-    password: z.string().min(8, 'Password must be at least 8 characters'),
-    licenseKey: z.string().optional(),
-  }),
-]);
+const LoginSchema = z.object({
+  authMode: z.literal('local'),
+  username: z.string().min(1),
+  password: z.string().min(8, 'Password must be at least 8 characters'),
+  licenseKey: z.string().optional(),
+});
 
 const TotpSchema = z.object({
   partialToken: z.string().min(1),
@@ -48,25 +38,10 @@ const PasswordSchema = z.object({
   newPassword: z.string().min(8).max(256),
 });
 
-function readOrCreateInstanceIdentifier(): string {
-  try {
-    if (existsSync(paths.instanceId)) {
-      return readFileSync(paths.instanceId, 'utf-8').trim();
-    }
-
-    const instanceIdentifier = crypto.randomUUID();
-    writeFileSync(paths.instanceId, instanceIdentifier);
-    return instanceIdentifier;
-  } catch {
-    return crypto.randomUUID();
-  }
-}
-
 export function registerAuthRoutes(app: Hono<{ Variables: AppVariables }>): void {
   /**
    * POST /api/v1/auth/login — public, rate-limited.
-   * Handles phavo.net (OAuth code exchange) and local (password + optional
-   * license key for first activation) authentication flows.
+   * Handles local authentication and optional offline license activation.
    */
   app.post('/auth/login', async (c) => {
     // In dev mode, always succeed without real credentials.
@@ -102,135 +77,17 @@ export function registerAuthRoutes(app: Hono<{ Variables: AppVariables }>): void
     const body = parsed.data;
     const SESSION_MAX_AGE = 7 * 24 * 60 * 60; // 7 days in seconds
 
-    if (body.authMode === 'phavo-net') {
-      // ── phavo.net OAuth code exchange ─────────────────────────────────────────
-      const phavoIoUrl = process.env.PHAVO_IO_URL ?? 'https://phavo.net';
-
-      let accessToken: string;
-      let userEmail: string;
-      let userId: string;
-      let tier: 'stellar' | 'celestial';
-
-      const PhavioTokenResponseSchema = z.object({
-        access_token: z.string(),
-        user: z.object({ id: z.string(), email: z.string() }),
-      });
-      const LicenseValidateSchema = z.object({ tier: z.enum(['stellar', 'celestial']) });
-
-      try {
-        const tokenRes = await fetch(`${phavoIoUrl}/api/oauth/token`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ code: body.code }),
-          signal: AbortSignal.timeout(10_000),
-        });
-        if (!tokenRes.ok) {
-          recordLoginAttempt(ip, false);
-          console.log(`[phavo] Login failed: ip=${ip} attempt=${getLoginAttemptCount(ip)}`);
-          return c.json(err('Authentication failed'), 401);
-        }
-        const tokenData = PhavioTokenResponseSchema.parse(await tokenRes.json());
-        accessToken = tokenData.access_token;
-        userEmail = tokenData.user.email;
-        userId = tokenData.user.id;
-      } catch {
-        recordLoginAttempt(ip, false);
-        console.log(`[phavo] Login failed: ip=${ip} attempt=${getLoginAttemptCount(ip)}`);
-        return c.json(err('Failed to connect to phavo.net'), 503);
-      }
-
-      // Validate/determine tier — with grace period fallback if phavo.net is unreachable.
-      try {
-        const licRes = await fetch(`${phavoIoUrl}/api/license/validate`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${accessToken}`,
-          },
-          signal: AbortSignal.timeout(10_000),
-        });
-        if (licRes.ok) {
-          const licData = LicenseValidateSchema.parse(await licRes.json());
-          tier = licData.tier;
-        } else {
-          recordLoginAttempt(ip, false);
-          console.log(`[phavo] Login failed: ip=${ip} attempt=${getLoginAttemptCount(ip)}`);
-          return c.json(err('License validation failed'), 403);
-        }
-      } catch {
-        // phavo.net unreachable — check if an existing session still has valid grace period.
-        const existing = await db
-          .select()
-          .from(schema.sessions)
-          .where(eq(schema.sessions.userId, userId))
-          .limit(1);
-        const ex = existing[0];
-        if (ex && ex.graceUntil !== null && ex.graceUntil > Date.now()) {
-          tier = ex.tier as 'stellar' | 'celestial';
-        } else {
-          recordLoginAttempt(ip, false);
-          console.log(`[phavo] Login failed: ip=${ip} attempt=${getLoginAttemptCount(ip)}`);
-          return c.json(err('phavo.net unreachable — grace period expired'), 401);
-        }
-      }
-
-      const graceUntil = Date.now() + (tier === 'stellar' ? 86_400_000 : 259_200_000);
-
-      // Upsert user record.
-      const existingUsers = await db
-        .select()
-        .from(schema.users)
-        .where(eq(schema.users.email, userEmail));
-      let dbUserId: string;
-      if (existingUsers[0]) {
-        dbUserId = existingUsers[0].id;
-      } else {
-        dbUserId = crypto.randomUUID();
-        await db.insert(schema.users).values({
-          id: dbUserId,
-          email: userEmail,
-          authMode: 'phavo-net',
-        });
-      }
-
-      // Create session.
-      const token = generateSessionToken();
-      await db.insert(schema.sessions).values({
-        id: token,
-        userId: dbUserId,
-        tier,
-        authMode: 'phavo-net',
-        validatedAt: Date.now(),
-        graceUntil,
-        expiresAt: Date.now() + SESSION_MAX_AGE * 1000,
-      });
-
-      recordLoginAttempt(ip, true);
-      console.log(`[phavo] Login success: userId=${dbUserId} tier=${tier} ip=${ip}`);
-      const response = c.json(ok({ tier }));
-      await setSessionCookies(response, token, SESSION_MAX_AGE);
-      return response;
-    }
-
     // ── Local auth ──────────────────────────────────────────────────────────────
     // For local auth, "username" is stored in the email field (single-user setup).
     const { username, password, licenseKey } = body;
 
     if (licenseKey) {
-      // First activation: create user + license record + session.
-      const instanceIdentifier = readOrCreateInstanceIdentifier();
-      const activation = await activateLocalLicense(licenseKey, instanceIdentifier);
-
-      if (!activation.valid || !activation.activationJwt) {
+      const activation = activateOfflineLicense(licenseKey);
+      if (!activation.valid) {
         recordLoginAttempt(ip, false);
         console.log(`[phavo] Login failed: ip=${ip} attempt=${getLoginAttemptCount(ip)}`);
-        return c.json(
-          err(activation.error ?? 'Failed to connect to phavo.net for activation'),
-          503,
-        );
+        return c.json(err(activation.error), 400);
       }
-
-      const activationJwt = activation.activationJwt;
 
       const passwordHash = await hashPassword(password);
       const newUserId = crypto.randomUUID();
@@ -256,10 +113,11 @@ export function registerAuthRoutes(app: Hono<{ Variables: AppVariables }>): void
       }
 
       await db.insert(schema.licenseActivation).values({
-        licenseKey,
         tier: 'celestial',
-        activationJwt,
-        instanceIdentifier,
+        licenseId: activation.activation.licenseId,
+        issuedAt: activation.activation.issuedAt,
+        payloadB64: activation.activation.payloadB64,
+        signatureB64: activation.activation.signatureB64,
       });
 
       const localUserRows = await db
@@ -277,7 +135,6 @@ export function registerAuthRoutes(app: Hono<{ Variables: AppVariables }>): void
           userId: localUserId,
           tier: 'celestial',
           authMode: 'local',
-          graceUntil: null,
           expiresMs: Date.now() + 5 * 60 * 1000,
         });
         return c.json(ok({ requiresTotp: true as const, partialToken }));
@@ -290,7 +147,6 @@ export function registerAuthRoutes(app: Hono<{ Variables: AppVariables }>): void
         tier: 'celestial',
         authMode: 'local',
         validatedAt: Date.now(),
-        graceUntil: null,
         expiresAt: Date.now() + SESSION_MAX_AGE * 1000,
       });
 
@@ -321,33 +177,19 @@ export function registerAuthRoutes(app: Hono<{ Variables: AppVariables }>): void
       return c.json(err('Invalid credentials'), 401);
     }
 
-    // Verify the stored activation JWT to confirm license is still valid (offline check).
+    // Verify stored license activation (if present). Invalid activation drops to Stellar.
     const activations = await db
       .select()
       .from(schema.licenseActivation)
       .orderBy(asc(schema.licenseActivation.activatedAt));
     const latestActivation = activations[activations.length - 1];
-
-    if (!latestActivation) {
-      // No activation on record — force re-activation.
-      recordLoginAttempt(ip, false);
-      console.log(`[phavo] Login failed: ip=${ip} attempt=${getLoginAttemptCount(ip)}`);
-      return c.json(err('No license activation found — please re-activate'), 403);
-    }
-
-    const pubKeyB64 = process.env.PHAVO_IO_PUBLIC_KEY ?? '';
-    if (env.nodeEnv === 'production' && !pubKeyB64) {
-      console.error('[phavo] PHAVO_IO_PUBLIC_KEY is required in production');
-      return c.json(err('Server misconfiguration'), 500);
-    }
-    if (pubKeyB64) {
-      const jwtValid = await verifyActivationJwt(latestActivation.activationJwt, pubKeyB64);
-      if (!jwtValid) {
-        recordLoginAttempt(ip, false);
-        console.log(`[phavo] Login failed: ip=${ip} attempt=${getLoginAttemptCount(ip)}`);
-        return c.json(err('License verification failed'), 403);
-      }
-    }
+    const verifiedActivation = latestActivation
+      ? verifyStoredLicenseActivation({
+          payloadB64: latestActivation.payloadB64,
+          signatureB64: latestActivation.signatureB64,
+        })
+      : null;
+    const tier: 'stellar' | 'celestial' = verifiedActivation ? 'celestial' : 'stellar';
 
     // Check if TOTP is enabled for this user.
     if (user.totpSecret) {
@@ -357,9 +199,8 @@ export function registerAuthRoutes(app: Hono<{ Variables: AppVariables }>): void
       }
       partialSessions.set(partialToken, {
         userId: user.id,
-        tier: 'celestial',
+        tier,
         authMode: 'local',
-        graceUntil: null,
         expiresMs: Date.now() + 5 * 60 * 1000,
       });
       return c.json(ok({ requiresTotp: true as const, partialToken }));
@@ -369,16 +210,15 @@ export function registerAuthRoutes(app: Hono<{ Variables: AppVariables }>): void
     await db.insert(schema.sessions).values({
       id: token,
       userId: user.id,
-      tier: 'celestial',
+      tier,
       authMode: 'local',
       validatedAt: Date.now(),
-      graceUntil: null,
       expiresAt: Date.now() + SESSION_MAX_AGE * 1000,
     });
 
     recordLoginAttempt(ip, true);
-    console.log(`[phavo] Login success: userId=${user.id} tier=celestial ip=${ip}`);
-    const response = c.json(ok({ tier: 'celestial' as const }));
+    console.log(`[phavo] Login success: userId=${user.id} tier=${tier} ip=${ip}`);
+    const response = c.json(ok({ tier }));
     await setSessionCookies(response, token, SESSION_MAX_AGE);
     return response;
   });
@@ -426,7 +266,6 @@ export function registerAuthRoutes(app: Hono<{ Variables: AppVariables }>): void
       tier: pending.tier,
       authMode: pending.authMode,
       validatedAt: Date.now(),
-      graceUntil: pending.graceUntil,
       expiresAt: Date.now() + SESSION_MAX_AGE * 1000,
     });
     partialSessions.delete(partialToken);
@@ -458,7 +297,6 @@ export function registerAuthRoutes(app: Hono<{ Variables: AppVariables }>): void
       ok({
         authMode: session.authMode,
         validatedAt: session.validatedAt,
-        graceUntil: session.graceUntil,
       }),
     );
   });
@@ -481,6 +319,24 @@ export function registerAuthRoutes(app: Hono<{ Variables: AppVariables }>): void
 
       const body = PasswordSchema.safeParse(rawBody);
       if (!body.success) return c.json(err('Invalid password data'), 400);
+
+      const users = await db
+        .select()
+        .from(schema.users)
+        .where(eq(schema.users.id, session.userId))
+        .limit(1);
+      const user = users[0];
+      if (!user?.passwordHash) {
+        return c.json(err('User account not found'), 404);
+      }
+
+      const currentValid = await verifyPassword({
+        hash: user.passwordHash,
+        password: body.data.currentPassword,
+      });
+      if (!currentValid) {
+        return c.json(err('Current password is incorrect'), 401);
+      }
 
       const passwordHash = await hashPassword(body.data.newPassword);
       await db

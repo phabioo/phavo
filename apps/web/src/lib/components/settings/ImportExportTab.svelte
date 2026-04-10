@@ -27,6 +27,8 @@
   let importWarnings = $state<string[]>([]);
   let importSuccess = $state(false);
   let fileInputEl = $state<HTMLInputElement | undefined>(undefined);
+  const exportPassphraseInputId = 'settings-export-passphrase';
+  const importPassphraseInputId = 'settings-import-passphrase';
 
   function pluralise(n: number, singular: string, plural: string): string {
     return n === 1 ? singular.replace('{n}', String(n)) : plural.replace('{n}', String(n));
@@ -245,8 +247,9 @@
     {#if includeCredentials}
       <p class="ie-hint">{en.settings.includeCredentialsHint}</p>
       <div>
-        <label class="settings-field-label">{en.settings.passphrase}</label>
+        <label class="settings-field-label" for={exportPassphraseInputId}>{en.settings.passphrase}</label>
         <Input
+          id={exportPassphraseInputId}
           type="password"
           placeholder={en.settings.passphrasePlaceholder}
           bind:value={exportPassphrase}
@@ -260,9 +263,9 @@
 
     <div class="settings-form-actions">
       <span></span>
-      <button class="settings-btn-primary" type="button" disabled={exporting} onclick={handleExport}>
+      <Button variant="primary" disabled={exporting} onclick={handleExport}>
         {exporting ? en.settings.exporting : en.settings.exportButton}
-      </button>
+      </Button>
     </div>
   </div>
 
@@ -319,8 +322,9 @@
         {#if parsedExport.hasCredentials}
           <p class="ie-hint">{en.settings.importPassphraseHint}</p>
           <div>
-            <label class="settings-field-label">{en.settings.passphrase}</label>
+            <label class="settings-field-label" for={importPassphraseInputId}>{en.settings.passphrase}</label>
             <Input
+              id={importPassphraseInputId}
               type="password"
               placeholder={en.settings.passphrasePlaceholder}
               bind:value={importPassphrase}
@@ -350,9 +354,9 @@
 
       <div class="settings-form-actions">
         <span></span>
-        <button class="settings-btn-primary" type="button" disabled={importing || importSuccess} onclick={handleImport}>
+        <Button variant="primary" disabled={importing || importSuccess} onclick={handleImport}>
           {importing ? en.settings.importing : en.settings.importConfirm}
-        </button>
+        </Button>
       </div>
     {/if}
   </div>

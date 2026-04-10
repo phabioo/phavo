@@ -8,8 +8,7 @@
     "PHAVO_PORT",
     "PHAVO_HTTPS_PORT",
     "PHAVO_TRUST_PROXY",
-    "PHAVO_IO_URL",
-    "PHAVO_IO_PUBLIC_KEY",
+    "PHAVO_LICENSE_PUBLIC_KEY",
     "PHAVO_DEV_MOCK_AUTH"
   ],
   "tasks": {

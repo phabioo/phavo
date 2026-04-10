@@ -67,11 +67,11 @@
     </div>
 
     {#if data.cores.length > 0}
-      <div style="display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; margin-top: 16px;">
-        {#each data.cores as coreLoad, i}
-          <div style="display: flex; flex-direction: column; align-items: center; gap: 4px;">
-            <span style="font-size: 10px; color: var(--color-on-surface-variant); text-transform: uppercase;">C{i + 1}</span>
-            <span style="font-size: 11px; color: var(--color-on-surface); font-weight: 700;">{Math.round(coreLoad)}%</span>
+      <div class="cpu-core-grid">
+        {#each data.cores as coreLoad, i (i)}
+          <div class="cpu-core-cell">
+            <span class="cpu-core-label">C{i + 1}</span>
+            <span class="cpu-core-value">{Math.round(coreLoad)}%</span>
           </div>
         {/each}
       </div>
@@ -146,5 +146,31 @@
     font-size: 16px;
     font-weight: 300;
     color: var(--color-on-surface-variant);
+  }
+
+  .cpu-core-grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: var(--space-2);
+    margin-top: var(--space-4);
+  }
+
+  .cpu-core-cell {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-1);
+  }
+
+  .cpu-core-label {
+    font-size: 10px;
+    color: var(--color-on-surface-variant);
+    text-transform: uppercase;
+  }
+
+  .cpu-core-value {
+    font-size: 11px;
+    color: var(--color-on-surface);
+    font-weight: 700;
   }
 </style>

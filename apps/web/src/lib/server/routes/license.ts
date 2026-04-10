@@ -1,29 +1,13 @@
-import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { schema } from '@phavo/db';
 import { err, ok } from '@phavo/types';
 import { desc, eq } from 'drizzle-orm';
 import type { Hono } from 'hono';
 import { z } from 'zod';
 import { db } from '$lib/server/db.js';
-import { activateLocalLicense } from '$lib/server/license.js';
+import { activateOfflineLicense } from '$lib/server/license.js';
 import type { AppVariables } from '$lib/server/middleware/auth.js';
 import { requireSession } from '$lib/server/middleware/auth.js';
-import { paths } from '$lib/server/paths.js';
 import { generateSessionToken, setSessionCookies } from './_auth-helpers.js';
-
-function readOrCreateInstanceIdentifier(): string {
-  try {
-    if (existsSync(paths.instanceId)) {
-      return readFileSync(paths.instanceId, 'utf-8').trim();
-    }
-
-    const instanceIdentifier = crypto.randomUUID();
-    writeFileSync(paths.instanceId, instanceIdentifier);
-    return instanceIdentifier;
-  } catch {
-    return crypto.randomUUID();
-  }
-}
 
 export function registerLicenseRoutes(app: Hono<{ Variables: AppVariables }>): void {
   app.post('/license/activate', requireSession(), async (c) => {
@@ -43,14 +27,9 @@ export function registerLicenseRoutes(app: Hono<{ Variables: AppVariables }>): v
         return c.json(err('Invalid licence key'), 400);
       }
 
-      const instanceIdentifier = readOrCreateInstanceIdentifier();
-      const activation = await activateLocalLicense(
-        requestBody.data.licenseKey,
-        instanceIdentifier,
-      );
-      if (!activation.valid || !activation.activationJwt) {
-        const status = activation.error === 'phavo.net unreachable' ? 503 : 400;
-        return c.json(err(activation.error ?? 'License activation failed'), status);
+      const activation = activateOfflineLicense(requestBody.data.licenseKey);
+      if (!activation.valid) {
+        return c.json(err(activation.error), 400);
       }
 
       const existingActivations = await db.select().from(schema.licenseActivation);
@@ -61,10 +40,11 @@ export function registerLicenseRoutes(app: Hono<{ Variables: AppVariables }>): v
       }
 
       await db.insert(schema.licenseActivation).values({
-        licenseKey: requestBody.data.licenseKey,
         tier: 'celestial',
-        activationJwt: activation.activationJwt,
-        instanceIdentifier,
+        licenseId: activation.activation.licenseId,
+        issuedAt: activation.activation.issuedAt,
+        payloadB64: activation.activation.payloadB64,
+        signatureB64: activation.activation.signatureB64,
       });
 
       await db.delete(schema.sessions).where(eq(schema.sessions.id, session.id));
@@ -77,7 +57,6 @@ export function registerLicenseRoutes(app: Hono<{ Variables: AppVariables }>): v
         tier: 'celestial',
         authMode: session.authMode,
         validatedAt: Date.now(),
-        graceUntil: null,
         expiresAt: Date.now() + sessionMaxAge * 1000,
       });
 
@@ -106,38 +85,6 @@ export function registerLicenseRoutes(app: Hono<{ Variables: AppVariables }>): v
         return c.json(err('No active local licence found'), 400);
       }
 
-      const phavoIoUrl = process.env.PHAVO_IO_URL ?? 'https://phavo.net';
-
-      let response: Response;
-      try {
-        response = await fetch(`${phavoIoUrl}/api/license/deactivate`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            licenseKey: licenseActivation.licenseKey,
-            instanceId: licenseActivation.instanceIdentifier,
-          }),
-          signal: AbortSignal.timeout(15_000),
-        });
-      } catch {
-        return c.json(
-          err('phavo.net unreachable — internet connection required to deactivate'),
-          503,
-        );
-      }
-
-      if (!response.ok) {
-        let errorMessage = 'Failed to deactivate licence';
-        try {
-          const payload = (await response.json()) as { error?: string };
-          if (payload.error) errorMessage = payload.error;
-        } catch {
-          // Ignore malformed error bodies.
-        }
-
-        return c.json(err(errorMessage), 400);
-      }
-
       const activationRows = await db.select().from(schema.licenseActivation);
       for (const activationRow of activationRows) {
         await db
@@ -147,7 +94,7 @@ export function registerLicenseRoutes(app: Hono<{ Variables: AppVariables }>): v
 
       await db
         .update(schema.sessions)
-        .set({ tier: 'stellar', graceUntil: null })
+        .set({ tier: 'stellar' })
         .where(eq(schema.sessions.id, session.id));
 
       return c.json(ok({ tier: 'stellar' as const, reload: true }));

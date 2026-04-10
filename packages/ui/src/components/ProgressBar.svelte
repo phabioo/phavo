@@ -12,7 +12,7 @@ const clamped = $derived(Math.min(100, Math.max(0, value)));
 <div class="w-full h-1.5 bg-hover rounded-full overflow-hidden">
   <div
     class="h-full rounded-full transition-[width] duration-300 ease-out
-      {color === 'danger' ? 'bg-red-500' : color === 'warning' ? 'bg-yellow-500' : 'bg-accent'}"
+      {color === 'danger' ? 'bg-error' : color === 'warning' ? 'bg-primary-fixed' : 'bg-accent'}"
     style:width="{clamped}%"
   ></div>
 </div>

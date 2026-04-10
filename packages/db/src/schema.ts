@@ -11,9 +11,9 @@ export const users = sqliteTable('users', {
     .$defaultFn(() => crypto.randomUUID()),
   // Unique when present; multiple NULLs are allowed in SQLite UNIQUE constraints.
   email: text('email').unique(),
-  // Argon2id hash. Local users only. Never stored for phavo.net users.
+  // Argon2id hash. Local users only.
   passwordHash: text('password_hash'),
-  authMode: text('auth_mode', { enum: ['phavo-net', 'local'] }).notNull(),
+  authMode: text('auth_mode', { enum: ['local'] }).notNull(),
   // AES-256-GCM encrypted. Set only when user enables 2FA.
   totpSecret: text('totp_secret'),
   // JSON array, AES-256-GCM encrypted. 8 one-time backup codes.
@@ -29,11 +29,9 @@ export const sessions = sqliteTable('sessions', {
     .references(() => users.id),
   // Single source of truth for tier enforcement. Set by server on login only.
   tier: text('tier', { enum: ['stellar', 'celestial'] }).notNull(),
-  authMode: text('auth_mode', { enum: ['phavo-net', 'local'] }).notNull(),
-  // Unix ms. Last successful phavo.net validation.
+  authMode: text('auth_mode', { enum: ['local'] }).notNull(),
+  // Unix ms. Last successful local auth.
   validatedAt: integer('validated_at').notNull(),
-  // Unix ms. Session valid offline until this time. Null for local tier.
-  graceUntil: integer('grace_until'),
   // Unix ms. Hard expiry — 7 days from creation.
   expiresAt: integer('expires_at').notNull(),
 });
@@ -95,15 +93,25 @@ export const licenseActivation = sqliteTable('license_activation', {
   id: text('id')
     .primaryKey()
     .$defaultFn(() => crypto.randomUUID()),
-  // Gumroad licence key.
-  licenseKey: text('license_key').notNull(),
   // Only 'celestial' tier activates here — see arch spec.
   tier: text('tier', { enum: ['celestial'] }).notNull(),
-  // RS256-signed JWT from phavo.net. Payload: { instanceId, tier, activatedAt }.
-  activationJwt: text('activation_jwt').notNull(),
-  // Stable UUID bound to Docker volume (generated once, stored in instance.id).
-  instanceIdentifier: text('instance_identifier').notNull(),
+  // Signed payload metadata extracted after offline Ed25519 verification.
+  licenseId: text('license_id').notNull(),
+  issuedAt: text('issued_at').notNull(),
+  // Stored payload/signature for re-verification; raw key is never persisted.
+  payloadB64: text('payload_b64').notNull(),
+  signatureB64: text('signature_b64').notNull(),
   activatedAt: integer('activated_at').notNull().default(nowMs),
+});
+
+export const pluginData = sqliteTable('plugin_data', {
+  id: text('id')
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
+  widgetId: text('widget_id').notNull(),
+  key: text('key').notNull(),
+  value: text('value').notNull(),
+  updatedAt: integer('updated_at').notNull().default(sql`(unixepoch())`),
 });
 
 export const notifications = sqliteTable('notifications', {

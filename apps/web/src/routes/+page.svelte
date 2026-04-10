@@ -2,20 +2,7 @@
 import { onMount } from 'svelte';
 import { page } from '$app/state';
 import {
-  type CalendarMetrics,
-  type CpuMetrics,
-  type DiskMetrics,
-  type DockerMetrics,
   isWidgetDefinition,
-  type MemoryMetrics,
-  type NetworkMetrics,
-  type PiholeMetrics,
-  type RssFeedResult,
-  type ServiceHealthMetrics,
-  type SpeedtestMetrics,
-  type TemperatureMetrics,
-  type UptimeMetrics,
-  type WeatherMetrics,
   type WidgetDefinition,
   type WidgetManifestEntry,
   type WidgetSize,
@@ -47,33 +34,14 @@ import {
   updateInstance,
   updateTab,
 } from '$lib/stores/widgets.svelte';
-import CalendarWidget from '$lib/widgets/CalendarWidget.svelte';
-import CpuWidget from '$lib/widgets/CpuWidget.svelte';
-import DiskWidget from '$lib/widgets/DiskWidget.svelte';
-import DockerWidget from '$lib/widgets/DockerWidget.svelte';
-import LinksWidget from '$lib/widgets/LinksWidget.svelte';
-import MemoryWidget from '$lib/widgets/MemoryWidget.svelte';
-import NetworkWidget from '$lib/widgets/NetworkWidget.svelte';
-import PiholeWidget from '$lib/widgets/PiholeWidget.svelte';
-import RssWidget from '$lib/widgets/RssWidget.svelte';
-import ServiceHealthWidget from '$lib/widgets/ServiceHealthWidget.svelte';
-import SpeedtestWidget from '$lib/widgets/SpeedtestWidget.svelte';
-import TemperatureWidget from '$lib/widgets/TemperatureWidget.svelte';
-import UptimeWidget from '$lib/widgets/UptimeWidget.svelte';
-import WeatherWidget from '$lib/widgets/WeatherWidget.svelte';
-
-type LinksMetrics = {
-  groups: {
-    label: string;
-    links: { title: string; url: string; icon?: string }[];
-  }[];
-};
+import { getWidgetComponent, getWidgetHeading } from '$lib/widgets/widget-rendering';
 
 let telemetryOpen = $state(false);
 let gridDragOver = $state(false);
 let isDrawerDragging = $state(false);
 let editingPageName = $state(false);
 let editingName = $state('');
+let pageNameInput = $state<HTMLInputElement | null>(null);
 
 const config = $derived(getConfig());
 const session = $derived(getSession());
@@ -108,38 +76,6 @@ function colSpanFor(size: WidgetSize): number {
 
 function rowSpanFor(size: WidgetSize): number {
   return ROW_SPAN_MAP[size] ?? 2;
-}
-
-const widgetHeadings: Record<string, { title: string; subtitle: string; icon: string }> = {
-  cpu: { title: 'CPU Utilization', subtitle: 'Processor Unit', icon: 'cpu' },
-  memory: { title: 'Memory Usage', subtitle: 'Memory', icon: 'memory-stick' },
-  disk: { title: 'Storage Overview', subtitle: 'Storage', icon: 'database' },
-  network: { title: 'Network Activity', subtitle: 'Network', icon: 'globe' },
-  temperature: { title: 'Thermal Status', subtitle: 'Temperature', icon: 'thermometer' },
-  uptime: { title: 'System Uptime', subtitle: 'System', icon: 'clock-3' },
-  weather: { title: 'Current Weather', subtitle: 'Environment', icon: 'cloud-sun' },
-  pihole: { title: 'DNS Filtering', subtitle: 'Pi-hole', icon: 'shield' },
-  rss: { title: 'News Feed', subtitle: 'RSS', icon: 'rss' },
-  links: { title: 'Bookmarks', subtitle: 'Quick Access', icon: 'bookmark' },
-  docker: { title: 'Containers', subtitle: 'Docker', icon: 'box' },
-  'service-health': { title: 'Service Health', subtitle: 'Monitoring', icon: 'activity' },
-  speedtest: { title: 'Network Benchmark', subtitle: 'Speedtest', icon: 'gauge' },
-  calendar: { title: 'Calendar', subtitle: 'Schedule', icon: 'calendar-days' },
-};
-
-function widgetHeadingFor(widgetId: string, def: WidgetDefinition): {
-  title: string;
-  subtitle: string;
-  icon: string;
-} {
-  const preset = widgetHeadings[widgetId];
-  if (preset) return preset;
-
-  return {
-    title: def.name,
-    subtitle: def.category.replace('-', ' '),
-    icon: 'layout-grid',
-  };
 }
 
 async function handleDrawerAdd(widgetId: string, defaultSize: WidgetSize) {
@@ -224,6 +160,13 @@ async function savePageName() {
   await updateTab(activePage.id, { label: trimmed });
 }
 
+$effect(() => {
+  if (editingPageName) {
+    pageNameInput?.focus();
+    pageNameInput?.select();
+  }
+});
+
 onMount(() => {
   return $effect.root(() => {
     $effect(() => {
@@ -269,10 +212,10 @@ onMount(() => {
             {#if editingPageName}
               <input
                 class="page-name-input"
+                bind:this={pageNameInput}
                 bind:value={editingName}
                 onblur={savePageName}
                 onkeydown={(e) => e.key === 'Enter' && savePageName()}
-                autofocus
               />
             {:else}
               <h1 class="welcome-heading">{activePage?.label ?? ''}</h1>
@@ -282,6 +225,10 @@ onMount(() => {
             {/if}
           </div>
         </div>
+        <button class="add-widget-hero-btn" onclick={() => setDrawerOpen(true)}>
+          <Icon name="plus" size={15} />
+          <span>{en.dashboard.addWidget}</span>
+        </button>
       </div>
     {/if}
 
@@ -306,7 +253,11 @@ onMount(() => {
             {@const error = getWidgetError(instance.id)}
             {@const lastSuccess = getWidgetLastSuccess(instance.id)}
             {#if def}
-              {@const heading = widgetHeadingFor(instance.widgetId, def)}
+              {@const heading = getWidgetHeading(instance.widgetId, {
+                name: def.name,
+                category: def.category,
+              })}
+              {@const WidgetComponent = getWidgetComponent(instance.widgetId)}
               <WidgetCard
                 status={state}
                 title={heading.title}
@@ -362,34 +313,8 @@ onMount(() => {
                   {/if}
 
                   {#key instance.size}
-                  {#if instance.widgetId === 'cpu' && data}
-                    <CpuWidget data={data as CpuMetrics} size={instance.size} />
-                  {:else if instance.widgetId === 'memory' && data}
-                    <MemoryWidget data={data as MemoryMetrics} size={instance.size} />
-                  {:else if instance.widgetId === 'disk' && data}
-                    <DiskWidget data={data as DiskMetrics[]} size={instance.size} />
-                  {:else if instance.widgetId === 'network' && data}
-                    <NetworkWidget data={data as NetworkMetrics} size={instance.size} />
-                  {:else if instance.widgetId === 'temperature' && data}
-                    <TemperatureWidget data={data as TemperatureMetrics} size={instance.size} />
-                  {:else if instance.widgetId === 'uptime' && data}
-                    <UptimeWidget data={data as UptimeMetrics} size={instance.size} />
-                  {:else if instance.widgetId === 'weather' && data}
-                    <WeatherWidget data={data as WeatherMetrics} size={instance.size} />
-                  {:else if instance.widgetId === 'pihole' && data}
-                    <PiholeWidget data={data as PiholeMetrics} size={instance.size} />
-                  {:else if instance.widgetId === 'rss' && data}
-                    <RssWidget data={data as RssFeedResult} size={instance.size} />
-                  {:else if instance.widgetId === 'links' && data}
-                    <LinksWidget data={data as LinksMetrics} size={instance.size} />
-                  {:else if instance.widgetId === 'docker' && data}
-                    <DockerWidget data={data as DockerMetrics} size={instance.size} />
-                  {:else if instance.widgetId === 'service-health' && data}
-                    <ServiceHealthWidget data={data as ServiceHealthMetrics} size={instance.size} />
-                  {:else if instance.widgetId === 'speedtest' && data}
-                    <SpeedtestWidget data={data as SpeedtestMetrics} size={instance.size} />
-                  {:else if instance.widgetId === 'calendar' && data}
-                    <CalendarWidget data={data as CalendarMetrics} size={instance.size} />
+                  {#if WidgetComponent && data}
+                    <WidgetComponent data={data as unknown} size={instance.size} />
                   {:else if data}
                     <div class="widget-state widget-state-muted">
                       <p class="widget-state-kicker">Widget View</p>
@@ -437,6 +362,7 @@ onMount(() => {
   {@const liveData = isWidgetDefinition(widget) ? getWidgetData(widget.id) : null}
   {@const previewLoading = isWidgetDefinition(widget) ? getWidgetPreviewLoading(widget.id) : false}
   {@const previewError = isWidgetDefinition(widget) ? getWidgetPreviewError(widget.id) : null}
+  {@const WidgetComponent = isWidgetDefinition(widget) ? getWidgetComponent(widget.id) : null}
 
   {#if !isWidgetDefinition(widget)}
     <div class="tray-live-state tray-live-state-locked">
@@ -458,36 +384,10 @@ onMount(() => {
         <p class="tray-live-copy">Phavo is loading the latest widget snapshot for this tray preview.</p>
       </div>
     </div>
-  {:else if widget.id === 'cpu' && liveData}
-    <div class="tray-live-render"><CpuWidget data={liveData as CpuMetrics} size="S" /></div>
-  {:else if widget.id === 'memory' && liveData}
-    <div class="tray-live-render"><MemoryWidget data={liveData as MemoryMetrics} size="S" /></div>
-  {:else if widget.id === 'disk' && liveData}
-    <div class="tray-live-render"><DiskWidget data={liveData as DiskMetrics[]} size="S" /></div>
-  {:else if widget.id === 'network' && liveData}
-    <div class="tray-live-render"><NetworkWidget data={liveData as NetworkMetrics} size="S" /></div>
-  {:else if widget.id === 'temperature' && liveData}
-    <div class="tray-live-render"><TemperatureWidget data={liveData as TemperatureMetrics} size="S" /></div>
-  {:else if widget.id === 'uptime' && liveData}
-    <div class="tray-live-render"><UptimeWidget data={liveData as UptimeMetrics} size="S" /></div>
-  {:else if widget.id === 'weather' && liveData}
-    <div class="tray-live-render"><WeatherWidget data={liveData as WeatherMetrics} size="S" /></div>
-  {:else if widget.id === 'pihole' && liveData}
-    <div class="tray-live-render"><PiholeWidget data={liveData as PiholeMetrics} size="S" /></div>
-  {:else if widget.id === 'rss' && liveData}
-    <div class="tray-live-render"><RssWidget data={liveData as RssFeedResult} size="S" /></div>
-  {:else if widget.id === 'links' && liveData}
-    <div class="tray-live-render"><LinksWidget data={liveData as LinksMetrics} size="S" /></div>
-  {:else if widget.id === 'docker' && liveData}
-    <div class="tray-live-render"><DockerWidget data={liveData as DockerMetrics} size="S" /></div>
-  {:else if widget.id === 'service-health' && liveData}
+  {:else if WidgetComponent && liveData}
     <div class="tray-live-render">
-      <ServiceHealthWidget data={liveData as ServiceHealthMetrics} size="S" />
+      <WidgetComponent data={liveData as unknown} size="S" />
     </div>
-  {:else if widget.id === 'speedtest' && liveData}
-    <div class="tray-live-render"><SpeedtestWidget data={liveData as SpeedtestMetrics} size="S" /></div>
-  {:else if widget.id === 'calendar' && liveData}
-    <div class="tray-live-render"><CalendarWidget data={liveData as CalendarMetrics} size="S" /></div>
   {:else if previewError}
     <div class="tray-live-state">
       <span class="tray-live-icon" aria-hidden="true">
@@ -979,10 +879,6 @@ onMount(() => {
     .dashboard-empty {
       flex-direction: column;
       align-items: flex-start;
-    }
-
-    .empty-action {
-      margin-left: 0;
     }
 
     .widget-stale-banner {

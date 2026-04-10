@@ -2,6 +2,8 @@
 
 > Modular, self-hosted personal dashboard — beautiful by default, yours to own.
 
+<!-- Hero screenshot pending — coming with v1.0 launch -->
+
 Phavo is a production-grade self-hosted dashboard built on a modern TypeScript stack. It ships as a single Docker container, runs on any Linux server or Raspberry Pi, and expands to desktop and mobile in future phases.
 
 ---
@@ -140,6 +142,7 @@ packages/
   @phavo/agent    System metrics library
 
 Auth:       Better Auth (local-only, Argon2id)
+AI:         Vercel AI SDK (ai + ollama-ai-provider / @ai-sdk/openai / @ai-sdk/anthropic)
 Database:   libSQL (local SQLite)
 Docker:     Multi-arch (amd64 + arm64)
 CI/CD:      GitHub Actions

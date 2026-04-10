@@ -12,6 +12,9 @@
 
   const running = $derived(data.containers.filter(c => c.status === 'running').length);
   const total = $derived(data.containers.length);
+  const stopped = $derived(data.containers.filter(c => c.status === 'stopped').length);
+  const paused = $derived(data.containers.filter(c => c.status === 'paused').length);
+  const runningRatio = $derived(total > 0 ? (running / total) * 100 : 0);
 </script>
 
 {#if size === 'S'}
@@ -32,6 +35,14 @@
       <span class="docker-hero hero-glow">
         {running}<span class="docker-hero-unit">/{total}</span>
       </span>
+    </div>
+
+    <div class="docker-health">
+      <div class="docker-health-track"><div class="docker-health-fill" style:width={`${runningRatio}%`}></div></div>
+      <div class="docker-health-meta">
+        <span>{running} running</span>
+        <span>{stopped} stopped</span>
+      </div>
     </div>
 
     {#if data.containers.length === 0}
@@ -63,6 +74,15 @@
       <span class="docker-hero hero-glow">
         {running}<span class="docker-hero-unit">/{total}</span>
       </span>
+    </div>
+
+    <div class="docker-health">
+      <div class="docker-health-track"><div class="docker-health-fill" style:width={`${runningRatio}%`}></div></div>
+      <div class="docker-health-meta">
+        <span>{running} running</span>
+        <span>{paused} paused</span>
+        <span>{stopped} stopped</span>
+      </div>
     </div>
 
     {#if data.containers.length === 0}
@@ -155,6 +175,8 @@
     display: flex;
     flex-direction: column;
     gap: var(--space-2);
+    min-height: 0;
+    overflow: hidden;
   }
 
   .docker-row {
@@ -162,6 +184,9 @@
     align-items: center;
     justify-content: space-between;
     gap: var(--space-2);
+    padding: var(--space-2) var(--space-3);
+    border-radius: var(--radius-md);
+    background: color-mix(in srgb, var(--color-surface-high) 45%, transparent);
   }
 
   .docker-row-info {
@@ -209,5 +234,34 @@
     font-size: 12px;
     color: var(--color-outline);
     font-family: var(--font-mono);
+  }
+
+  .docker-health {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+
+  .docker-health-track {
+    height: 6px;
+    border-radius: var(--radius-full);
+    background: color-mix(in srgb, var(--color-on-surface) 7%, transparent);
+    overflow: hidden;
+  }
+
+  .docker-health-fill {
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, var(--color-secondary), var(--color-secondary-fixed));
+    transition: width var(--motion-component);
+  }
+
+  .docker-health-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-3);
+    font-size: 11px;
+    font-family: var(--font-mono);
+    color: var(--color-on-surface-variant);
   }
 </style>

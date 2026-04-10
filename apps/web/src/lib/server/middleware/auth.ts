@@ -20,7 +20,12 @@ type Tier = 'stellar' | 'celestial';
 const TIER_RANK: Record<Tier, number> = { stellar: 0, celestial: 1 };
 
 // Routes that bypass session validation entirely (no auth required).
-const PUBLIC_PATHS = new Set(['/api/v1/system/health', '/api/v1/auth/login', '/api/v1/auth/totp']);
+const PUBLIC_PATHS = new Set([
+  '/api/v1/system/health',
+  '/api/v1/auth/login',
+  '/api/v1/auth/totp',
+  '/api/v1/webhooks/gumroad',
+]);
 
 function parseCookieValue(header: string, name: string): string | undefined {
   return header
@@ -45,7 +50,6 @@ export const authMiddleware: MiddlewareHandler<{ Variables: AppVariables }> = as
       tier: mockSession.tier,
       authMode: mockSession.authMode,
       validatedAt: mockSession.validatedAt,
-      graceUntil: null,
       expiresAt: Date.now() + 7 * 24 * 60 * 60 * 1000,
     };
     c.set('session', devSession);
@@ -68,11 +72,6 @@ export const authMiddleware: MiddlewareHandler<{ Variables: AppVariables }> = as
   if (session.expiresAt < now) {
     await db.delete(schema.sessions).where(eq(schema.sessions.id, token));
     return c.json(err('Session expired'), 401);
-  }
-
-  // phavo.net grace period check (arch spec "Session Validation" step 2).
-  if (session.authMode === 'phavo-net' && session.graceUntil !== null && session.graceUntil < now) {
-    return c.json(err('Grace period expired — please log in again'), 401);
   }
 
   c.set('session', session);

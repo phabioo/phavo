@@ -62,7 +62,7 @@ export function registerNotificationRoutes(app: Hono<{ Variables: AppVariables }
   // POST /notifications — create a notification
   app.post('/notifications', requireSession(), async (c) => {
     await dbReady;
-    const body = await c.req.json<{
+    let body: {
       type: string;
       title: string;
       message: string;
@@ -70,7 +70,12 @@ export function registerNotificationRoutes(app: Hono<{ Variables: AppVariables }
       actionUrl?: string;
       widgetId?: string;
       progress?: number;
-    }>();
+    };
+    try {
+      body = await c.req.json();
+    } catch {
+      return c.json(err('Invalid request body'), 400);
+    }
 
     if (!body.type || !body.title || !body.message) {
       return c.json(err('type, title, and message are required'), 400);
@@ -105,7 +110,12 @@ export function registerNotificationRoutes(app: Hono<{ Variables: AppVariables }
   app.patch('/notifications/:id', requireSession(), async (c) => {
     await dbReady;
     const id = c.req.param('id');
-    const body = await c.req.json<{ read?: boolean; progress?: number; readAll?: boolean }>();
+    let body: { read?: boolean; progress?: number; readAll?: boolean };
+    try {
+      body = await c.req.json();
+    } catch {
+      return c.json(err('Invalid request body'), 400);
+    }
 
     const updates: Record<string, unknown> = {};
     if (body.read !== undefined) updates.read = body.read ? 1 : 0;
@@ -121,7 +131,12 @@ export function registerNotificationRoutes(app: Hono<{ Variables: AppVariables }
   // PATCH /notifications — bulk operations (mark all read)
   app.patch('/notifications', requireSession(), async (c) => {
     await dbReady;
-    const body = await c.req.json<{ readAll?: boolean }>();
+    let body: { readAll?: boolean };
+    try {
+      body = await c.req.json();
+    } catch {
+      return c.json(err('Invalid request body'), 400);
+    }
 
     if (body.readAll) {
       await db.update(schema.notifications).set({ read: 1 });

@@ -79,17 +79,43 @@ export function registerWidgetRoutes(app: Hono<{ Variables: AppVariables }>): vo
   app.patch('/widget-instances/:id', requireSession(), async (c) => {
     try {
       const instanceId = c.req.param('id');
-      const body = (await c.req.json()) as {
-        size?: WidgetSize;
-        positionX?: number;
-        positionY?: number;
-      };
+      let rawBody: unknown;
+      try {
+        rawBody = await c.req.json();
+      } catch {
+        return c.json(err('Invalid request body'), 400);
+      }
+
+      const patchSchema = z
+        .object({
+          size: z.enum(['S', 'M', 'L', 'XL']).optional(),
+          positionX: z.number().int().min(0).max(1000).optional(),
+          positionY: z.number().int().min(0).max(1000).optional(),
+        })
+        .refine((value) => Object.keys(value).length > 0, {
+          message: 'No updates provided',
+        });
+      const bodyResult = patchSchema.safeParse(rawBody);
+      if (!bodyResult.success) {
+        return c.json(err(bodyResult.error.issues[0]?.message ?? 'Invalid update payload'), 400);
+      }
+      const body = bodyResult.data;
 
       const existing = await db
         .select()
         .from(schema.widgetInstances)
         .where(eq(schema.widgetInstances.id, instanceId));
       if (existing.length === 0) return c.json(err('Widget instance not found'), 404);
+      const current = existing[0];
+      if (!current) return c.json(err('Widget instance not found'), 404);
+
+      if (body.size !== undefined) {
+        const widgetDef = registry.getById(current.widgetId);
+        if (!widgetDef) return c.json(err('Unknown widget'), 400);
+        if (!widgetDef.sizes.includes(body.size)) {
+          return c.json(err('Unsupported widget size'), 400);
+        }
+      }
 
       const updates: Record<string, unknown> = {};
       if (body.size !== undefined) updates.size = body.size;

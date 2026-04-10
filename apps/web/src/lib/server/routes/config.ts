@@ -1,6 +1,6 @@
 import { decrypt, encrypt, schema } from '@phavo/db';
 import { err, ok } from '@phavo/types';
-import { asc, eq } from 'drizzle-orm';
+import { asc, eq, like } from 'drizzle-orm';
 import type { Hono } from 'hono';
 import { z } from 'zod';
 import { parseConfigEntries } from '$lib/server/config-helpers.js';
@@ -431,6 +431,7 @@ export function registerConfigRoutes(app: Hono<{ Variables: AppVariables }>): vo
         // ── Replace tabs ──────────────────────────────────────────────────────────
         await tx.delete(schema.widgetInstances);
         await tx.delete(schema.tabs);
+        await tx.delete(schema.credentials).where(like(schema.credentials.key, 'widget:%'));
 
         for (const tab of tabsToImport) {
           const newId = crypto.randomUUID();
@@ -527,7 +528,7 @@ export function registerConfigRoutes(app: Hono<{ Variables: AppVariables }>): vo
               title: `${def.name} needs reconfiguration`,
               message: `Widget "${def.name}" needs credentials configured after import`,
               widgetId: wi.widgetId,
-              actionUrl: '/settings?tab=widgets',
+              actionUrl: `/settings?tab=widgets#widgets/${encodeURIComponent(wi.widgetId)}`,
             });
           }
         }

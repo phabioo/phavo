@@ -159,16 +159,16 @@ function isSizeAvailable(s: WidgetSize): boolean {
   class="widget-card-outer {cls}"
   class:widget-dragging={isDragging}
   class:widget-drop-target={dropIndicator}
-  class:widget-featured={colSpan >= 8}
-  class:widget-compact={colSpan <= 4}
   class:widget-size-s={size === 'S'}
   class:widget-size-m={size === 'M'}
+  class:widget-size-l={size === 'L'}
+  class:widget-size-xl={size === 'XL'}
   class:widget-state-error={effectiveStatus === 'error'}
   class:widget-state-stale={effectiveStatus === 'stale'}
   class:widget-card-loading={effectiveStatus === 'loading'}
   style:grid-column="span {colSpan}"
   style:grid-row="span {rowSpan}"
-  style:animation-delay="{staggerIndex * 40}ms"
+  style:animation-delay="{staggerIndex * 60}ms"
   ondragover={handleCardDragOver}
   ondragleave={handleCardDragLeave}
   ondrop={handleCardDrop}
@@ -176,7 +176,7 @@ function isSizeAvailable(s: WidgetSize): boolean {
   data-widget-id={instanceId || undefined}
 >
   <div
-    class="widget-card-inner"
+    class="widget-card-inner widget-size-{size.toLowerCase()}"
     class:widget-card-inner-clip={clipContent}
     style="--widget-glow: {glowColor === 'teal'
       ? 'var(--color-secondary)'
@@ -184,7 +184,7 @@ function isSizeAvailable(s: WidgetSize): boolean {
   >
     <!-- Background texture: star field -->
     {#if starField}
-      <div style="position: absolute; inset: 0; background-image: radial-gradient(circle, color-mix(in srgb, var(--color-primary) 20%, transparent) 1px, transparent 1px); background-size: 50px 50px; opacity: 0.08; pointer-events: none; border-radius: inherit; z-index: 0;"></div>
+      <div class="widget-starfield"></div>
     {/if}
 
     <!-- Widget body — renders children (backward compat) or state-based defaults -->
@@ -309,7 +309,7 @@ function isSizeAvailable(s: WidgetSize): boolean {
     flex-direction: column;
     min-height: 188px;
     box-shadow: var(--shadow-md);
-    transition: transform var(--motion-micro), box-shadow var(--motion-micro);
+    transition: transform var(--motion-component), box-shadow var(--motion-component);
     will-change: transform;
     animation: widget-enter var(--motion-component) forwards;
   }
@@ -327,13 +327,10 @@ function isSizeAvailable(s: WidgetSize): boolean {
     transform: scale(1.02);
   }
 
-  .widget-featured {
-    min-height: 264px;
-  }
-
-  .widget-compact {
-    min-height: 156px;
-  }
+  .widget-size-s { min-height: 120px; }
+  .widget-size-m { min-height: 200px; }
+  .widget-size-l { min-height: 320px; }
+  .widget-size-xl { min-height: 320px; }
 
   .widget-dragging {
     opacity: 0.5;
@@ -368,7 +365,7 @@ function isSizeAvailable(s: WidgetSize): boolean {
     z-index: 10;
     cursor: grab;
     opacity: 0.4;
-    transition: opacity 0.15s;
+    transition: opacity var(--motion-micro);
     pointer-events: all;
     width: 20px;
     height: 20px;
@@ -402,7 +399,7 @@ function isSizeAvailable(s: WidgetSize): boolean {
     border-radius: 9999px;
     border: 1px solid color-mix(in srgb, var(--color-on-surface) 8%, transparent);
     opacity: 0;
-    transition: opacity 0.2s ease;
+    transition: opacity var(--motion-micro);
     pointer-events: none;
   }
 
@@ -422,7 +419,7 @@ function isSizeAvailable(s: WidgetSize): boolean {
     border-radius: var(--radius-sm);
     background: transparent;
     cursor: pointer;
-    transition: color 0.15s, background 0.15s;
+    transition: color var(--motion-micro), background var(--motion-micro);
   }
 
   .ctrl-size {
@@ -535,7 +532,7 @@ function isSizeAvailable(s: WidgetSize): boolean {
     border-radius: var(--radius-sm);
     padding: var(--space-1) var(--space-3);
     cursor: pointer;
-    transition: background 0.15s;
+    transition: background var(--motion-micro);
   }
 
   .retry-btn:hover {
@@ -630,9 +627,33 @@ function isSizeAvailable(s: WidgetSize): boolean {
 
   @media (min-width: 640px) and (max-width: 1023px) {
     .widget-card-outer {
-      grid-column: span 1 !important;
       grid-row: auto !important;
     }
+
+    .widget-size-s,
+    .widget-size-m {
+      grid-column: span 2 !important;
+    }
+
+    .widget-size-l,
+    .widget-size-xl {
+      grid-column: span 3 !important;
+    }
+  }
+
+  .widget-starfield {
+    position: absolute;
+    inset: 0;
+    background-image: radial-gradient(
+      circle,
+      color-mix(in srgb, var(--color-on-surface) 20%, transparent) 1px,
+      transparent 1px
+    );
+    background-size: 50px 50px;
+    opacity: 0.08;
+    pointer-events: none;
+    border-radius: inherit;
+    z-index: 0;
   }
 
 </style>

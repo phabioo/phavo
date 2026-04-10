@@ -42,6 +42,22 @@
       default:             return 'info';
     }
   }
+
+  function isActionable(notif: Notification): boolean {
+    return Boolean(notif.actionUrl || notif.widgetId);
+  }
+
+  function handleCardAction(notif: Notification): void {
+    if (!isActionable(notif)) return;
+    onaction(notif);
+  }
+
+  function handleCardKeydown(event: KeyboardEvent, notif: Notification): void {
+    if (!isActionable(notif)) return;
+    if (event.key !== 'Enter' && event.key !== ' ') return;
+    event.preventDefault();
+    onaction(notif);
+  }
 </script>
 
 {#if open}
@@ -75,9 +91,15 @@
       </div>
     {:else}
       {#each notifications as notif (notif.id)}
+        {@const actionable = isActionable(notif)}
         <div
           class="notif-card notif-card-{notif.type}"
           class:notif-card-read={notif.read}
+          class:notif-card-actionable={actionable}
+          role={actionable ? 'button' : undefined}
+          tabindex={actionable ? 0 : undefined}
+          onclick={actionable ? () => handleCardAction(notif) : undefined}
+          onkeydown={actionable ? (event) => handleCardKeydown(event, notif) : undefined}
         >
           <!-- Icon circle -->
           <div class="notif-icon notif-icon-{notif.type}">
@@ -111,7 +133,10 @@
             {#if notif.actionLabel}
               <button
                 class="notif-action-btn"
-                onclick={() => onaction(notif)}
+                onclick={(event) => {
+                  event.stopPropagation();
+                  onaction(notif);
+                }}
               >
                 {notif.actionLabel}
               </button>
@@ -121,7 +146,10 @@
           <!-- Dismiss button -->
           <button
             class="notif-dismiss"
-            onclick={() => ondismiss(notif.id)}
+            onclick={(event) => {
+              event.stopPropagation();
+              ondismiss(notif.id);
+            }}
             aria-label="Dismiss"
           >
             <Icon name="x" size={12} />
@@ -276,6 +304,19 @@
 
   .notif-card:hover {
     background: var(--color-surface-high);
+  }
+
+  .notif-card-actionable {
+    cursor: pointer;
+  }
+
+  .notif-card-actionable:hover {
+    background: color-mix(in srgb, var(--color-surface-high) 84%, var(--color-primary-fixed) 16%);
+  }
+
+  .notif-card-actionable:focus-visible {
+    outline: 1px solid color-mix(in srgb, var(--color-primary-fixed) 40%, transparent);
+    outline-offset: 2px;
   }
 
   .notif-card-read {

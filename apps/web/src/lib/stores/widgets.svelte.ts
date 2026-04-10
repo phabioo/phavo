@@ -213,7 +213,7 @@ function trackPiholeFailure(widgetId: string): void {
       title: en.notifications.piholeUnreachable,
       message: en.notifications.piholeUnreachableBody,
       widgetId: 'pihole',
-      actionUrl: '/settings?tab=general',
+      actionUrl: '/settings?tab=widgets#widgets/pihole',
     });
     piholeFailStreak = 0;
   }

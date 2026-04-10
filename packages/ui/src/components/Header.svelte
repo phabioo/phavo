@@ -20,7 +20,7 @@ interface Props {
   aiProviders?: AiProviders;
   tier?: 'stellar' | 'celestial';
   onSearchAction?: (entry: SearchEntry) => void;
-  onAiChat?: (provider: 'ollama' | 'openai' | 'anthropic', query: string) => Promise<string>;
+  onAiChat?: (provider: 'ollama' | 'openai' | 'anthropic' | 'google' | 'custom', query: string) => Promise<string>;
 }
 
 let {

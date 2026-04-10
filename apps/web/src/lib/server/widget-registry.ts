@@ -1,80 +1,31 @@
-import { ensureZodMetaCompat, type WidgetDefinition, type WidgetManifestEntry } from '@phavo/types';
-import { z } from 'zod';
+import type { WidgetDefinition, WidgetManifestEntry } from '@phavo/types';
+import type { z } from 'zod';
+
+import {
+  CalendarWidgetConfigSchema,
+  DockerWidgetConfigSchema,
+  LinksWidgetConfigSchema,
+  PiholeWidgetConfigSchema,
+  RssWidgetConfigSchema,
+  ServiceHealthWidgetConfigSchema,
+  SpeedtestWidgetConfigSchema,
+} from '$lib/widgets/config-schemas.js';
+
+export {
+  CalendarWidgetConfigSchema,
+  DockerWidgetConfigSchema,
+  LinksWidgetConfigSchema,
+  PiholeWidgetConfigSchema,
+  RssWidgetConfigSchema,
+  ServiceHealthWidgetConfigSchema,
+  SpeedtestWidgetConfigSchema,
+};
 
 export type RegisteredWidgetDefinition = WidgetDefinition & {
   configSchema?: z.ZodTypeAny;
   permissions?: string[];
   isPlugin?: boolean;
 };
-
-ensureZodMetaCompat();
-
-export const PiholeWidgetConfigSchema = z.object({
-  url: z.string().url().meta({
-    label: 'Pi-hole URL',
-    testEndpoint: '/api/v1/pihole/test',
-  }),
-  token: z.string().min(1).meta({
-    credential: true,
-    label: 'API token',
-  }),
-});
-
-export const RssWidgetConfigSchema = z.object({
-  feeds: z
-    .array(
-      z.object({
-        id: z.string().uuid(),
-        url: z.string().url().meta({ label: 'Feed URL' }),
-        label: z.string().optional().meta({ label: 'Label' }),
-        authType: z
-          .enum(['none', 'basic', 'bearer'])
-          .default('none')
-          .meta({ label: 'Authentication' }),
-        username: z.string().optional().meta({
-          credential: true,
-          label: 'Username',
-        }),
-        password: z.string().optional().meta({
-          credential: true,
-          label: 'Password',
-        }),
-        token: z.string().optional().meta({
-          credential: true,
-          label: 'Bearer token',
-        }),
-      }),
-    )
-    .min(1)
-    .max(20),
-});
-
-const HttpUrlSchema = z
-  .string()
-  .url()
-  .refine((value) => {
-    try {
-      const url = new URL(value);
-      return url.protocol === 'http:' || url.protocol === 'https:';
-    } catch {
-      return false;
-    }
-  }, 'Only http:// and https:// URLs are allowed');
-
-export const LinksWidgetConfigSchema = z.object({
-  groups: z.array(
-    z.object({
-      label: z.string().min(1).meta({ label: 'Group label' }),
-      links: z.array(
-        z.object({
-          title: z.string().min(1).meta({ label: 'Title' }),
-          url: HttpUrlSchema.meta({ label: 'URL' }),
-          icon: z.string().url().optional().meta({ label: 'Icon URL' }),
-        }),
-      ),
-    }),
-  ),
-});
 
 function toManifestDefinition(widget: RegisteredWidgetDefinition): WidgetDefinition {
   return {
@@ -86,6 +37,7 @@ function toManifestDefinition(widget: RegisteredWidgetDefinition): WidgetDefinit
     minSize: widget.minSize,
     defaultSize: widget.defaultSize,
     sizes: widget.sizes,
+    configSchema: widget.configSchema ? true : undefined,
     dataEndpoint: widget.dataEndpoint,
     refreshInterval: widget.refreshInterval,
   };
@@ -263,4 +215,61 @@ registry.register({
   dataEndpoint: '/api/v1/links',
   refreshInterval: 0,
   configSchema: LinksWidgetConfigSchema,
+});
+
+// Celestial integration widgets
+registry.register({
+  id: 'docker',
+  name: 'Docker',
+  description: 'Container status, CPU/RAM per container, restart actions',
+  tier: 'celestial',
+  category: 'integration',
+  sizes: ['S', 'M', 'L'],
+  defaultSize: { w: 4, h: 3 },
+  minSize: { w: 2, h: 2 },
+  dataEndpoint: '/api/v1/docker',
+  refreshInterval: 10000,
+  configSchema: DockerWidgetConfigSchema,
+});
+
+registry.register({
+  id: 'service-health',
+  name: 'Service Health',
+  description: 'HTTP/ping health checks with response time monitoring',
+  tier: 'celestial',
+  category: 'integration',
+  sizes: ['S', 'M', 'L'],
+  defaultSize: { w: 4, h: 3 },
+  minSize: { w: 2, h: 2 },
+  dataEndpoint: '/api/v1/service-health',
+  refreshInterval: 30000,
+  configSchema: ServiceHealthWidgetConfigSchema,
+});
+
+registry.register({
+  id: 'speedtest',
+  name: 'Speedtest',
+  description: 'Internet speed test with 30-result history',
+  tier: 'celestial',
+  category: 'integration',
+  sizes: ['S', 'M', 'L'],
+  defaultSize: { w: 4, h: 3 },
+  minSize: { w: 2, h: 2 },
+  dataEndpoint: '/api/v1/speedtest',
+  refreshInterval: 60000,
+  configSchema: SpeedtestWidgetConfigSchema,
+});
+
+registry.register({
+  id: 'calendar',
+  name: 'Calendar',
+  description: 'Upcoming events from CalDAV calendar',
+  tier: 'celestial',
+  category: 'integration',
+  sizes: ['S', 'M', 'L'],
+  defaultSize: { w: 4, h: 3 },
+  minSize: { w: 2, h: 2 },
+  dataEndpoint: '/api/v1/calendar',
+  refreshInterval: 300000,
+  configSchema: CalendarWidgetConfigSchema,
 });

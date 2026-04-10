@@ -31,13 +31,14 @@
 
   @media (min-width: 640px) {
     .bento-grid {
-      grid-template-columns: repeat(2, 1fr);
+      grid-template-columns: repeat(6, 1fr);
     }
   }
 
   @media (min-width: 1024px) {
     .bento-grid {
       grid-template-columns: repeat(12, 1fr);
+      align-items: start;
     }
   }
 </style>

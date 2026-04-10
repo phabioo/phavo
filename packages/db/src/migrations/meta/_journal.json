@@ -36,6 +36,20 @@
       "when": 1775865600000,
       "tag": "0004_notifications",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1776403200000,
+      "tag": "0005_local_auth_offline_license",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1776489600000,
+      "tag": "0006_plugin_data",
+      "breakpoints": true
     }
   ]
 }

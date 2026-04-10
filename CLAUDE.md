@@ -16,9 +16,9 @@ on your hardware.
 - **Stellar** (free) — base widgets, 1 page (Home)
 - **Celestial** (paid, one-time) — all widgets, unlimited pages, AI assistant
 
-There are no subscriptions. There is no phavo.net account backend. The Celestial
-license key is a self-verifying Ed25519-signed payload — the app validates it
-offline against an embedded public key. phavo.net is never contacted at runtime.
+There are no subscriptions. There is no phavo.net account backend.
+Runtime auth and license are local-only: offline Ed25519 license verification and
+local session enforcement.
 
 ## Versioning Policy
 
@@ -53,7 +53,6 @@ phavo/
 │   ├── design.md     ← Celestial Wish Design System (authoritative)
 │   └── rules.md
 ├── CLAUDE.md         ← You are here
-└── RULES.md          ← Symlink or copy of docs/rules.md for legacy tooling
 ```
 
 ---
@@ -69,7 +68,7 @@ phavo/
 | Fonts | Geist + Geist Mono via `@fontsource` — **never** Google Fonts CDN |
 | Backend | Hono (mounted via SvelteKit catch-all) |
 | ORM | Drizzle + libSQL (SQLite) |
-| Auth | Better Auth, local-only mode |
+| Auth | Better Auth (local-only) |
 | Runtime | Bun |
 | Monorepo | Turborepo |
 | Linter | Biome (replaces ESLint + Prettier) |
@@ -107,10 +106,12 @@ On Windows, Bun's implicit bin resolution in workspaces is broken.
 `package.json` scripts call local tool entrypoints directly.
 **Never** modify these back to implicit calls — they will break on Windows.
 
-### 6. No Network Calls at Runtime
-The app is fully offline after installation. No API calls to phavo.net,
-no telemetry, no update pings without explicit user action.
-Exception: `GET /api/v1/update/check` — user-initiated only, with 1h cache.
+### 6. Runtime Network Boundaries
+The app is local-first. Outbound calls must remain explicit and scoped:
+- user-initiated update check (`GET /api/v1/update/check`, 1h cache)
+- integration/data calls (Weather, RSS, Pi-hole)
+
+Never add telemetry, analytics, or background phone-home behavior.
 
 ### 7. Tailwind v4 Dual-Valid
 The `@theme` block in `theme.css` makes all tokens available both as:
@@ -172,19 +173,19 @@ Key route modules:
 ## Widget System
 
 Widget tier assignments:
-- **Stellar:** CPU, Memory, Disk, Network, Uptime, Temperature, Weather
-- **Celestial:** All Stellar + Docker, Service Health, Speedtest, Calendar, RSS, Pi-hole, Links
+- **Stellar (7):** CPU, Memory, Disk, Network, Temperature, Uptime, Weather
+- **Celestial (7):** Pi-hole, RSS Feed, Links/Bookmarks, Docker, Service Health, Speedtest, Calendar
 
 Widget sizes and BentoGrid spans:
-| Size | colSpan | rowSpan |
-|---|---|---|
-| S | 3 | 1 |
-| M | 4 | 2 |
-| L | 6 | 2 |
-| XL | 8 | 3 |
+| Size | colSpan | rowSpan | Content depth |
+|---|---|---|---|
+| S | 3 | 1 | Compact stat only |
+| M | 4 | 2 | Header + hero stat + one secondary element |
+| L | 6 | 2 | Header + hero stat + meaningful expanded content |
+| XL | 8 | 3 | Reserved — exists in WidgetSize but NO widget registers it |
 
 > **Note:** XL exists in the `WidgetSize` type but is intentionally inactive —
-> no widget currently registers it. Reserved for future use.
+> no widget currently registers it. Reserved for future use. Do not add XL to `availableSizes` arrays.
 
 Widgets are always **presentational** — no self-fetching.
 Data flows: store → widget component. Never widget → API.
@@ -229,7 +230,7 @@ All three collapse to `0ms` under `prefers-reduced-motion: reduce`.
 
 SQLite via Drizzle + libSQL. Migrations in `packages/db/src/migrations/`.
 Core tables: `users`, `sessions`, `config`, `tabs`, `widget_instances`,
-`credentials`, `license_activation`, `plugin_data`, `notifications`
+`credentials`, `license_activation`, `notifications`
 
 Migrations:
 | File | Change |
@@ -237,8 +238,10 @@ Migrations:
 | `0000_initial.sql` | Bootstrap |
 | `0001_spicy_clea.sql` | Core schema: users, sessions, config, tabs, widget_instances, credentials, license_activation |
 | `0002_keen_luminals.sql` | Auth tables |
-| `0003_auth_mode_rename.sql` | Rename authMode `phavo-io` → `local` |
+| `0003_auth_mode_rename.sql` | Legacy auth mode rename in pre-v1 schema history |
 | `0004_notifications.sql` | Add `notifications` table (DB-persisted, survives restarts) |
+| `0005_local_auth_offline_license.sql` | Local-only auth normalization + offline license payload/signature schema (rebuild sessions + license_activation) |
+| `0006_plugin_data.sql` | Add `plugin_data` table (Speedtest history) |
 
 Sensitive widget config: AES-256-GCM encrypted in `widget_instances.config_encrypted`.
 Secrets: `credentials` table, keyed by widget instance path.
@@ -255,7 +258,11 @@ Secrets: `credentials` table, keyed by widget instance path.
 | `docs/design.md` | Celestial Wish Design System (full spec) |
 | `docs/rules.md` | Development rules and anti-patterns |
 | `docs/widget-guide.md` | Widget development guide |
+| `docs/svelte-audit.md` | Svelte audit report |
+| `docs/dev-commands.md` | Cross-platform dev commands |
 | `CLAUDE.md` | This file — agent entry point |
+
+See `docs/rules.md` for engineering rules.
 
 ### Key Files
 
@@ -268,7 +275,9 @@ Secrets: `credentials` table, keyed by widget instance path.
 | `packages/ui/src/components/WishStar.svelte` | 4-pointed SVG star (drag handle) |
 | `apps/web/src/lib/stores/notifications.svelte.ts` | Notification store (Svelte 5 Runes) |
 | `apps/web/src/lib/widgets/_widget-template.svelte` | Starting point for new widgets |
+| `apps/web/src/lib/widgets/config-schemas.ts` | Shared widget config Zod schemas |
 | `apps/web/src/lib/components/settings/` | Settings page components (master-detail) |
+| `packages/ui/src/components/Button.svelte` | Button component (primary pill, secondary ghost, tertiary text-only) |
 
 ---
 
@@ -278,7 +287,7 @@ Secrets: `credentials` table, keyed by widget instance path.
 ```bash
 PHAVO_DEV_MOCK_AUTH=true PHAVO_SECRET=dev-secret PHAVO_ENV=development \
   PHAVO_PORT=3000 PHAVO_DATA_DIR=./apps/web/.dev-data \
-  bun run --cwd apps/web dev -- --host 0.0.0.0
+  ~/.bun/bin/bun run --cwd apps/web dev -- --host 0.0.0.0
 ```
 
 **Celestial tier:**
@@ -286,7 +295,7 @@ PHAVO_DEV_MOCK_AUTH=true PHAVO_SECRET=dev-secret PHAVO_ENV=development \
 PHAVO_DEV_MOCK_AUTH=true PHAVO_SECRET=dev-secret PHAVO_ENV=development \
   PHAVO_PORT=3000 PHAVO_DATA_DIR=./apps/web/.dev-data \
   PHAVO_DEV_TIER=celestial \
-  bun run --cwd apps/web dev -- --host 0.0.0.0
+  ~/.bun/bin/bun run --cwd apps/web dev -- --host 0.0.0.0
 ```
 
 **Checks:**
@@ -299,7 +308,8 @@ bun run lint         # Biome
 
 ## Known Pre-existing Issues (do not fix without context)
 
-1. 89 CRLF line-ending warnings from Windows git checkout — known, ignored.
+1. Settings dropdown menus clip with settings cards (z-index issue, manual fix pending)
+2. a11y_interactive_supports_focus warning on WishStar drag handle (deferred)
 
 ---
 

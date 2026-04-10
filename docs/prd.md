@@ -1,16 +1,22 @@
 # Phavo — Product Requirements Document
 
-**Version:** 4.0
-**Date:** 2026-04-07
+**Version:** 4.1
+**Date:** 2026-04-09
 **Status:** Active — MA Design & Experience in progress · Pre-Launch
 **Owner:** getphavo
 
+**Changelog v4.1:** Documentation alignment with the v0.8.0 runtime. UI updates include
+header scroll state handling and sidebar delete-page actions. Server updates include
+expanded notification routes, current auth/session behavior, and current license
+activation flow.
+
 **Changelog v4.0:** Complete product model revision. Tiers simplified to Stellar (free)
 + Celestial (one-time, €24.99). No subscriptions, no phavo.net account infrastructure,
-no cloud backend. License is a fully offline Ed25519-signed key delivered via Gumroad.
+no cloud backend. Runtime auth/license is local-only in v1.0: offline Ed25519
+verification + local session enforcement.
 Design language updated to Celestial Wish. Phase 4 cloud/sync/marketplace deferred
-indefinitely. Auth mode `phavo-net` removed — `local` only. Tier identifiers in code:
-`stellar` / `celestial`.
+indefinitely. Auth mode is `local` at runtime.
+Tier identifiers in code: `stellar` / `celestial`.
 
 ---
 
@@ -382,9 +388,9 @@ Conversion levers built into the product:
 
 ---
 
-### 6.5 License Architecture (Celestial — Fully Offline)
+### 6.5 License Architecture (Celestial — Local-First)
 
-**No phavo.net contact at runtime. Ever.**
+Runtime is local-only for auth/license in v1.0.
 
 License key format:
 ```
@@ -401,9 +407,9 @@ Payload:
 Activation flow:
 1. User purchases on Gumroad → receives key via email
 2. User pastes key in Settings → Licence
-3. App calls `verifyEd25519(key, embeddedPublicKeys)` — no network call
+3. App verifies key offline against embedded/public Ed25519 key and writes activation payload/signature
 4. On success: tier written to `license_activation` table, session updated
-5. No further network calls on login, restart, or any subsequent event
+5. Session/tier enforcement remains server-side in local runtime
 
 **Ed25519 key management:**
 - Private key: GitHub Actions Secrets only, never in repo
@@ -472,7 +478,12 @@ PATCH /api/v1/widgets/instances/:id
 DELETE /api/v1/widgets/instances/:id
 
 GET  /api/v1/notifications
-POST /api/v1/notifications/:id/read
+POST /api/v1/notifications
+PATCH /api/v1/notifications/:id
+PATCH /api/v1/notifications
+PATCH /api/v1/notifications/mute
+DELETE /api/v1/notifications/:id
+DELETE /api/v1/notifications
 
 GET  /api/v1/plugins
 POST /api/v1/plugins/upload
@@ -485,9 +496,16 @@ GET  /api/v1/system/health
 GET  /api/v1/system/about
 ```
 
-**Removed (v4.0):**
-All `phavo.net` endpoints (`/api/license/validate`, `/api/license/activate`,
-`/api/oauth/*`) are removed. License validation is fully local.
+**AI Assistant (Celestial tier):**
+The AI Assistant uses the Vercel AI SDK (`ai` package) with a unified provider
+abstraction supporting Ollama (local, fully offline via `ollama-ai-provider`),
+OpenAI (`@ai-sdk/openai`), and Anthropic (`@ai-sdk/anthropic`).
+Streaming responses via Hono SSE (`streamSSE` helper). The searchbar AI mode
+consumes the same streaming endpoint. API keys are stored server-side in
+encrypted form (`credentials` table) and never exposed to the browser.
+
+**Runtime note (v4.1):**
+Auth and license paths are local-only (`local` mode). Session and tier enforcement remain server-side.
 
 ---
 
@@ -611,11 +629,11 @@ Phase 4 subscription is a separate future product decision.
 
 ### 11.1 Auth
 
-- Local username + password only. Argon2id hashing.
+- Local username + password (Argon2id), local-only runtime mode.
 - Session: DB-backed, cookie-token based (random 32-byte session ID, not JWT).
 - No tier data in cookie — tier derived from `license_activation` table on every request.
 - Optional TOTP 2FA.
-- No OAuth, no phavo.net account, no external identity provider.
+- No phavo.net account backend. No online auth/license runtime dependency.
 
 ### 11.2 Tier Enforcement
 
@@ -735,7 +753,7 @@ Dev env only — not available in production builds.
 | 5 | **No machine lock in v1.0:** Key is not bound to hardware. Revisit in v1.1. |
 | 6 | **No telemetry:** Neither tier sends any data anywhere. No toggle needed. |
 | 7 | **Phase 4 deferred indefinitely:** No cloud, no marketplace, no sync in roadmap. |
-| 8 | **Auth mode `phavo-net` removed:** Only `local` mode remains in codebase. |
+| 8 | **Auth mode is `local` only:** Session and middleware paths enforce local-only runtime behavior. |
 | 9 | **Design: Celestial Wish:** Atmospheric dark, Soft Gold primary, Teal secondary. |
 | 10 | **Fonts via @fontsource:** Geist + Geist Mono. Google Fonts CDN never used. |
 | 11 | **Icons via `<Icon>` abstraction:** Never `lucide-svelte` direct imports. |

@@ -9,16 +9,7 @@
     WidgetCard,
   } from '@phavo/ui';
   import {
-    type CpuMetrics,
-    type DiskMetrics,
     isWidgetDefinition,
-    type MemoryMetrics,
-    type NetworkMetrics,
-    type PiholeMetrics,
-    type RssFeedResult,
-    type TemperatureMetrics,
-    type UptimeMetrics,
-    type WeatherMetrics,
     z,
     type WidgetCategory,
     type WidgetDefinition,
@@ -26,25 +17,11 @@
   } from '@phavo/types';
   import { removeWidgetInstanceFromStore } from '$lib/stores/widgets.svelte';
   import { fetchWithCsrf } from '$lib/utils/api';
-  import CpuWidget from '$lib/widgets/CpuWidget.svelte';
-  import DiskWidget from '$lib/widgets/DiskWidget.svelte';
-  import LinksWidget from '$lib/widgets/LinksWidget.svelte';
-  import MemoryWidget from '$lib/widgets/MemoryWidget.svelte';
-  import NetworkWidget from '$lib/widgets/NetworkWidget.svelte';
-  import PiholeWidget from '$lib/widgets/PiholeWidget.svelte';
-  import RssWidget from '$lib/widgets/RssWidget.svelte';
-  import TemperatureWidget from '$lib/widgets/TemperatureWidget.svelte';
-  import UptimeWidget from '$lib/widgets/UptimeWidget.svelte';
-  import WeatherWidget from '$lib/widgets/WeatherWidget.svelte';
+  import { getWidgetComponent, getWidgetIcon } from '$lib/widgets/widget-rendering';
+  import { configSchemaMap } from '$lib/widgets/config-schemas';
 
   type CategoryFilter = 'all' | WidgetCategory;
-  type WidgetStatus = 'active' | 'unconfigured' | 'error';
-  type LinksPreviewData = {
-    groups: Array<{
-      label: string;
-      links: Array<{ title: string; url: string; icon?: string }>;
-    }>;
-  };
+  type WidgetStatus = 'active' | 'unconfigured' | 'error' | 'inactive';
   type WidgetSummary = {
     id: string;
     def: WidgetDefinition;
@@ -79,7 +56,13 @@
   const selectedWidget = $derived(
     filteredWidgets.find((widget) => widget.id === selectedId) ?? filteredWidgets[0] ?? null,
   );
-  const isMobile = $derived(typeof window !== 'undefined' ? window.innerWidth < 640 : false);
+  let isMobile = $state(typeof window !== 'undefined' ? window.innerWidth < 640 : false);
+
+  onMount(() => {
+    const resizeHandler = () => { isMobile = window.innerWidth < 640; };
+    window.addEventListener('resize', resizeHandler, { passive: true });
+    return () => window.removeEventListener('resize', resizeHandler);
+  });
 
   onMount(() => {
     $effect.root(() => {
@@ -94,24 +77,28 @@
     $effect.root(() => {
       $effect(() => {
         if (!selectedWidget) return;
-        updateHash(selectedWidget.id);
         void loadPreview(selectedWidget.def);
       });
     });
   });
 
   onMount(() => {
-    selectFromHash();
+    const syncFromHash = () => selectFromHash();
+    syncFromHash();
+    window.addEventListener('hashchange', syncFromHash);
     void loadWidgets();
+
+    return () => {
+      window.removeEventListener('hashchange', syncFromHash);
+    };
   });
 
   /**
-   * configSchema is typed as unknown in the client-side WidgetDefinition because
-   * the API manifest strips the actual Zod object. The `{#if configSchema}` guard
-   * ensures this is only called when truthy — in practice it never is (API omits it).
+   * Resolve the real Zod config schema for a widget from the client-side
+   * schema map. Returns undefined when the widget has no configurable fields.
    */
-  function asZodSchema(v: unknown): z.ZodSchema {
-    return v as z.ZodSchema;
+  function getConfigSchema(widgetId: string): z.ZodSchema | undefined {
+    return configSchemaMap.get(widgetId);
   }
 
   async function loadWidgets(): Promise<void> {
@@ -186,11 +173,16 @@
     for (const def of widgetDefs) {
       const widgetInstances = grouped.get(def.id) ?? [];
 
-      const hasConfig = !!def.configSchema;
-      const status: WidgetStatus =
-        hasConfig && (widgetInstances.length === 0 || widgetInstances.some((instance) => instance.configured === false))
-          ? 'unconfigured'
-          : 'active';
+      const hasConfig = configSchemaMap.has(def.id);
+      let status: WidgetStatus;
+
+      if (widgetInstances.length === 0) {
+        status = 'inactive';
+      } else if (hasConfig && widgetInstances.some((instance) => instance.configured === false)) {
+        status = 'unconfigured';
+      } else {
+        status = 'active';
+      }
 
       summaries.push({
         id: def.id,
@@ -223,6 +215,7 @@
 
   function selectWidget(widgetId: string): void {
     selectedId = widgetId;
+    updateHash(widgetId);
     confirmRemove = false;
   }
 
@@ -248,7 +241,7 @@
       return;
     }
 
-    if (selectedWidget?.status === 'unconfigured') {
+    if (selectedWidget?.status === 'unconfigured' || selectedWidget?.status === 'inactive') {
       previewData = null;
       previewError = '';
       return;
@@ -272,39 +265,45 @@
     }
   }
 
-  function getStatusGlyph(status: WidgetStatus): string {
-    if (status === 'active') return '✓';
-    if (status === 'unconfigured') return '⚠';
-    return '✗';
-  }
-
-  function getWidgetIcon(widgetId: string): string {
-    const iconMap: Record<string, string> = {
-      cpu: 'cpu',
-      memory: 'memory-stick',
-      disk: 'hard-drive',
-      network: 'wifi',
-      temperature: 'thermometer',
-      uptime: 'clock',
-      weather: 'cloud-sun',
-      pihole: 'shield',
-      rss: 'rss',
-      links: 'link',
-      docker: 'container',
-      'service-health': 'activity',
-      speedtest: 'gauge',
-      calendar: 'calendar',
-    };
-    return iconMap[widgetId] ?? 'puzzle';
-  }
-
   function getStatusLabel(status: WidgetStatus): string {
     if (status === 'active') return 'Active';
     if (status === 'unconfigured') return 'Needs configuration';
+    if (status === 'inactive') return 'Not added';
     return 'Error';
   }
 
+  function getDetailStatus(widget: WidgetSummary): { label: string; type: WidgetStatus | 'warning' | 'unavailable' } {
+    if (widget.status === 'inactive') {
+      return { label: 'NOT ADDED', type: 'inactive' };
+    }
+
+    if (widget.status === 'unconfigured') {
+      return { label: 'NEEDS CONFIG', type: 'warning' };
+    }
+
+    if (previewError) {
+      return { label: 'ERROR', type: 'error' };
+    }
+
+    if (previewData !== null && previewData !== undefined) {
+      // Temperature: check if sensor data is available
+      if (widget.def.id === 'temperature') {
+        const temp = previewData as { cpuTemp?: number | null };
+        if (temp.cpuTemp === null || temp.cpuTemp === undefined || temp.cpuTemp === 0) {
+          return { label: 'NOT AVAILABLE', type: 'unavailable' };
+        }
+      }
+      return { label: 'ACTIVE', type: 'active' };
+    }
+
+    return { label: 'NO DATA', type: 'inactive' };
+  }
+
   function getStatusDescription(widget: WidgetSummary): string {
+    if (widget.status === 'inactive') {
+      return 'This widget has not been added to any page yet.';
+    }
+
     if (widget.status === 'unconfigured') {
       return 'This widget needs configuration before it can fetch live data.';
     }
@@ -313,7 +312,17 @@
       return `Error: ${previewError}`;
     }
 
-    return 'This widget is active and polling live data.';
+    if (previewData !== null && previewData !== undefined) {
+      if (widget.def.id === 'temperature') {
+        const temp = previewData as { cpuTemp?: number | null };
+        if (temp.cpuTemp === null || temp.cpuTemp === undefined || temp.cpuTemp === 0) {
+          return 'Temperature sensor not available on this hardware.';
+        }
+      }
+      return 'This widget is active and polling live data.';
+    }
+
+    return 'No data received yet. The widget may still be loading.';
   }
 
   function getCurrentConfig(widget: WidgetSummary): Record<string, unknown> {
@@ -403,7 +412,7 @@
             <div class="settings-item-info">
               <span class="settings-item-name">{widget.def.name}</span>
               <div class="settings-item-status">
-                <span class="settings-status-dot settings-status-{widget.status === 'active' ? 'active' : widget.status === 'unconfigured' ? 'warning' : 'error'}"></span>
+                <span class="settings-status-dot settings-status-{widget.status === 'active' ? 'active' : widget.status === 'unconfigured' ? 'warning' : widget.status === 'inactive' ? 'inactive' : 'error'}"></span>
                 <span class="settings-status-label">{getStatusLabel(widget.status)}</span>
               </div>
             </div>
@@ -419,10 +428,10 @@
       {@const widget = selectedWidget}
       {#if isMobile}
         <div class="wt-mobile-back">
-          <button class="settings-btn-ghost" type="button" onclick={() => (selectedId = null)}>
+          <Button variant="ghost" onclick={() => (selectedId = null)}>
             <Icon name="arrow-left" size={16} />
             Back
-          </button>
+          </Button>
         </div>
       {/if}
 
@@ -440,26 +449,11 @@
               >
                 {#if widget.status === 'unconfigured'}
                   <div class="wt-preview-empty">Configure this widget to see a live preview.</div>
-                {:else if widget.def.id === 'cpu' && previewData}
-                  <CpuWidget data={previewData as CpuMetrics} />
-                {:else if widget.def.id === 'memory' && previewData}
-                  <MemoryWidget data={previewData as MemoryMetrics} />
-                {:else if widget.def.id === 'disk' && previewData}
-                  <DiskWidget data={previewData as DiskMetrics[]} />
-                {:else if widget.def.id === 'network' && previewData}
-                  <NetworkWidget data={previewData as NetworkMetrics} />
-                {:else if widget.def.id === 'temperature' && previewData}
-                  <TemperatureWidget data={previewData as TemperatureMetrics} />
-                {:else if widget.def.id === 'uptime' && previewData}
-                  <UptimeWidget data={previewData as UptimeMetrics} />
-                {:else if widget.def.id === 'weather' && previewData}
-                  <WeatherWidget data={previewData as WeatherMetrics} />
-                {:else if widget.def.id === 'pihole' && previewData}
-                  <PiholeWidget data={previewData as PiholeMetrics} />
-                {:else if widget.def.id === 'rss' && previewData}
-                  <RssWidget data={previewData as RssFeedResult} />
-                {:else if widget.def.id === 'links' && previewData}
-                  <LinksWidget data={previewData as LinksPreviewData} />
+                {:else if getWidgetComponent(widget.def.id) && previewData}
+                  {@const PreviewComponent = getWidgetComponent(widget.def.id)}
+                  {#if PreviewComponent}
+                    <PreviewComponent data={previewData as unknown} />
+                  {/if}
                 {:else}
                   <div class="wt-preview-empty">No preview data available.</div>
                 {/if}
@@ -469,7 +463,7 @@
 
         <div class="settings-hero-card">
           <span class="settings-card-label">STATUS</span>
-          <h2 class="settings-hero-value">{getStatusLabel(widget.status)}</h2>
+          <h2 class="settings-hero-value">{getDetailStatus(widget).label}</h2>
           <p class="settings-hero-sub">{getStatusDescription(widget)}</p>
           <div class="wt-hero-meta">
             <Badge variant="default">{widget.def.category}</Badge>
@@ -484,11 +478,11 @@
         </div>
       </div>
 
-      {#if widget.def.configSchema}
+      {#if getConfigSchema(widget.def.id)}
         <div class="settings-form-card">
           <h3 class="settings-form-title">Configuration</h3>
           <SchemaRenderer
-            schema={asZodSchema(widget.def.configSchema)}
+            schema={getConfigSchema(widget.def.id)!}
             instanceId={widget.instances[0]?.id ?? ''}
             currentConfig={getCurrentConfig(widget)}
             onSaved={handleSaved}
@@ -505,17 +499,17 @@
         {#if confirmRemove}
           <span class="wt-confirm-text">Remove all instances of this widget?</span>
           <div class="wt-confirm-actions">
-            <button class="settings-btn-danger" type="button" onclick={() => removeAllInstances(widget)} disabled={removing}>
+            <Button variant="danger" onclick={() => removeAllInstances(widget)} disabled={removing}>
               <Icon name="trash-2" size={14} />
               {removing ? 'Removing...' : 'Confirm remove'}
-            </button>
-            <button class="settings-btn-ghost" type="button" onclick={() => (confirmRemove = false)}>Cancel</button>
+            </Button>
+            <Button variant="ghost" onclick={() => (confirmRemove = false)}>Cancel</Button>
           </div>
         {:else}
-          <button class="settings-btn-danger" type="button" onclick={() => (confirmRemove = true)}>
+          <Button variant="danger" onclick={() => (confirmRemove = true)}>
             <Icon name="trash-2" size={14} />
             Remove all instances
-          </button>
+          </Button>
           <span></span>
         {/if}
       </div>

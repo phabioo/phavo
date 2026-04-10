@@ -7,18 +7,21 @@ interface SelectOption {
 }
 
 interface Props {
+  id?: string;
   label?: string;
   options: SelectOption[];
   value?: string;
   onchange?: (value: string) => void;
 }
 
-let { label, options, value = $bindable(''), onchange }: Props = $props();
+let { id, label, options, value = $bindable(''), onchange }: Props = $props();
 
 let open = $state(false);
 let triggerEl: HTMLButtonElement | undefined = $state();
 
-const selectId = `select-${Math.random().toString(36).slice(2, 9)}`;
+const componentId = $props.id();
+const fallbackId = `select-${componentId}`;
+const selectId = $derived(id ?? fallbackId);
 
 const selectedLabel = $derived(
   options.find((o) => o.value === value)?.label ?? value,
@@ -51,9 +54,9 @@ function handleBackdropClick() {
 }
 </script>
 
-<div class="flex flex-col gap-1" style={open ? 'position: relative; z-index: 100;' : 'position: relative;'}>
+<div class={open ? 'relative z-[1200] flex flex-col gap-1' : 'relative flex flex-col gap-1'}>
   {#if label}
-    <span class="text-xs text-text-muted uppercase tracking-widest mb-1">{label}</span>
+    <label class="text-xs text-text-muted uppercase tracking-widest mb-1" for={selectId}>{label}</label>
   {/if}
 
   <button
@@ -73,9 +76,9 @@ function handleBackdropClick() {
 
   {#if open}
     <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
-    <div class="fixed inset-0 z-[90]" onclick={handleBackdropClick} aria-hidden="true"></div>
+    <div class="fixed inset-0 z-[1190]" onclick={handleBackdropClick} aria-hidden="true"></div>
     <ul
-      class="absolute top-full left-0 right-0 mt-1 bg-elevated border border-border rounded-md shadow-lg z-[100] py-1 max-h-60 overflow-auto"
+      class="absolute top-full left-0 right-0 mt-1 bg-surface-card border border-border rounded-md shadow-lg z-[1200] py-1 max-h-60 overflow-auto"
       role="listbox"
       aria-labelledby={selectId}
     >

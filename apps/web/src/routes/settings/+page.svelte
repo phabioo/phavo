@@ -3,7 +3,7 @@ import { goto } from '$app/navigation';
 import { page } from '$app/state';
 import { onMount } from 'svelte';
 import { fade } from 'svelte/transition';
-  import { Badge, Icon, Input, Select, Tooltip } from '@phavo/ui';
+  import { Badge, Button, Icon, Input, Select, Tooltip } from '@phavo/ui';
 import en from '$lib/i18n/en.json';
 import ImportExportTab from '$lib/components/settings/ImportExportTab.svelte';
 import LicenceTab from '$lib/components/settings/LicenceTab.svelte';
@@ -14,7 +14,7 @@ import { updateAiStatusFromPayload } from '$lib/stores/ai.svelte';
 import { setConfig, updateConfig } from '$lib/stores/config.svelte';
 import { fetchWithCsrf } from '$lib/utils/api';
 
-type TabId = 'general' | 'widgets' | 'import-export' | 'license' | 'account' | 'plugins' | 'about';
+type TabId = 'general' | 'widgets' | 'import-export' | 'license' | 'account' | 'ai' | 'plugins' | 'about';
 type SaveState = 'idle' | 'saving' | 'saved';
 type GeoResult = {
   id: number;
@@ -26,7 +26,7 @@ type GeoResult = {
 type SessionInfo = {
   userId: string;
   tier: 'stellar' | 'celestial';
-  authMode: 'phavo-net' | 'local';
+  authMode: 'local';
   validatedAt: number;
   email: string | null;
 } | null;
@@ -61,16 +61,24 @@ type AiSettingsResponseData = AiStatusResponseData & {
   customSearchUrl: string;
   ollamaUrl: string;
   ollamaModel: string;
+  openaiModel: string;
+  anthropicModel: string;
+  googleModel: string;
+  customAiUrl: string;
+  customModel: string;
   hasOpenaiKey: boolean;
   hasAnthropicKey: boolean;
+  hasGoogleKey: boolean;
+  hasCustomKey: boolean;
 };
 
-const settingsTabs: Array<{ id: TabId; label: string; icon: string; statusLabel: string; status: 'active' | 'inactive' | 'warning' | 'error' }> = [
+const settingsTabs: Array<{ id: TabId; label: string; icon: string; statusLabel: string; status: 'active' | 'inactive' | 'warning' | 'error'; celestialOnly?: boolean }> = [
   { id: 'general', label: 'General', icon: 'settings-2', statusLabel: 'Configured', status: 'active' },
   { id: 'widgets', label: 'Widgets', icon: 'puzzle', statusLabel: 'Active', status: 'active' },
   { id: 'import-export', label: 'Backup & Export', icon: 'archive', statusLabel: 'Ready', status: 'active' },
   { id: 'license', label: 'Licence', icon: 'shield-check', statusLabel: 'Active', status: 'active' },
   { id: 'account', label: 'Account', icon: 'user', statusLabel: 'Secured', status: 'active' },
+  { id: 'ai', label: 'AI', icon: 'sparkles', statusLabel: 'Not configured', status: 'inactive', celestialOnly: true },
   { id: 'plugins', label: 'Plugins', icon: 'plug', statusLabel: 'Coming soon', status: 'inactive' },
   { id: 'about', label: 'About', icon: 'info', statusLabel: 'Up to date', status: 'active' },
 ];
@@ -78,7 +86,7 @@ const settingsTabs: Array<{ id: TabId; label: string; icon: string; statusLabel:
 const tabMeta: Record<TabId, { title: string; description: string }> = {
   general: {
     title: 'General',
-    description: 'Update your dashboard identity, location, search defaults, and AI connections.',
+    description: 'Update your dashboard identity, location, and search defaults.',
   },
   widgets: {
     title: 'Widgets',
@@ -95,6 +103,10 @@ const tabMeta: Record<TabId, { title: string; description: string }> = {
   account: {
     title: 'Account',
     description: 'Manage session security, local password changes, and account details for this dashboard.',
+  },
+  ai: {
+    title: 'AI',
+    description: 'Configure an AI provider to enable natural language search and dashboard assistance.',
   },
   plugins: {
     title: 'Plugins',
@@ -115,8 +127,19 @@ const sessionTimeoutOptions = [
 
 const DOCS_URL = 'https://docs.phavo.net';
 const GITHUB_URL = 'https://github.com/getphavo/phavo';
+const dashboardNameInputId = 'settings-dashboard-name';
+const weatherLocationInputId = 'settings-weather-location';
+const searchEngineSelectId = 'settings-search-engine';
+const customSearchUrlInputId = 'settings-custom-search-url';
+const ollamaUrlInputId = 'settings-ollama-url';
+const ollamaModelInputId = 'settings-ollama-model';
+const openAiKeyInputId = 'settings-openai-key';
+const anthropicKeyInputId = 'settings-anthropic-key';
+const newPasswordInputId = 'settings-new-password';
+const confirmPasswordInputId = 'settings-confirm-password';
+const sessionTimeoutSelectId = 'settings-session-timeout';
 
-const validTabs = new Set<TabId>(['general', 'widgets', 'import-export', 'license', 'account', 'plugins', 'about']);
+const validTabs = new Set<TabId>(['general', 'widgets', 'import-export', 'license', 'account', 'ai', 'plugins', 'about']);
 const activeTab = $derived.by(() => {
   const tab = page.url.searchParams.get('tab') as TabId | null;
   return tab && validTabs.has(tab) ? tab : 'general';
@@ -147,6 +170,7 @@ let confirmPassword = $state('');
 let passwordError = $state('');
 
 // ─── Search & AI ──────────────────────────────────────────────────────
+import type { AiProvider } from '$lib/stores/ai.svelte';
 const searchEngineOptions = [
   { value: 'duckduckgo', label: 'DuckDuckGo' },
   { value: 'google', label: 'Google' },
@@ -155,30 +179,75 @@ const searchEngineOptions = [
 ];
 let searchEngine = $state('duckduckgo');
 let customSearchUrl = $state('');
+let aiProvider = $state<AiProvider>(null);
 let ollamaUrl = $state('');
 let ollamaModel = $state('');
 let openaiKey = $state('');
+let openaiModel = $state('');
 let anthropicKey = $state('');
+let anthropicModel = $state('');
+let googleKey = $state('');
+let googleModel = $state('');
+let customAiUrl = $state('');
+let customKey = $state('');
+let customModel = $state('');
 let ollamaTestResult = $state<'idle' | 'testing' | 'ok' | 'fail' | 'empty'>('idle');
 let aiSettingsLoaded = $state(false);
 
 let aiInitial = $state({
   searchEngine: 'duckduckgo',
   customSearchUrl: '',
+  aiProvider: null as AiProvider,
   ollamaUrl: '',
   ollamaModel: '',
   openaiKey: '',
+  openaiModel: '',
   anthropicKey: '',
+  anthropicModel: '',
+  googleKey: '',
+  googleModel: '',
+  customAiUrl: '',
+  customKey: '',
+  customModel: '',
 });
 
-const aiDirty = $derived(
+const searchDirty = $derived(
   searchEngine !== aiInitial.searchEngine ||
-    customSearchUrl.trim() !== aiInitial.customSearchUrl ||
+    customSearchUrl.trim() !== aiInitial.customSearchUrl,
+);
+
+const aiDirty = $derived(
+  aiProvider !== aiInitial.aiProvider ||
     ollamaUrl.trim() !== aiInitial.ollamaUrl ||
     ollamaModel.trim() !== aiInitial.ollamaModel ||
     openaiKey !== aiInitial.openaiKey ||
-    anthropicKey !== aiInitial.anthropicKey,
+    openaiModel.trim() !== aiInitial.openaiModel ||
+    anthropicKey !== aiInitial.anthropicKey ||
+    anthropicModel.trim() !== aiInitial.anthropicModel ||
+    googleKey !== aiInitial.googleKey ||
+    googleModel.trim() !== aiInitial.googleModel ||
+    customAiUrl.trim() !== aiInitial.customAiUrl ||
+    customKey !== aiInitial.customKey ||
+    customModel.trim() !== aiInitial.customModel,
 );
+
+function providerDisplayName(p: string) {
+  const names: Record<string, string> = {
+    ollama: 'Ollama', openai: 'OpenAI',
+    anthropic: 'Anthropic', google: 'Google Gemini',
+    custom: 'Custom Provider',
+  };
+  return names[p] ?? p;
+}
+
+// String proxy for aiProvider in Select (null ↔ empty string)
+let aiProviderString = $state('');
+
+function onAiProviderChange(v: string) {
+  const validProviders = ['ollama', 'openai', 'anthropic', 'google', 'custom'];
+  aiProvider = validProviders.includes(v) ? v as AiProvider : null;
+  aiProviderString = v;
+}
 
 let generalInitial = $state({
   dashboardName: 'My Dashboard',
@@ -194,6 +263,7 @@ let saveStates = $state<Record<TabId, SaveState>>({
   widgets: 'idle',
   license: 'idle',
   'import-export': 'idle',
+  ai: 'idle',
   plugins: 'idle',
   about: 'idle',
 });
@@ -203,6 +273,7 @@ let tabErrors = $state<Record<TabId, string>>({
   widgets: '',
   license: '',
   'import-export': '',
+  ai: '',
   plugins: '',
   about: '',
 });
@@ -212,7 +283,7 @@ const generalDirty = $derived(
     locationName.trim() !== generalInitial.locationName ||
     locationLatitude !== generalInitial.locationLatitude ||
     locationLongitude !== generalInitial.locationLongitude ||
-    aiDirty,
+    searchDirty,
 );
 const securityDirty = $derived(sessionTimeout !== securityInitial);
 const canChangePassword = $derived(sessionInfo?.authMode === 'local');
@@ -225,6 +296,7 @@ const canSaveCurrentTab = $derived.by(() => {
   if (loading) return false;
   if (activeTab === 'general') return generalDirty;
   if (activeTab === 'account') return (!!accountDirty && !!accountValid) || securityDirty;
+  if (activeTab === 'ai') return aiDirty;
   return false;
 });
 const currentSaveLabel = $derived(
@@ -331,17 +403,34 @@ async function loadAiSettings() {
       updateAiStatusFromPayload(json.data);
       searchEngine = json.data.searchEngine || 'duckduckgo';
       customSearchUrl = json.data.customSearchUrl || '';
+      aiProvider = (json.data.aiProvider ?? null) as AiProvider;
+      aiProviderString = aiProvider ?? '';
       ollamaUrl = json.data.ollamaUrl || '';
       ollamaModel = json.data.ollamaModel || '';
       openaiKey = json.data.hasOpenaiKey ? '••••••••' : '';
+      openaiModel = json.data.openaiModel || '';
       anthropicKey = json.data.hasAnthropicKey ? '••••••••' : '';
+      anthropicModel = json.data.anthropicModel || '';
+      googleKey = json.data.hasGoogleKey ? '••••••••' : '';
+      googleModel = json.data.googleModel || '';
+      customAiUrl = json.data.customAiUrl || '';
+      customKey = json.data.hasCustomKey ? '••••••••' : '';
+      customModel = json.data.customModel || '';
       aiInitial = {
-        searchEngine: searchEngine,
-        customSearchUrl: customSearchUrl,
-        ollamaUrl: ollamaUrl,
-        ollamaModel: ollamaModel,
-        openaiKey: openaiKey,
-        anthropicKey: anthropicKey,
+        searchEngine,
+        customSearchUrl,
+        aiProvider,
+        ollamaUrl,
+        ollamaModel,
+        openaiKey,
+        openaiModel,
+        anthropicKey,
+        anthropicModel,
+        googleKey,
+        googleModel,
+        customAiUrl,
+        customKey,
+        customModel,
       };
       aiSettingsLoaded = true;
     }
@@ -352,11 +441,17 @@ async function loadAiSettings() {
 
 async function saveAiSettings() {
   try {
-    const payload: Record<string, string> = {
+    const payload: Record<string, string | null> = {
+      aiProvider: aiProvider,
       searchEngine,
       customSearchUrl: customSearchUrl.trim(),
       ollamaUrl: ollamaUrl.trim(),
       ollamaModel: ollamaModel.trim(),
+      openaiModel: openaiModel.trim(),
+      anthropicModel: anthropicModel.trim(),
+      googleModel: googleModel.trim(),
+      customUrl: customAiUrl.trim(),
+      customModel: customModel.trim(),
     };
     // Only send keys if they were actually changed (not the mask)
     if (openaiKey && openaiKey !== '••••••••') {
@@ -364,6 +459,12 @@ async function saveAiSettings() {
     }
     if (anthropicKey && anthropicKey !== '••••••••') {
       payload.anthropicKey = anthropicKey;
+    }
+    if (googleKey && googleKey !== '••••••••') {
+      payload.googleKey = googleKey;
+    }
+    if (customKey && customKey !== '••••••••') {
+      payload.customKey = customKey;
     }
     const resp = await fetchWithCsrf('/api/v1/ai/config', {
       method: 'POST',
@@ -443,8 +544,8 @@ async function saveGeneral() {
       locationLongitude: json.data.location?.longitude ?? null,
     };
 
-    // Also save AI settings if changed
-    if (aiDirty) {
+    // Also save search engine settings if changed
+    if (searchDirty) {
       await saveAiSettings();
     }
 
@@ -519,6 +620,22 @@ async function saveCurrentTab() {
     if (accountDirty && accountValid) await saveAccount();
     if (securityDirty) await saveSecurity();
     return;
+  }
+  if (activeTab === 'ai') return saveAiTab();
+}
+
+async function saveAiTab() {
+  saveStates = { ...saveStates, ai: 'saving' };
+  tabErrors = { ...tabErrors, ai: '' };
+  try {
+    await saveAiSettings();
+    setSavedState('ai');
+  } catch (error) {
+    tabErrors = {
+      ...tabErrors,
+      ai: error instanceof Error ? error.message : 'Failed to save AI settings',
+    };
+    saveStates = { ...saveStates, ai: 'idle' };
   }
 }
 
@@ -683,14 +800,15 @@ function formatReleaseDate(iso: string): string {
       <h3 class="settings-form-title">Configuration</h3>
       <div class="settings-form-fields">
         <div>
-          <label class="settings-field-label">Dashboard Name</label>
-          <Input bind:value={dashboardName} />
+          <label class="settings-field-label" for={dashboardNameInputId}>Dashboard Name</label>
+          <Input id={dashboardNameInputId} bind:value={dashboardName} />
         </div>
 
         <div>
-          <label class="settings-field-label">Weather Location</label>
+          <label class="settings-field-label" for={weatherLocationInputId}>Weather Location</label>
           <div class="settings-location-wrap">
             <Input
+              id={weatherLocationInputId}
               placeholder="Search for a city…"
               bind:value={locationName}
               oninput={onLocationInput}
@@ -715,13 +833,14 @@ function formatReleaseDate(iso: string): string {
         </div>
 
         <div>
-          <label class="settings-field-label">Search Engine</label>
-          <Select options={searchEngineOptions} bind:value={searchEngine} />
+          <label class="settings-field-label" for={searchEngineSelectId}>Search Engine</label>
+          <Select id={searchEngineSelectId} options={searchEngineOptions} bind:value={searchEngine} />
         </div>
         {#if searchEngine === 'custom'}
           <div>
-            <label class="settings-field-label">Custom Search URL</label>
+            <label class="settings-field-label" for={customSearchUrlInputId}>Custom Search URL</label>
             <Input
+              id={customSearchUrlInputId}
               placeholder="https://example.com/search?q=&#123;query&#125;"
               bind:value={customSearchUrl}
             />
@@ -731,44 +850,11 @@ function formatReleaseDate(iso: string): string {
     </div>
 
     <div class="settings-form-card">
-      <h3 class="settings-form-title">AI Connections</h3>
-      <div class="settings-form-fields">
-        <div>
-          <label class="settings-field-label">Ollama URL</label>
-          <div class="settings-inline-action">
-            <Input placeholder="http://localhost:11434" bind:value={ollamaUrl} />
-            <button class="settings-btn-ghost" type="button" onclick={testOllamaConnection} disabled={ollamaTestResult === 'testing'}>
-              {ollamaTestResult === 'testing' ? 'Testing…' : ollamaTestResult === 'ok' ? '✓ OK' : ollamaTestResult === 'fail' ? '✗ Fail' : ollamaTestResult === 'empty' ? '✗ Enter URL' : 'Test'}
-            </button>
-          </div>
-        </div>
-        <div>
-          <label class="settings-field-label">Ollama Model</label>
-          <Input placeholder="llama3.2" bind:value={ollamaModel} />
-        </div>
-        <div>
-          <label class="settings-field-label">OpenAI API Key</label>
-          <Input type="password" placeholder="sk-…" bind:value={openaiKey} />
-          {#if openaiKey && !openaiKey.startsWith('sk-')}
-            <p class="settings-field-error">Key should start with sk-</p>
-          {/if}
-        </div>
-        <div>
-          <label class="settings-field-label">Anthropic API Key</label>
-          <Input type="password" placeholder="sk-ant-…" bind:value={anthropicKey} />
-          {#if anthropicKey && !anthropicKey.startsWith('sk-ant-')}
-            <p class="settings-field-error">Key should start with sk-ant-</p>
-          {/if}
-        </div>
-      </div>
-    </div>
-
-    <div class="settings-form-card">
       <h3 class="settings-form-title">Setup Tools</h3>
       <p class="settings-hero-sub" style="color: var(--color-on-surface-variant);">
         Re-open guided setup to rebuild the onboarding baseline.
       </p>
-      <button class="settings-btn-ghost" type="button" onclick={reRunSetup}>Re-run Setup</button>
+      <Button variant="ghost" onclick={reRunSetup}>Re-run Setup</Button>
     </div>
     </div>
 
@@ -778,9 +864,9 @@ function formatReleaseDate(iso: string): string {
 
     <div class="settings-form-actions">
       <span></span>
-      <button class="settings-btn-primary" type="button" onclick={saveCurrentTab} disabled={!canSaveCurrentTab || saveStates.general === 'saving'}>
+      <Button variant="primary" onclick={saveCurrentTab} disabled={!canSaveCurrentTab || saveStates.general === 'saving'}>
         {currentSaveLabel}
-      </button>
+      </Button>
     </div>
 
   {:else if activeTab === 'widgets'}
@@ -828,12 +914,12 @@ function formatReleaseDate(iso: string): string {
         <h3 class="settings-form-title">Password</h3>
         <div class="settings-form-fields">
           <div>
-            <label class="settings-field-label">New Password</label>
-            <Input type="password" bind:value={newPassword} />
+            <label class="settings-field-label" for={newPasswordInputId}>New Password</label>
+            <Input id={newPasswordInputId} type="password" bind:value={newPassword} />
           </div>
           <div>
-            <label class="settings-field-label">Confirm Password</label>
-            <Input type="password" bind:value={confirmPassword} />
+            <label class="settings-field-label" for={confirmPasswordInputId}>Confirm Password</label>
+            <Input id={confirmPasswordInputId} type="password" bind:value={confirmPassword} />
           </div>
         </div>
         {#if passwordError}
@@ -852,7 +938,7 @@ function formatReleaseDate(iso: string): string {
       </div>
       <Tooltip text="Coming soon">
         <span>
-          <button class="settings-btn-ghost" type="button" disabled>Enable 2FA</button>
+          <Button variant="ghost" disabled>Enable 2FA</Button>
         </span>
       </Tooltip>
     </div>
@@ -861,8 +947,8 @@ function formatReleaseDate(iso: string): string {
       <h3 class="settings-form-title">Session Security</h3>
       <div class="settings-form-fields">
         <div>
-          <label class="settings-field-label">Session Timeout</label>
-          <Select options={sessionTimeoutOptions} bind:value={sessionTimeout} />
+          <label class="settings-field-label" for={sessionTimeoutSelectId}>Session Timeout</label>
+          <Select id={sessionTimeoutSelectId} options={sessionTimeoutOptions} bind:value={sessionTimeout} />
         </div>
       </div>
       <div class="settings-form-actions">
@@ -870,7 +956,7 @@ function formatReleaseDate(iso: string): string {
           <span class="settings-meta-value">Current Session</span>
           <span class="settings-field-hint">Signed in: {formatTimestamp(sessionInfo?.validatedAt)}</span>
         </div>
-        <button class="settings-btn-ghost" type="button" onclick={signOutAllSessions}>Sign out all sessions</button>
+        <Button variant="ghost" onclick={signOutAllSessions}>Sign out all sessions</Button>
       </div>
     </div>
     </div>
@@ -881,10 +967,171 @@ function formatReleaseDate(iso: string): string {
 
     <div class="settings-form-actions">
       <span></span>
-      <button class="settings-btn-primary" type="button" onclick={saveCurrentTab} disabled={!canSaveCurrentTab || saveStates.account === 'saving'}>
+      <Button variant="primary" onclick={saveCurrentTab} disabled={!canSaveCurrentTab || saveStates.account === 'saving'}>
         {currentSaveLabel}
-      </button>
+      </Button>
     </div>
+
+  {:else if activeTab === 'ai'}
+    {#if (sessionInfo?.tier ?? aboutInfo.tier) !== 'celestial'}
+      <div class="settings-cards-grid">
+        <div class="settings-hero-card settings-card-full">
+          <span class="settings-card-label">AI ASSISTANT</span>
+          <h2 class="settings-hero-value">Celestial Only</h2>
+          <p class="settings-hero-sub">AI features require the Celestial tier.</p>
+        </div>
+      </div>
+    {:else}
+      <div class="settings-cards-grid">
+        <div class="settings-hero-card settings-card-full">
+          <span class="settings-card-label">AI ASSISTANT</span>
+          <h2 class="settings-hero-value">
+            {#if aiProvider}
+              {providerDisplayName(aiProvider)} Connected
+            {:else}
+              Not Configured
+            {/if}
+          </h2>
+          <p class="settings-hero-sub">
+            Configure an AI provider to enable natural language search
+            and dashboard assistance in the search bar ({#if typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.userAgent)}⌘K{:else}Ctrl+K{/if}).
+          </p>
+        </div>
+
+        <div class="settings-form-card">
+          <h3 class="settings-form-title">Active Provider</h3>
+          <div class="settings-form-fields">
+            <div>
+              <label class="settings-field-label" for="ai-provider">Provider</label>
+              <Select
+                id="ai-provider"
+                options={[
+                  { value: '', label: 'None (AI disabled)' },
+                  { value: 'ollama', label: 'Ollama (Local)' },
+                  { value: 'openai', label: 'OpenAI' },
+                  { value: 'anthropic', label: 'Anthropic' },
+                  { value: 'google', label: 'Google Gemini' },
+                  { value: 'custom', label: 'Custom (OpenAI-compatible)' },
+                ]}
+                value={aiProviderString}
+                onchange={onAiProviderChange}
+              />
+              <p class="settings-field-hint">
+                The active provider is used for all AI features in PHAVO.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div class="settings-form-card">
+          <h3 class="settings-form-title">
+            <Icon name="server" size={14} />
+            Ollama — Local LLM
+          </h3>
+          <div class="settings-form-fields">
+            <div>
+              <label class="settings-field-label" for="ai-ollama-url">URL</label>
+              <div class="settings-inline-action">
+                <Input id="ai-ollama-url" type="url" placeholder="http://localhost:11434" bind:value={ollamaUrl} />
+                <Button variant="ghost" onclick={testOllamaConnection} disabled={ollamaTestResult === 'testing'}>
+                  {ollamaTestResult === 'testing' ? 'Testing…' : ollamaTestResult === 'ok' ? '✓ OK' : ollamaTestResult === 'fail' ? '✗ Fail' : ollamaTestResult === 'empty' ? '✗ Enter URL' : 'Test'}
+                </Button>
+              </div>
+            </div>
+            <div>
+              <label class="settings-field-label" for="ai-ollama-model">Model</label>
+              <Input id="ai-ollama-model" placeholder="llama3.2" bind:value={ollamaModel} />
+            </div>
+          </div>
+        </div>
+
+        <div class="settings-form-card">
+          <h3 class="settings-form-title">
+            <Icon name="zap" size={14} />
+            OpenAI
+          </h3>
+          <div class="settings-form-fields">
+            <div>
+              <label class="settings-field-label" for="ai-openai-key">API Key</label>
+              <Input id="ai-openai-key" type="password" placeholder="sk-…" bind:value={openaiKey} />
+            </div>
+            <div>
+              <label class="settings-field-label" for="ai-openai-model">Model</label>
+              <Input id="ai-openai-model" placeholder="gpt-4o-mini" bind:value={openaiModel} />
+            </div>
+          </div>
+        </div>
+
+        <div class="settings-form-card">
+          <h3 class="settings-form-title">
+            <Icon name="cpu" size={14} />
+            Anthropic
+          </h3>
+          <div class="settings-form-fields">
+            <div>
+              <label class="settings-field-label" for="ai-anthropic-key">API Key</label>
+              <Input id="ai-anthropic-key" type="password" placeholder="sk-ant-…" bind:value={anthropicKey} />
+            </div>
+            <div>
+              <label class="settings-field-label" for="ai-anthropic-model">Model</label>
+              <Input id="ai-anthropic-model" placeholder="claude-haiku-4-5-20251001" bind:value={anthropicModel} />
+            </div>
+          </div>
+        </div>
+
+        <div class="settings-form-card">
+          <h3 class="settings-form-title">
+            <Icon name="globe" size={14} />
+            Google Gemini
+          </h3>
+          <div class="settings-form-fields">
+            <div>
+              <label class="settings-field-label" for="ai-google-key">API Key</label>
+              <Input id="ai-google-key" type="password" placeholder="AIza…" bind:value={googleKey} />
+            </div>
+            <div>
+              <label class="settings-field-label" for="ai-google-model">Model</label>
+              <Input id="ai-google-model" placeholder="gemini-2.0-flash" bind:value={googleModel} />
+            </div>
+          </div>
+        </div>
+
+        <div class="settings-form-card">
+          <h3 class="settings-form-title">
+            <Icon name="settings-2" size={14} />
+            Custom (OpenAI-compatible)
+          </h3>
+          <p class="settings-field-hint">
+            Compatible with LM Studio, Jan, Mistral, and any OpenAI-compatible endpoint.
+          </p>
+          <div class="settings-form-fields">
+            <div>
+              <label class="settings-field-label" for="ai-custom-url">Base URL</label>
+              <Input id="ai-custom-url" type="url" placeholder="http://localhost:1234/v1" bind:value={customAiUrl} />
+            </div>
+            <div>
+              <label class="settings-field-label" for="ai-custom-key">API Key</label>
+              <Input id="ai-custom-key" type="password" placeholder="optional" bind:value={customKey} />
+            </div>
+            <div>
+              <label class="settings-field-label" for="ai-custom-model">Model ID</label>
+              <Input id="ai-custom-model" placeholder="model name" bind:value={customModel} />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {#if tabErrors.ai}
+        <div class="settings-alert settings-alert-danger">{tabErrors.ai}</div>
+      {/if}
+
+      <div class="settings-form-actions">
+        <span></span>
+        <Button variant="primary" onclick={saveCurrentTab} disabled={!canSaveCurrentTab || saveStates.ai === 'saving'}>
+          {currentSaveLabel}
+        </Button>
+      </div>
+    {/if}
 
   {:else if activeTab === 'plugins'}
     <div class="settings-cards-grid">
@@ -935,10 +1182,10 @@ function formatReleaseDate(iso: string): string {
           Check for the latest version.
         </p>
       {/if}
-      <button class="settings-btn-ghost" type="button" style="display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2);" onclick={checkForUpdates} disabled={checkingUpdates}>
+      <Button variant="ghost" onclick={checkForUpdates} disabled={checkingUpdates}>
         <Icon name="refresh-cw" size={14} />
         {checkingUpdates ? 'Checking…' : 'Check Updates'}
-      </button>
+      </Button>
     </div>
 
     {#if updateInfo !== null && updateInfo.updateAvailable}
@@ -955,14 +1202,14 @@ function formatReleaseDate(iso: string): string {
           <p class="settings-field-hint">{en.settings.updateRunManually}</p>
           <div class="settings-cmd-row">
             <code class="settings-code settings-code-block">{updateInfo.updateCommand}</code>
-            <button class="settings-btn-ghost" type="button" onclick={copyUpdateCommand}>
+            <Button variant="ghost" onclick={copyUpdateCommand}>
               {cmdCopied ? 'Copied' : 'Copy'}
-            </button>
+            </Button>
           </div>
         {:else}
           <div class="settings-actions-row">
-            <button class="settings-btn-primary" type="button" onclick={applyUpdate} disabled={applying}>{en.settings.updateNow}</button>
-            <button class="settings-btn-ghost" type="button" onclick={copyUpdateCommand}>{cmdCopied ? 'Copied' : 'Copy command'}</button>
+            <Button variant="primary" onclick={applyUpdate} disabled={applying}>{en.settings.updateNow}</Button>
+            <Button variant="ghost" onclick={copyUpdateCommand}>{cmdCopied ? 'Copied' : 'Copy command'}</Button>
           </div>
         {/if}
       </div>

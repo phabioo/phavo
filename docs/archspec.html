@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Phavo — Technical Architecture Spec v3.0</title>
+<title>Phavo — Technical Architecture Spec v3.1</title>
 <style>
 @import url('/fonts/geist.css'); /* @fontsource/geist — never CDN */
 
@@ -384,7 +384,7 @@ pre {
 <nav>
   <div class="nav-logo">
     <div class="name">PHAVO</div>
-    <div class="sub">Arch Spec v3.0 · 2026-04-07</div>
+    <div class="sub">Arch Spec v3.2 · 2026-04-10</div>
   </div>
 
   <div class="nav-label">Overview</div>
@@ -412,6 +412,7 @@ pre {
   <a href="#design-tokens">Design Tokens</a>
 
   <div class="nav-label">Features</div>
+  <a href="#ai-sdk">AI Integration</a>
   <a href="#license">License Activation</a>
   <a href="#notifications">Notifications</a>
   <a href="#export-import">Export / Import</a>
@@ -432,10 +433,11 @@ pre {
 <div class="doc-header">
   <h1>Phavo — <span>Technical Architecture Spec</span></h1>
   <div class="doc-meta">
-    <span>Version <b>3.0</b></span>
-    <span>Date <b>2026-04-07</b></span>
-    <span>PRD <b>v4.0</b></span>
+    <span>Version <b>3.2</b></span>
+    <span>Date <b>2026-04-10</b></span>
+    <span>PRD <b>v4.1</b></span>
     <span>Roadmap <b>v5.0</b></span>
+    <span>Runtime <b>v0.8.0</b></span>
     <span>Design <b>Celestial Wish</b></span>
   </div>
 </div>
@@ -447,7 +449,7 @@ pre {
 <p>Phavo is a self-hosted personal dashboard. It runs entirely locally — no cloud account, no subscription, no phone-home. Two tiers: <strong>Stellar</strong> (free) and <strong>Celestial</strong> (one-time purchase, Ed25519 offline license).</p>
 
 <div class="callout info">
-  <strong>Key architectural invariant:</strong> The app never makes outbound network calls at runtime except for user-initiated actions (update check, weather API, RSS feeds, Pi-hole). There is no phavo.net account backend. License validation is fully offline via Ed25519 signature verification against an embedded public key.
+  <strong>Key architectural invariant:</strong> The app remains local-first. Runtime outbound calls are limited to explicit integrations (update check, weather API, RSS feeds, Pi-hole). Auth/licensing is fully local-only.
 </div>
 
 <p>The web app (<code>apps/web/</code>) is the only active runtime target. Desktop (<code>apps/desktop/</code>) and mobile stubs exist for future Tauri integration.</p>
@@ -597,8 +599,8 @@ pre {
   <tr><td><code>metrics.ts</code></td><td><code>/metrics</code></td><td class="note">cpu, memory, disk, network, temperature, uptime, weather</td></tr>
   <tr><td><code>integrations.ts</code></td><td><code>/integrations</code></td><td class="note">pihole, rss, links</td></tr>
   <tr><td><code>license.ts</code></td><td><code>/license</code></td><td class="note">Celestial key activate / deactivate / status</td></tr>
-  <tr><td><code>ai.ts</code></td><td><code>/ai</code></td><td class="note">AI provider config, status, chat (Celestial only)</td></tr>
-  <tr><td><code>notifications.ts</code></td><td><code>/notifications</code></td><td class="note">Queue drain, mark-read</td></tr>
+  <tr><td><code>ai.ts</code></td><td><code>/ai</code></td><td class="note">AI provider config, status, chat — Vercel AI SDK (<code>ai</code> + <code>ollama-ai-provider</code> / <code>@ai-sdk/openai</code> / <code>@ai-sdk/anthropic</code>); streaming via Hono SSE (Celestial only)</td></tr>
+  <tr><td><code>notifications.ts</code></td><td><code>/notifications</code></td><td class="note">List/create/mute/mark-read/bulk-read/delete</td></tr>
   <tr><td><code>plugins.ts</code></td><td><code>/plugins</code></td><td class="note">List, upload .phwidget, delete, status</td></tr>
   <tr><td><code>system.ts</code></td><td><code>/system</code></td><td class="note">health (public), about, update check/apply</td></tr>
 </tbody>
@@ -634,7 +636,7 @@ pre {
 <h2>Auth &amp; Session</h2>
 
 <div class="callout">
-  <strong>Local auth only.</strong> There is no phavo.net OAuth, no external identity provider, no cloud account. Username + password, hashed with Argon2id.
+  <strong>Local-only auth.</strong> Runtime uses local username/password (Argon2id), local session enforcement, and offline Ed25519 license verification.
 </div>
 
 <h3>Login flow</h3>
@@ -845,7 +847,7 @@ POST /api/v1/auth/totp/verify  { token }  → validates TOTP before completing l
 <section id="plugin-data">
 <h2>plugin_data Table</h2>
 
-<p>Key-value store for plugin persistence. Plugins cannot create DB tables — all persistent data goes through <code>WidgetContext.store</code>.</p>
+<p>Added in migration 0006. Used for plugin key-value persistence (e.g. Speedtest result history). Namespaced per plugin_id.</p>
 
 <div class="schema-table">
   <div class="schema-header">
@@ -927,8 +929,10 @@ POST /api/v1/auth/totp/verify  { token }  → validates TOTP before completing l
 <tbody>
   <tr><td><code>0001_spicy_clea.sql</code></td><td class="note">Core schema: users, sessions, config, tabs, widgetInstances, credentials, licenseActivation</td></tr>
   <tr><td><code>0002_keen_luminals.sql</code></td><td class="note">Auth tables</td></tr>
-  <tr><td><code>0003_auth_mode_rename.sql</code></td><td class="note">Rename authMode 'phavo-io' → 'local' in sessions</td></tr>
+  <tr><td><code>0003_auth_mode_rename.sql</code></td><td class="note">Legacy authMode migration retained in history (phavo-io/local paths)</td></tr>
   <tr><td><code>0004_notifications.sql</code></td><td class="note">Add notifications table (DB-persisted, survives restarts)</td></tr>
+  <tr><td><code>0005_local_auth_offline_license.sql</code></td><td class="note">Local-only auth normalization + offline license payload/signature schema (rebuild sessions + license_activation)</td></tr>
+  <tr><td><code>0006_plugin_data.sql</code></td><td class="note">Add plugin_data table (Speedtest history)</td></tr>
 </tbody>
 </table></div>
 </section>
@@ -1124,6 +1128,28 @@ POST /api/v1/auth/totp/verify  { token }  → validates TOTP before completing l
 </section>
 
 <!-- ═══════════════════════════════════════════════════════ -->
+<section id="ai-sdk">
+<h2>AI Integration (Celestial)</h2>
+
+<p>AI integration uses the <strong>Vercel AI SDK</strong> (<code>ai</code> package) with a provider abstraction layer supporting multiple backends:</p>
+
+<div class="tbl-wrap"><table>
+<thead><tr><th>Provider</th><th>Package</th><th>Notes</th></tr></thead>
+<tbody>
+  <tr><td>Ollama (local)</td><td><code>ollama-ai-provider</code></td><td class="note">Fully offline. Base URL configurable via <code>PHAVO_OLLAMA_URL</code> env var.</td></tr>
+  <tr><td>OpenAI</td><td><code>@ai-sdk/openai</code></td><td class="note">API key stored encrypted in credentials table.</td></tr>
+  <tr><td>Anthropic</td><td><code>@ai-sdk/anthropic</code></td><td class="note">API key stored encrypted in credentials table.</td></tr>
+</tbody>
+</table></div>
+
+<p>Streaming responses use <code>streamText()</code> from the AI SDK piped through Hono's <code>streamSSE</code> helper. The searchbar AI mode and the dedicated AI chat panel both consume the same streaming endpoint (<code>POST /api/v1/ai/chat</code>). Full responses are never buffered server-side — always streamed token-by-token.</p>
+
+<div class="callout info">
+  <strong>Provider factory pattern:</strong> <code>createOllama()</code> / <code>createOpenAI()</code> / <code>createAnthropic()</code> are used to instantiate providers with the user's configured credentials. Provider selection is stored in the <code>config</code> table.
+</div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════ -->
 <section id="license">
 <h2>License Activation (Celestial)</h2>
 
@@ -1158,7 +1184,11 @@ POST /api/v1/auth/totp/verify  { token }  → validates TOTP before completing l
 ]
 
 <span class="cm">// Private key: GitHub Actions Secrets only — never in repo</span>
-<span class="cm">// Rotation: promote next→current, generate new next, ship in next release</span></pre>
+<span class="cm">// Public key also available via PHAVO_LICENSE_PUBLIC_KEY env var</span>
+<span class="cm">// Rotation: promote next→current, generate new next, ship in next release</span>
+
+<span class="cm">// licenseActivation table stores payload + signature separately (migration 0005)</span>
+<span class="cm">// Server re-verifies on every startup against embedded public key</span></pre>
 </section>
 
 <!-- ═══════════════════════════════════════════════════════ -->
@@ -1240,7 +1270,7 @@ POST /api/v1/auth/totp/verify  { token }  → validates TOTP before completing l
 
 <h3>Rate limits</h3>
 <pre>POST /api/v1/plugins/upload   → 5 complete uploads per 10 minutes per session
-plugin_data per plugin_id     → 10MB quota enforced server-side</pre>
+plugin_data per plugin_id     → 10MB quota enforced server-side (planned, pending table implementation)</pre>
 </section>
 
 <!-- ═══════════════════════════════════════════════════════ -->
@@ -1293,6 +1323,8 @@ volumes:
   <tr><td><code>PHAVO_SECRET</code></td><td class="note">auto-generated</td><td class="note">auto-generated</td><td class="note">AES key source. Override for ephemeral volumes.</td></tr>
   <tr><td><code>PHAVO_TRUST_PROXY</code></td><td class="note">false</td><td class="note">false</td><td class="note">true when behind nginx/Caddy/Traefik — reads X-Forwarded-For for rate limiting</td></tr>
   <tr><td><code>PHAVO_PLUGIN_DEV_DIR</code></td><td class="note">unset</td><td class="note">unset</td><td class="note">Hot-reload from local dir. Dev env only.</td></tr>
+  <tr><td><code>PHAVO_OLLAMA_URL</code></td><td class="note">http://localhost:11434</td><td class="note">http://localhost:11434</td><td class="note">Ollama base URL for AI integration (Celestial only).</td></tr>
+  <tr><td><code>PHAVO_LICENSE_PUBLIC_KEY</code></td><td class="note">embedded</td><td class="note">embedded</td><td class="note">Ed25519 public key override. Falls back to two embedded keys.</td></tr>
 </tbody>
 </table></div>
 
@@ -1400,7 +1432,7 @@ Horizontal scroll: never, tested at 375px (iPhone SE)</span></pre>
 </table></div>
 
 <p style="margin-top:24px;font-size:12px;color:var(--outline)">
-  Phavo Architecture Spec v3.0 · phavo.net · github.com/getphavo/phavo
+  Phavo Architecture Spec v3.1 · phavo.net · github.com/getphavo/phavo
 </p>
 </section>
 

@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { untrack } from 'svelte';
   import type { NetworkMetrics, WidgetSize } from '@phavo/types';
   import { Icon } from '@phavo/ui';
   import { formatSpeed } from '$lib/utils/format';
@@ -15,12 +14,13 @@
     Array.from({ length: 14 }, (_, i) => 50000 + Math.random() * 200000)
   );
 
+  let prevSpeed: number | undefined;
+
   $effect(() => {
-    const speed = data?.downloadSpeed;
-    if (speed !== undefined) {
-      // Use untrack to read speedHistory without subscribing — prevents an
-      // infinite reactive loop where mutating the array re-triggers this effect.
-      speedHistory = [...untrack(() => speedHistory), speed].slice(-14);
+    const speed = data?.downloadSpeed ?? 0;
+    if (speed !== prevSpeed) {
+      prevSpeed = speed;
+      speedHistory = [...speedHistory.slice(-13), speed];
     }
   });
 
@@ -53,7 +53,7 @@
     </div>
 
     <div class="net-chart">
-      {#each sparkBars as bar}
+      {#each sparkBars as bar, i (i)}
         <div class="net-bar" style="height: {bar}%"></div>
       {/each}
     </div>
@@ -83,7 +83,7 @@
     </div>
 
     <div class="net-chart">
-      {#each sparkBars as bar}
+      {#each sparkBars as bar, i (i)}
         <div class="net-bar" style="height: {bar}%"></div>
       {/each}
     </div>

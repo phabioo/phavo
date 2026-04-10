@@ -1,110 +1,133 @@
+import { createPublicKey, verify as verifySignature } from 'node:crypto';
 import { z } from 'zod';
 
-interface LicenseValidationResult {
-  valid: boolean;
-  tier: 'stellar' | 'celestial';
-  graceUntil?: number;
-  activationJwt?: string;
-  error?: string;
-}
-
-const GRACE_PERIOD_FREE = 24 * 60 * 60 * 1000; // 24 hours
-const GRACE_PERIOD_STANDARD = 72 * 60 * 60 * 1000; // 72 hours
-
-const LicenseValidateResponseSchema = z.object({
-  tier: z.enum(['stellar', 'celestial']),
+const LicensePayloadSchema = z.object({
+  tier: z.literal('celestial'),
+  licenseId: z.string().min(1),
+  issuedAt: z.string().min(1),
 });
 
-const LicenseActivateResponseSchema = z.object({
-  activationJwt: z.string().optional(),
-});
+export type OfflineLicenseActivation = {
+  tier: 'celestial';
+  licenseId: string;
+  issuedAt: string;
+  payloadB64: string;
+  signatureB64: string;
+};
 
-export async function validateLicense(
-  licenseKey: string,
-  authMode: 'phavo-net' | 'local',
-): Promise<LicenseValidationResult> {
-  // Local auth mode: validate once on activation, fully offline after
-  if (authMode === 'local') {
-    return {
-      valid: true,
-      tier: 'celestial',
-    };
+type LicenseActivationResult =
+  | { valid: true; activation: OfflineLicenseActivation }
+  | { valid: false; error: string };
+
+function decodeBase64Url(value: string): Uint8Array {
+  const padded = value.replace(/-/g, '+').replace(/_/g, '/');
+  const normalized = padded + '='.repeat((4 - (padded.length % 4)) % 4);
+  return Uint8Array.from(Buffer.from(normalized, 'base64'));
+}
+
+function encodeBase64Url(value: Uint8Array): string {
+  return Buffer.from(value)
+    .toString('base64')
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/, '');
+}
+
+function importEd25519PublicKey(publicKeyInput: string) {
+  const trimmed = publicKeyInput.trim();
+  if (!trimmed) {
+    throw new Error('Missing PHAVO_LICENSE_PUBLIC_KEY');
   }
 
-  // phavo.net validation
-  const phavoIoUrl = process.env.PHAVO_IO_URL ?? 'https://phavo.net';
+  if (trimmed.includes('BEGIN PUBLIC KEY')) {
+    return createPublicKey(trimmed);
+  }
 
+  return createPublicKey({
+    key: Buffer.from(trimmed, 'base64'),
+    format: 'der',
+    type: 'spki',
+  });
+}
+
+function parseSignedLicenseKey(licenseKey: string): {
+  signature: Uint8Array;
+  payload: Uint8Array;
+  payloadB64: string;
+  signatureB64: string;
+} {
+  const decoded = decodeBase64Url(licenseKey.trim());
+  // Ed25519 signatures are fixed-length 64 bytes.
+  const payloadStart = 64;
+  if (decoded.length <= payloadStart) {
+    throw new Error('Malformed license key');
+  }
+
+  const signature = decoded.slice(0, payloadStart);
+  const payload = decoded.slice(payloadStart);
+
+  return {
+    signature,
+    payload,
+    payloadB64: encodeBase64Url(payload),
+    signatureB64: encodeBase64Url(signature),
+  };
+}
+
+function verifyOfflinePayload(payload: Uint8Array, signature: Uint8Array): boolean {
+  const pubKey = importEd25519PublicKey(process.env.PHAVO_LICENSE_PUBLIC_KEY ?? '');
+  return verifySignature(null, Buffer.from(payload), pubKey, Buffer.from(signature));
+}
+
+export function verifyStoredLicenseActivation(input: {
+  payloadB64: string;
+  signatureB64: string;
+}): OfflineLicenseActivation | null {
   try {
-    const response = await fetch(`${phavoIoUrl}/api/license/validate`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ licenseKey }),
-    });
+    const payloadBytes = decodeBase64Url(input.payloadB64);
+    const signatureBytes = decodeBase64Url(input.signatureB64);
+    if (!verifyOfflinePayload(payloadBytes, signatureBytes)) return null;
 
-    if (response.ok) {
-      const raw: unknown = await response.json();
-      const parsed = LicenseValidateResponseSchema.safeParse(raw);
-      if (!parsed.success) {
-        return { valid: false, tier: 'stellar', error: 'Invalid response from phavo.net' };
-      }
-      return {
-        valid: true,
-        tier: parsed.data.tier,
-      };
-    }
-
-    return { valid: false, tier: 'stellar' };
-  } catch {
-    // phavo.net unreachable — apply grace period
-    const gracePeriod = licenseKey ? GRACE_PERIOD_STANDARD : GRACE_PERIOD_FREE;
-    const graceUntil = Date.now() + gracePeriod;
+    const payloadJson = JSON.parse(Buffer.from(payloadBytes).toString('utf-8')) as unknown;
+    const parsed = LicensePayloadSchema.safeParse(payloadJson);
+    if (!parsed.success) return null;
 
     return {
-      valid: true,
-      tier: licenseKey ? 'celestial' : 'stellar',
-      graceUntil,
+      tier: parsed.data.tier,
+      licenseId: parsed.data.licenseId,
+      issuedAt: parsed.data.issuedAt,
+      payloadB64: input.payloadB64,
+      signatureB64: input.signatureB64,
     };
+  } catch {
+    return null;
   }
 }
 
-export async function activateLocalLicense(
-  licenseKey: string,
-  instanceIdentifier: string,
-): Promise<LicenseValidationResult> {
-  const phavoIoUrl = process.env.PHAVO_IO_URL ?? 'https://phavo.net';
-
+export function activateOfflineLicense(licenseKey: string): LicenseActivationResult {
   try {
-    const response = await fetch(`${phavoIoUrl}/api/license/activate`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ licenseKey, instanceId: instanceIdentifier }),
-      signal: AbortSignal.timeout(15_000),
-    });
-
-    if (!response.ok) {
-      let error = 'License activation failed';
-      try {
-        const payload = (await response.json()) as { error?: string };
-        if (payload.error) error = payload.error;
-      } catch {
-        // Ignore invalid error payloads.
-      }
-
-      return { valid: false, tier: 'celestial', error };
+    const { payload, signature, payloadB64, signatureB64 } = parseSignedLicenseKey(licenseKey);
+    if (!verifyOfflinePayload(payload, signature)) {
+      return { valid: false, error: 'Invalid license signature' };
     }
 
-    const raw: unknown = await response.json();
-    const parsed = LicenseActivateResponseSchema.safeParse(raw);
-    if (!parsed.success || !parsed.data.activationJwt) {
-      return { valid: false, tier: 'celestial', error: 'Missing activation token from phavo.net' };
+    const payloadJson = JSON.parse(Buffer.from(payload).toString('utf-8')) as unknown;
+    const parsed = LicensePayloadSchema.safeParse(payloadJson);
+    if (!parsed.success) {
+      return { valid: false, error: 'Invalid license payload' };
     }
 
     return {
       valid: true,
-      tier: 'celestial',
-      activationJwt: parsed.data.activationJwt,
+      activation: {
+        tier: 'celestial',
+        licenseId: parsed.data.licenseId,
+        issuedAt: parsed.data.issuedAt,
+        payloadB64,
+        signatureB64,
+      },
     };
   } catch {
-    return { valid: false, tier: 'celestial', error: 'phavo.net unreachable' };
+    return { valid: false, error: 'Invalid license key format' };
   }
 }

@@ -55,7 +55,7 @@ export function registerTabRoutes(app: Hono<{ Variables: AppVariables }>): void 
       if (session.tier === 'stellar') {
         const existing = await db.select().from(schema.tabs);
         if (existing.length >= 1) {
-          return c.json(err('Tab limit reached — upgrade to Standard'), 403);
+          return c.json(err('Tab limit reached — upgrade to Celestial'), 403);
         }
       }
 

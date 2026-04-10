@@ -46,10 +46,10 @@ async function fetchUpdateInfo(fallback: UpdateInfo): Promise<UpdateInfo> {
   };
 }
 
-function maskLicenseKey(licenseKey?: string | null): string | null {
-  if (!licenseKey) return null;
-  if (licenseKey.length <= 8) return licenseKey;
-  return `${licenseKey.slice(0, 4)}••••${licenseKey.slice(-4)}`;
+function maskLicenseId(licenseId?: string | null): string | null {
+  if (!licenseId) return null;
+  if (licenseId.length <= 8) return licenseId;
+  return `${licenseId.slice(0, 4)}••••${licenseId.slice(-4)}`;
 }
 
 export function registerSystemRoutes(app: Hono<{ Variables: AppVariables }>): void {
@@ -73,7 +73,7 @@ export function registerSystemRoutes(app: Hono<{ Variables: AppVariables }>): vo
         ok({
           version: PHAVO_VERSION,
           tier: session.tier,
-          licenseKeyMasked: maskLicenseKey(latestLicense?.licenseKey ?? null),
+          licenseKeyMasked: maskLicenseId(latestLicense?.licenseId ?? null),
         }),
       );
     } catch {

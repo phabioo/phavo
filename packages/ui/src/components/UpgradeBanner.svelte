@@ -15,7 +15,7 @@ let { feature, price = '€8.99' }: Props = $props();
       </svg>
     </span>
     <p class="upgrade-text">
-      Upgrade to Standard to unlock <strong>{feature}</strong> — {price} one-time.
+      Upgrade to Celestial to unlock <strong>{feature}</strong> — {price} one-time.
     </p>
   </div>
 </div>

@@ -11,6 +11,27 @@
 
   const latest = $derived(data.lastResult);
 
+  let running = $state(false);
+  let lastError = $state<string | null>(null);
+
+  async function runTest() {
+    if (running) return;
+    running = true;
+    lastError = null;
+    try {
+      const res = await fetch('/api/v1/integrations/speedtest', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      const json = await res.json();
+      if (!json.ok) lastError = json.error ?? 'Test failed';
+    } catch {
+      lastError = 'Connection error';
+    } finally {
+      running = false;
+    }
+  }
+
   function fmtSpeed(mbps: number) {
     return mbps >= 1000 ? `${(mbps / 1000).toFixed(1)}` : `${mbps.toFixed(1)}`;
   }
@@ -28,7 +49,7 @@
   {#if !latest}
     <div class="speed-s">
       <span class="widget-category-label">SPEEDTEST</span>
-      <span class="speed-s-value" style="color: var(--color-outline); font-size: 14px;">No results</span>
+      <span class="speed-s-empty">No results</span>
     </div>
   {:else}
     <div class="speed-s">
@@ -70,6 +91,35 @@
         <span class="speed-meta-item">Ping {latest.latencyMs.toFixed(0)}ms</span>
         <span class="speed-meta-item">{fmtTime(latest.timestamp)}</span>
       </div>
+
+      <div class="speed-bars">
+        <div class="speed-bar-row">
+          <span class="speed-bar-label">Down</span>
+          <div class="speed-bar-track"><div class="speed-bar-fill" style:width={`${Math.min(latest.downloadMbps / 10, 100)}%`}></div></div>
+        </div>
+        <div class="speed-bar-row">
+          <span class="speed-bar-label">Up</span>
+          <div class="speed-bar-track"><div class="speed-bar-fill speed-bar-fill-dim" style:width={`${Math.min(latest.uploadMbps / 10, 100)}%`}></div></div>
+        </div>
+      </div>
+    {/if}
+
+    <button
+      class="speedtest-run-btn"
+      onclick={runTest}
+      disabled={running}
+      aria-label="Run speed test"
+    >
+      {#if running}
+        <Icon name="loader-2" size={14} class="spin" />
+        <span>TESTING...</span>
+      {:else}
+        <Icon name="play" size={14} />
+        <span>RUN TEST</span>
+      {/if}
+    </button>
+    {#if lastError}
+      <span class="speed-error">{lastError}</span>
     {/if}
   </div>
 {:else}
@@ -103,6 +153,22 @@
       <div class="speed-meta">
         <span class="speed-meta-item">Ping {latest.latencyMs.toFixed(0)}ms</span>
         <span class="speed-meta-item">{fmtTime(latest.timestamp)}</span>
+        {#if data.testInProgress}
+          <span class="speed-meta-item">Running...</span>
+        {:else if data.cooldownUntil && data.cooldownUntil > Date.now()}
+          <span class="speed-meta-item">Cooldown</span>
+        {/if}
+      </div>
+
+      <div class="speed-bars">
+        <div class="speed-bar-row">
+          <span class="speed-bar-label">Down</span>
+          <div class="speed-bar-track"><div class="speed-bar-fill" style:width={`${Math.min(latest.downloadMbps / 10, 100)}%`}></div></div>
+        </div>
+        <div class="speed-bar-row">
+          <span class="speed-bar-label">Up</span>
+          <div class="speed-bar-track"><div class="speed-bar-fill speed-bar-fill-dim" style:width={`${Math.min(latest.uploadMbps / 10, 100)}%`}></div></div>
+        </div>
       </div>
 
       {#if data.history.length > 0}
@@ -117,6 +183,24 @@
           {/each}
         </div>
       {/if}
+    {/if}
+
+    <button
+      class="speedtest-run-btn"
+      onclick={runTest}
+      disabled={running}
+      aria-label="Run speed test"
+    >
+      {#if running}
+        <Icon name="loader-2" size={14} class="spin" />
+        <span>TESTING...</span>
+      {:else}
+        <Icon name="play" size={14} />
+        <span>RUN TEST</span>
+      {/if}
+    </button>
+    {#if lastError}
+      <span class="speed-error">{lastError}</span>
     {/if}
   </div>
 {/if}
@@ -137,6 +221,11 @@
     font-weight: 700;
     color: var(--color-primary-fixed);
     letter-spacing: -0.02em;
+  }
+
+  .speed-s-empty {
+    font-size: var(--font-size-md);
+    color: var(--color-outline);
   }
 
   .speed-s-unit {
@@ -247,5 +336,92 @@
   .speed-history-time {
     color: var(--color-outline);
     margin-left: auto;
+  }
+
+  .speed-bars {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+
+  .speed-bar-row {
+    display: grid;
+    grid-template-columns: 44px 1fr;
+    align-items: center;
+    gap: var(--space-2);
+  }
+
+  .speed-bar-label {
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    font-family: var(--font-mono);
+    color: var(--color-on-surface-variant);
+  }
+
+  .speed-bar-track {
+    height: 6px;
+    border-radius: var(--radius-full);
+    background: color-mix(in srgb, var(--color-on-surface) 7%, transparent);
+    overflow: hidden;
+  }
+
+  .speed-bar-fill {
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, var(--color-secondary), var(--color-secondary-fixed));
+    transition: width var(--motion-component);
+  }
+
+  .speed-bar-fill-dim {
+    background: linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--color-secondary) 75%, var(--color-surface-high)),
+      var(--color-secondary)
+    );
+  }
+
+  /* ── Run Test button ────────────────────────────────── */
+  .speedtest-run-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-4);
+    border-radius: var(--radius-full);
+    background: color-mix(in srgb, var(--color-primary-fixed) 12%, transparent);
+    border: 1px solid color-mix(in srgb, var(--color-primary-fixed) 25%, transparent);
+    color: var(--color-primary-fixed);
+    font-size: 11px;
+    font-weight: 700;
+    font-family: var(--font-mono);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: background var(--motion-micro);
+    margin-top: auto;
+  }
+
+  .speedtest-run-btn:hover {
+    background: color-mix(in srgb, var(--color-primary-fixed) 20%, transparent);
+  }
+
+  .speedtest-run-btn:disabled {
+    opacity: 0.5;
+    pointer-events: none;
+  }
+
+  .speed-error {
+    font-size: var(--font-size-xs);
+    color: var(--color-error);
+    margin-top: var(--space-1);
+  }
+
+  :global(.spin) {
+    animation: spin 1s linear infinite;
+  }
+
+  @keyframes spin {
+    from { transform: rotate(0deg); }
+    to   { transform: rotate(360deg); }
   }
 </style>

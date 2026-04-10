@@ -15,6 +15,8 @@
     ollama: boolean;
     openai: boolean;
     anthropic: boolean;
+    google: boolean;
+    custom: boolean;
   }
 
   interface Props {
@@ -25,7 +27,7 @@
     onAction?: ((entry: SearchEntry) => void) | undefined;
     onAiChat?:
       | ((
-          provider: 'ollama' | 'openai' | 'anthropic',
+          provider: 'ollama' | 'openai' | 'anthropic' | 'google' | 'custom',
           query: string,
         ) => Promise<string>)
       | undefined;
@@ -34,17 +36,19 @@
   let {
     searchIndex = [],
     searchEngineUrl = 'https://duckduckgo.com/?q={query}',
-    aiProviders = { ollama: false, openai: false, anthropic: false },
+    aiProviders = { ollama: false, openai: false, anthropic: false, google: false, custom: false },
     tier = 'stellar',
     onAction,
     onAiChat,
   }: Props = $props();
 
   const MAX_RESULTS = 8;
-  const PROVIDER_LABELS: Record<'ollama' | 'openai' | 'anthropic', string> = {
+  const PROVIDER_LABELS: Record<'ollama' | 'openai' | 'anthropic' | 'google' | 'custom', string> = {
     ollama: 'Ollama',
     openai: 'OpenAI',
     anthropic: 'Anthropic',
+    google: 'Gemini',
+    custom: 'Custom',
   };
   const CATEGORY_ICONS: Record<SearchEntry['category'], string> = {
     widget: 'layout-grid',
@@ -108,11 +112,11 @@
 
     const items: Array<{
       id: string;
-      provider: 'ollama' | 'openai' | 'anthropic';
+      provider: 'ollama' | 'openai' | 'anthropic' | 'google' | 'custom';
       label: string;
     }> = [];
 
-    for (const provider of ['ollama', 'openai', 'anthropic'] as const) {
+    for (const provider of ['ollama', 'openai', 'anthropic', 'google', 'custom'] as const) {
       if (aiProviders[provider]) {
         items.push({
           id: `__ai_${provider}__`,
@@ -193,7 +197,7 @@
     }
   }
 
-  async function askAi(provider: 'ollama' | 'openai' | 'anthropic') {
+  async function askAi(provider: 'ollama' | 'openai' | 'anthropic' | 'google' | 'custom') {
     if (!onAiChat || !query.trim()) return;
 
     aiLoading = true;
@@ -296,9 +300,10 @@
       {/if}
     </div>
 
-    <!-- svelte-ignore a11y_no_static_element_interactions -->
     <div
       class="hs-dropdown"
+      role="listbox"
+      aria-label="Search results"
       aria-hidden={!open}
       inert={!open}
       onmousedown={(event) => event.preventDefault()}
@@ -311,9 +316,8 @@
       {:else}
         {#if results.length > 0}
           <div class="hs-group-label">Dashboard</div>
-          {#each results as entry, index}
-            <!-- svelte-ignore a11y_click_events_have_key_events -->
-            <div
+          {#each results as entry, index (entry.id ?? index)}
+            <button
               class="hs-item"
               class:hs-item--active={selectedIndex === index}
               onmouseenter={() => (selectedIndex = index)}
@@ -322,6 +326,10 @@
                 onAction?.(entry);
                 dismiss();
               }}
+              role="option"
+              aria-selected={selectedIndex === index}
+              tabindex="-1"
+              type="button"
             >
               <span class="hs-item-icon">
                 <Icon name={getEntryIcon(entry)} size={14} />
@@ -332,14 +340,13 @@
                   <span class="hs-item-sub">{entry.subtitle}</span>
                 {/if}
               </span>
-            </div>
+            </button>
           {/each}
         {/if}
 
         {#if webSearchEntry}
           <div class="hs-group-label">Web search</div>
-          <!-- svelte-ignore a11y_click_events_have_key_events -->
-          <div
+          <button
             class="hs-item"
             class:hs-item--active={selectedIndex === webSearchIndex}
             onmouseenter={() => (selectedIndex = webSearchIndex)}
@@ -347,6 +354,10 @@
               webSearchEntry.action();
               dismiss();
             }}
+            role="option"
+            aria-selected={selectedIndex === webSearchIndex}
+            tabindex="-1"
+            type="button"
           >
             <span class="hs-item-icon">
               <Icon name="globe-2" size={14} />
@@ -354,18 +365,21 @@
             <span class="hs-item-copy">
               <span class="hs-item-label">{webSearchEntry.label}</span>
             </span>
-          </div>
+          </button>
         {/if}
 
         {#if tier !== 'stellar' && aiEntries.length > 0}
           <div class="hs-group-label">Ask AI</div>
-          {#each aiEntries as aiEntry, index}
-            <!-- svelte-ignore a11y_click_events_have_key_events -->
-            <div
+          {#each aiEntries as aiEntry, index (aiEntry.id ?? index)}
+            <button
               class="hs-item"
               class:hs-item--active={selectedIndex === aiStartIndex + index}
               onmouseenter={() => (selectedIndex = aiStartIndex + index)}
               onmousedown={() => void askAi(aiEntry.provider)}
+              role="option"
+              aria-selected={selectedIndex === aiStartIndex + index}
+              tabindex="-1"
+              type="button"
             >
               <span class="hs-item-icon">
                 <Icon name="sparkles" size={14} />
@@ -373,7 +387,7 @@
               <span class="hs-item-copy">
                 <span class="hs-item-label">{aiEntry.label}</span>
               </span>
-            </div>
+            </button>
           {/each}
         {/if}
 
@@ -606,6 +620,11 @@
     cursor: pointer;
     transition: background 0.12s ease, border-color 0.12s ease;
     border: 1px solid transparent;
+    background: none;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    width: 100%;
   }
 
   .hs-item:hover,

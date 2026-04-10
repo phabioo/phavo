@@ -108,29 +108,29 @@ const mobileNavItems = $derived([{ id: 'home', label: 'Dashboard', icon: 'layout
       {#if !collapsed && dashExpanded}
         <div class="nav-sub-items">
           {#each tabs as tab}
-            <button
+            <div
               class="nav-sub-item"
               class:nav-sub-item-active={activeTab === tab.id}
-              onclick={() => onTabSelect?.(tab.id)}
-              type="button"
             >
-              <span class="nav-sub-dot"></span>
-              <span class="nav-sub-label">{tab.label}</span>
+              <button class="nav-sub-main" onclick={() => onTabSelect?.(tab.id)} type="button">
+                <span class="nav-sub-dot"></span>
+                <span class="nav-sub-label">{tab.label}</span>
+              </button>
               {#if tab.id !== 'home' && tab.id !== tabs[0]?.id}
                 <button
                   class="nav-sub-delete"
-                  onclick={(e) => { e.preventDefault(); e.stopPropagation(); ondeletepage?.(tab.id); }}
+                  onclick={() => ondeletepage?.(tab.id)}
                   aria-label="Delete page"
                   type="button"
                 >
                   <Icon name="x" size={10} />
                 </button>
               {/if}
-            </button>
+            </div>
           {/each}
           {#if onNewTab}
             <button class="nav-sub-add" onclick={() => onNewTab?.()} type="button">
-              <Icon name="plus" size={12} />
+              <Icon name="plus" size={10} />
               <span>New Page</span>
             </button>
           {/if}
@@ -556,7 +556,7 @@ const mobileNavItems = $derived([{ id: 'home', label: 'Dashboard', icon: 'layout
 
   /* ── Sub-items ───────────────────────────────────────────────────────── */
   .nav-sub-items {
-    padding-left: 60px;
+    padding-left: 0;
     margin: 0 0 var(--space-2) 0;
     border-left: none;
     display: flex;
@@ -567,19 +567,33 @@ const mobileNavItems = $derived([{ id: 'home', label: 'Dashboard', icon: 'layout
   .nav-sub-item {
     display: flex;
     align-items: center;
+    border-radius: var(--radius-sm);
+    color: var(--color-on-surface-variant);
+    transition: color var(--motion-micro), background var(--motion-micro);
+    width: 100%;
+  }
+
+  .nav-sub-main {
+    display: flex;
+    align-items: center;
     gap: var(--space-2);
     padding: var(--space-1) var(--space-2);
-    border-radius: var(--radius-sm);
     font-size: 12px;
-    color: var(--color-on-surface-variant);
     text-decoration: none;
-    transition: color var(--motion-micro), background var(--motion-micro);
     background: none;
     border: none;
     cursor: pointer;
     font-family: var(--font-ui);
     text-align: left;
     width: 100%;
+    color: inherit;
+    border-radius: var(--radius-sm);
+    min-width: 0;
+  }
+
+  .nav-sub-main:focus-visible {
+    outline: 2px solid var(--color-primary-fixed);
+    outline-offset: 2px;
   }
 
   .nav-sub-item:hover {
@@ -605,6 +619,8 @@ const mobileNavItems = $derived([{ id: 'home', label: 'Dashboard', icon: 'layout
 
   .nav-sub-label {
     white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .nav-sub-delete {
@@ -637,7 +653,7 @@ const mobileNavItems = $derived([{ id: 'home', label: 'Dashboard', icon: 'layout
   .nav-sub-add {
     display: flex;
     align-items: center;
-    gap: var(--space-2);
+    gap: 2px;
     padding: var(--space-1) var(--space-2);
     border-radius: var(--radius-sm);
     font-size: 12px;

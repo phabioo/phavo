@@ -17,6 +17,7 @@
   let deactivating = $state(false);
   let errorMessage = $state('');
   let successMessage = $state('');
+  const licenseKeyInputId = 'settings-license-key';
 
   function tierVariant(value: Tier) {
     if (value === 'celestial') return 'accent';
@@ -134,17 +135,18 @@
       <h3 class="settings-form-title">{en.settings.activateLicense}</h3>
       <p class="licence-hint">{en.settings.licenseActivationHint}</p>
       <div>
-        <label class="settings-field-label">{en.settings.enterLicenseKey}</label>
+        <label class="settings-field-label" for={licenseKeyInputId}>{en.settings.enterLicenseKey}</label>
         <Input
+          id={licenseKeyInputId}
           placeholder={en.settings.licenseKeyPlaceholder}
           bind:value={licenseKey}
         />
       </div>
       <div class="settings-form-actions">
         <span></span>
-        <button class="settings-btn-primary" type="button" onclick={activateLicense} disabled={activating}>
+        <Button variant="primary" onclick={activateLicense} disabled={activating}>
           {activating ? en.settings.activatingLicense : en.settings.activateLicense}
-        </button>
+        </Button>
       </div>
     </div>
   {:else}
@@ -152,10 +154,10 @@
       <h3 class="settings-form-title">{en.settings.localLicenseActive}</h3>
       <p class="licence-hint">{en.settings.licenseDeactivateHint}</p>
       <div class="settings-form-actions" style="justify-content: flex-start;">
-        <button class="settings-btn-danger" type="button" onclick={deactivateLicense} disabled={deactivating}>
+        <Button variant="danger" onclick={deactivateLicense} disabled={deactivating}>
           <Icon name="shield-off" size={14} />
           {deactivating ? en.settings.deactivatingLicense : en.settings.deactivateLicense}
-        </button>
+        </Button>
       </div>
     </div>
   {/if}

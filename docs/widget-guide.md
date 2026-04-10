@@ -3,6 +3,7 @@
 > This document is the authoritative reference for building widgets.
 > Every agent and contributor must follow it exactly.
 > A widget built correctly from this guide requires zero visual bugfixes.
+> Updated for runtime v0.8.0 and current WidgetCard behavior.
 
 ---
 
@@ -66,6 +67,9 @@ WidgetCard handles: background, border-radius, hover scale, drag handle
 **`staggerIndex` usage:** When rendering multiple widgets in the BentoGrid,
 pass `staggerIndex={i}` (loop index) for sequential card pop-in animation.
 Each card delays by `staggerIndex * 60ms`.
+
+Animation timing must use motion tokens from `packages/ui/src/theme.css`
+(`--motion-micro`, `--motion-component`, `--motion-page`) instead of hardcoded values.
 
 **Non-dashboard contexts:** Always pass `showControls={false} clipContent={false}`
 when using WidgetCard outside the BentoGrid (e.g. WidgetDrawer previews, Settings).
@@ -403,3 +407,4 @@ A widget is complete when ALL of these are true:
 - [ ] Registered in `+page.svelte` widget render switch
 
 **Widget template:** `apps/web/src/lib/widgets/_widget-template.svelte`
+**Config schemas:** `apps/web/src/lib/widgets/config-schemas.ts` — shared Zod schemas for widget configuration
