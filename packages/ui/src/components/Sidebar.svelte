@@ -21,7 +21,6 @@ interface TabItem {
 
 interface Props {
   collapsed?: boolean;
-  tier?: 'stellar' | 'celestial';
   deviceName?: string;
   items?: NavItem[];
   bottomItems?: NavItem[];
@@ -39,7 +38,6 @@ interface Props {
 
 let {
   collapsed = $bindable(false),
-  tier = 'stellar',
   deviceName = '',
   items = [],
   bottomItems = [],
@@ -57,7 +55,6 @@ let {
 
 let dashExpanded = $state(true);
 
-const showUpgrade = $derived(tier === 'stellar');
 const mobileNavItems = $derived([{ id: 'home', label: 'Dashboard', icon: 'layout-dashboard' }, ...items, ...bottomItems]);
 </script>
 
@@ -202,31 +199,11 @@ const mobileNavItems = $derived([{ id: 'home', label: 'Dashboard', icon: 'layout
     {/if}
   </div>
 
-  <!-- Upgrade card -->
+  <!-- Footer -->
   <div class="sidebar-upgrade">
     {#if children}
       <div class="sidebar-footer">
         {@render children()}
-      </div>
-    {:else if showUpgrade}
-      <div class="sidebar-upgrade-card">
-        {#if !collapsed}
-          <div class="sidebar-upgrade-text">
-            <p class="upgrade-kicker">Stellar Edition</p>
-            <p class="upgrade-desc">Unlock more widgets, more pages, and AI with Celestial.</p>
-          </div>
-        {/if}
-        <button
-          class="upgrade-btn"
-          onclick={() => onnavigate?.('license')}
-          type="button"
-        >
-          {#if collapsed}
-            <Icon name="sparkles" size={16} />
-          {:else}
-            <span class="upgrade-cta-text">Upgrade to Celestial</span>
-          {/if}
-        </button>
       </div>
     {/if}
   </div>

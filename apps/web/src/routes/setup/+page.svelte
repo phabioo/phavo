@@ -1,7 +1,5 @@
 <script lang="ts">
 import {
-  isWidgetDefinition,
-  isWidgetTeaserDefinition,
   type Tab,
   type WeatherMetrics,
   type WidgetInstance,
@@ -25,7 +23,6 @@ let { data }: Props = $props();
 type SetupMode = 'welcome' | 'quick' | 'full';
 type QuickStep = 'auth' | 'location' | 'done';
 type FullStep =
-  | 'tier'
   | 'auth'
   | 'name'
   | 'location'
@@ -34,11 +31,10 @@ type FullStep =
   | 'assign'
   | 'config'
   | 'done';
-type Tier = 'stellar' | 'celestial';
 type AuthMode = 'local';
 type ApiResponse<T> = { ok: true; data: T } | { ok: false; error: string };
 type SessionInfo = { authMode: AuthMode; validatedAt: number };
-type LoginSuccess = { tier?: Tier; requiresTotp?: boolean; partialToken?: string };
+type LoginSuccess = { requiresTotp?: boolean; partialToken?: string };
 type GeoResult = { id: number; name: string; country: string; latitude: number; longitude: number };
 type SetupLocation = { name: string; latitude: number; longitude: number };
 type RssFeedDraft = {
@@ -68,7 +64,7 @@ type PersistedFieldData = {
 const SETUP_KEY = 'phavo_setup_state';
 const QUICK_STEPS: QuickStep[] = ['auth', 'location', 'done'];
 const FULL_STEPS: FullStep[] = [
-  'tier', 'auth', 'name', 'location', 'tabs', 'widgets', 'assign', 'config', 'done',
+  'auth', 'name', 'location', 'tabs', 'widgets', 'assign', 'config', 'done',
 ];
 const CONFIGURABLE_WIDGET_IDS = new Set(['pihole', 'rss', 'links', 'weather']);
 
@@ -77,15 +73,12 @@ const CONFIGURABLE_WIDGET_IDS = new Set(['pihole', 'rss', 'links', 'weather']);
 // Mode and step are NEVER read from sessionStorage.
 let mode = $state<SetupMode>('welcome');
 let quickStep = $state<QuickStep>('auth');
-let fullStep = $state<FullStep>('tier');
+let fullStep = $state<FullStep>('auth');
 
 // ── AUTH STATE ─────────────────────────────────────────────────────────────
-let selectedTier = $state<Tier>('stellar');
-let sessionTier = $state<Tier | null>(null);
 let currentAuthMode = $state<AuthMode | null>(null);
 let authUsername = $state('');
 let authPassword = $state('');
-let authLicenseKey = $state('');
 let authError = $state('');
 let authLoading = $state(false);
 
@@ -123,8 +116,6 @@ let hydrated = $state(false);
 // ── DERIVED ────────────────────────────────────────────────────────────────
 const quickStepIndex = $derived(QUICK_STEPS.indexOf(quickStep));
 const fullStepIndex = $derived(FULL_STEPS.indexOf(fullStep));
-const effectiveTier = $derived(sessionTier ?? selectedTier);
-const freeTabLimitReached = $derived(effectiveTier === 'stellar' && tabs.length >= 1);
 const configurableSelections = $derived(
   selectedWidgets.filter((id) => CONFIGURABLE_WIDGET_IDS.has(id)),
 );
@@ -207,7 +198,7 @@ function clearFieldData() {
 function setMode(newMode: 'quick' | 'full') {
   mode = newMode;
   quickStep = 'auth';
-  fullStep = 'tier';
+  fullStep = 'auth';
   authError = '';
   window.history.replaceState({}, '', `/setup?mode=${newMode}`);
 }
@@ -262,7 +253,6 @@ async function submitLocalAuth(nextMode: 'quick' | 'full') {
         authMode: 'local',
         username: authUsername,
         password: authPassword,
-        licenseKey: authLicenseKey.trim() || undefined,
       },
     });
     if (!resp.ok) { authError = resp.error; return; }
@@ -270,7 +260,6 @@ async function submitLocalAuth(nextMode: 'quick' | 'full') {
       authError = 'Two-factor login is not available in setup yet. Sign in from the login page.';
       return;
     }
-    sessionTier = resp.data.tier ?? sessionTier;
     currentAuthMode = 'local';
     const ok = await syncSessionContext();
     if (!ok) return;
@@ -357,7 +346,6 @@ async function loadWidgetManifest() {
     const resp = await apiRequest<WidgetManifestEntry[]>('/api/v1/widgets');
     if (!resp.ok) { widgetManifestError = resp.error; return; }
     widgetManifest = resp.data;
-    sessionTier = widgetManifest.some((e) => isWidgetTeaserDefinition(e)) ? 'stellar' : 'celestial';
   } catch {
     widgetManifestError = en.errors.networkError;
   } finally {
@@ -371,14 +359,12 @@ function getWidgetName(widgetId: string): string {
 
 function getDefaultWidgetSize(widgetId: string): WidgetSize {
   const widget = widgetManifest.find(
-    (e): e is Extract<WidgetManifestEntry, { sizes: WidgetSize[] }> =>
-      e.id === widgetId && isWidgetDefinition(e),
+    (e) => e.id === widgetId,
   );
   return widget?.sizes[0] ?? 'M';
 }
 
 function toggleWidgetSelection(entry: WidgetManifestEntry) {
-  if (!isWidgetDefinition(entry)) return;
   if (selectedWidgets.includes(entry.id)) {
     selectedWidgets = selectedWidgets.filter((id) => id !== entry.id);
     const nextAssign = { ...widgetAssignments };
@@ -401,7 +387,6 @@ function updateWidgetAssignment(widgetId: string, tabLabel: string) {
 // ── TABS ───────────────────────────────────────────────────────────────────
 function addTab() {
   tabError = '';
-  if (freeTabLimitReached) { tabError = en.upgrade.tabLimit; return; }
   const label = newTabName.trim() || `Tab ${tabs.length + 1}`;
   tabs = [...tabs, label];
   newTabName = '';
@@ -661,7 +646,7 @@ onMount(() => {
     quickStep = 'auth';
   } else if (urlMode === 'full') {
     mode = 'full';
-    fullStep = 'tier';
+    fullStep = 'auth';
   }
   // else: mode stays 'welcome'
 
@@ -721,7 +706,6 @@ onMount(() => {
         <div class="flex flex-col gap-3">
           <Input label={en.setup.auth.username} placeholder={en.setup.auth.username} bind:value={authUsername} />
           <Input label={en.setup.auth.password} type="password" placeholder={en.auth.passwordPlaceholder} bind:value={authPassword} />
-          <Input label={en.setup.auth.enterLicenseKey} placeholder={en.setup.auth.enterLicenseKey} bind:value={authLicenseKey} />
           {#if authError}<p class="text-red-400 text-sm">{authError}</p>{/if}
           <div class="flex justify-end gap-3 flex-wrap mt-2">
             <Button variant="tertiary" onclick={backToWelcome}>{en.common.back}</Button>
@@ -794,38 +778,11 @@ onMount(() => {
         <ProgressBar value={(fullStepIndex + 1) / FULL_STEPS.length * 100} />
       </div>
 
-      {#if fullStep === 'tier'}
-        <h2 class="text-xl font-semibold text-text">{en.setup.steps.tierSelect}</h2>
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <button
-            type="button"
-            class="flex flex-col gap-2 p-6 border rounded-lg bg-surface text-left cursor-pointer text-text transition-colors hover:border-border focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2
-              {selectedTier === 'stellar' ? 'border-accent shadow-[0_0_0_1px_var(--color-accent)]' : 'border-border-subtle'}"
-            onclick={() => { selectedTier = 'stellar'; nextFullStep(); }}
-          >
-            <h3 class="text-lg font-semibold">{en.setup.auth.localAccount}</h3>
-            <p class="text-sm text-text-muted">Create a local account. Start on Stellar, activate Celestial anytime with your key.</p>
-          </button>
-          <button
-            type="button"
-            class="flex flex-col gap-2 p-6 border rounded-lg bg-surface text-left cursor-pointer text-text transition-colors hover:border-border focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2
-              {selectedTier === 'celestial' ? 'border-accent shadow-[0_0_0_1px_var(--color-accent)]' : 'border-border-subtle'}"
-            onclick={() => { selectedTier = 'celestial'; nextFullStep(); }}
-          >
-            <h3 class="text-lg font-semibold">{en.setup.auth.localAccount}</h3>
-            <p class="text-sm text-text-muted">Offline-capable — requires a Local licence key.</p>
-          </button>
-        </div>
-        <div class="flex justify-end gap-3 flex-wrap mt-2">
-          <Button variant="tertiary" onclick={backToWelcome}>{en.common.back}</Button>
-        </div>
-
-      {:else if fullStep === 'auth'}
+      {#if fullStep === 'auth'}
         <h2 class="text-xl font-semibold text-text">{en.setup.steps.auth}</h2>
         <div class="flex flex-col gap-3">
           <Input label={en.setup.auth.username} placeholder={en.setup.auth.username} bind:value={authUsername} />
           <Input label={en.setup.auth.password} type="password" placeholder={en.auth.passwordPlaceholder} bind:value={authPassword} />
-          <Input label={en.setup.auth.enterLicenseKey} placeholder={en.setup.auth.enterLicenseKey} bind:value={authLicenseKey} />
           {#if authError}<p class="text-red-400 text-sm">{authError}</p>{/if}
           <div class="flex justify-end gap-3 flex-wrap mt-2">
             <Button variant="tertiary" onclick={prevFullStep}>{en.common.back}</Button>
@@ -910,13 +867,10 @@ onMount(() => {
               placeholder={en.setup.tabs.defaultTabName}
               bind:value={newTabName}
             />
-            <Button onclick={addTab} disabled={freeTabLimitReached}>{en.setup.tabs.addTab}</Button>
+            <Button onclick={addTab}>{en.setup.tabs.addTab}</Button>
           </div>
 
           {#if tabError}<p class="text-red-400 text-sm">{tabError}</p>{/if}
-          {#if freeTabLimitReached}
-            <p class="text-text-muted text-sm">{en.upgrade.tabLimit}</p>
-          {/if}
         </div>
 
         <div class="flex justify-end gap-3 flex-wrap mt-2">
@@ -936,25 +890,15 @@ onMount(() => {
         {:else}
           <div class="grid grid-cols-[repeat(auto-fill,minmax(180px,1fr))] gap-3">
             {#each widgetManifest as entry (entry.id)}
-              {#if isWidgetDefinition(entry)}
                 <button
                   type="button"
                   class="flex flex-col gap-2 p-4 border rounded-lg bg-elevated text-left text-text cursor-pointer transition-colors
                     {selectedWidgets.includes(entry.id) ? 'border-accent shadow-[0_0_0_1px_var(--color-accent)]' : 'border-border hover:border-border-strong'}"
                   onclick={() => toggleWidgetSelection(entry)}
                 >
-                  <span class="text-[11px] px-2 py-0.5 rounded-full bg-base text-text-muted w-fit">{entry.tier === 'stellar' ? 'Stellar' : 'Celestial'}</span>
                   <strong>{entry.name}</strong>
                   <p class="text-sm text-text-muted">{entry.description}</p>
                 </button>
-              {:else}
-                <div class="flex flex-col gap-2 p-4 border border-border rounded-lg bg-elevated text-left opacity-75">
-                  <span class="text-[11px] px-2 py-0.5 rounded-full bg-base text-text-muted w-fit">LOCKED</span>
-                  <strong class="text-text">{entry.name}</strong>
-                  <p class="text-sm text-text-muted">{entry.description}</p>
-                  <span class="text-sm" aria-hidden="true">🔒</span>
-                </div>
-              {/if}
             {/each}
           </div>
         {/if}

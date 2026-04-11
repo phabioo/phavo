@@ -4,7 +4,9 @@
 
 <!-- Hero screenshot pending — coming with v1.0 launch -->
 
-Phavo is a production-grade self-hosted dashboard built on a modern TypeScript stack. It ships as a single Docker container, runs on any Linux server or Raspberry Pi, and expands to desktop and mobile in future phases.
+Phavo is a production-grade self-hosted dashboard built on a modern TypeScript stack. It ships as a single Docker container, runs on any Linux server or Raspberry Pi, and stays focused on the web runtime today.
+
+PHAVO is free and open source under the MIT license. All features are available to all users in the current Celestial Edition.
 
 ---
 
@@ -58,7 +60,6 @@ volumes:
 
 ## 🧩 Widgets
 
-### Stellar (free)
 | Widget | Data |
 |---|---|
 | CPU | Usage %, per-core breakdown, load average, model name |
@@ -68,12 +69,6 @@ volumes:
 | Temperature | CPU temperature (where available) |
 | Uptime | System uptime, human-readable |
 | Weather | Current conditions + 5-day forecast via Open-Meteo (no API key needed) |
-
-### Celestial (paid, one-time)
-All Stellar widgets plus:
-
-| Widget | Details |
-|---|---|
 | Pi-hole | Queries, blocked %, blocklist count, enable/disable toggle |
 | RSS Feed | Multiple feeds, Basic Auth + Bearer token for private feeds |
 | Links | Named bookmarks with icons, grouped by category |
@@ -90,36 +85,18 @@ Press `Cmd+K` (macOS) or `Ctrl+K` (Windows/Linux) from anywhere in the dashboard
 
 - **Local search** — instantly find and navigate to widgets, settings, tabs, and actions
 - **Web search** — search with your preferred engine (DuckDuckGo by default, configurable)
-- **AI assistant** — ask questions using Ollama (fully local/offline), OpenAI, or Anthropic Claude (Celestial tier)
+- **AI assistant** — ask questions using Ollama (fully local/offline), OpenAI, or Anthropic Claude
 
 AI API keys are stored server-side in encrypted form and never exposed to the browser.
 
 ---
 
-## 💳 Pricing
+## ️ Roadmap
 
-| | Stellar | Celestial |
+| Track | Status | Description |
 |---|---|---|
-| Price | €0 | €24.99 one-time (launch: €16.99) |
-| Widgets | Core system + weather | All 14 widgets |
-| Tabs | 1 (Home) | Unlimited |
-| AI assistant | — | ✅ |
-| Auth | Local (username + password) | Local (username + password) |
-| Offline | Fully offline | Fully offline |
-
-**14-day money-back guarantee** on Celestial via Gumroad.
-License key is a self-verifying Ed25519 payload — validated offline, no account required.
-
----
-
-## 🗺️ Roadmap
-
-| Phase | Status | Description |
-|---|---|---|
-| **1 — Web Dashboard** | ✅ Complete | SvelteKit dashboard, all widgets, Command Palette, Docker multi-arch |
-| **2 — Desktop App** | Planned | Tauri 2.0 · macOS, Windows, Linux · system tray · auto-update |
-| **3 — Mobile Apps** | Planned | Tauri 2.0 Mobile · iOS, iPadOS, Android |
-| **4 — Cloud + Marketplace** | Long-term | Multi-user, widget marketplace, Phavo Agent daemon |
+| **v1.0** | In progress | Web dashboard, all widgets, Command Palette, Docker multi-arch, launch hardening |
+| **Future Direction** | No timeline | Desktop wrapper, marketplace, and optional sync remain anecdotal ideas only |
 
 ---
 
@@ -132,8 +109,6 @@ Linting:    Biome
 
 apps/
   web/        SvelteKit + Hono API (Phase 1 — web dashboard)
-  desktop/    Tauri 2.0 (Phase 2, stub)
-  mobile/     Tauri 2.0 Mobile (Phase 3, stub)
 
 packages/
   @phavo/ui       Svelte 5 (Runes) component library
@@ -160,7 +135,7 @@ CI/CD:      GitHub Actions
 - **CSP:** Content-Security-Policy with nonce-based script whitelisting
 - **SSRF protection:** All user-supplied URLs validated against cloud metadata endpoints before fetch
 - **Brute-force protection:** 10 attempts → 5-minute lockout per IP
-- **2FA:** TOTP optional on all tiers
+- **2FA:** TOTP optional
 
 No telemetry is sent from the local app.
 
@@ -174,8 +149,6 @@ To report a vulnerability, see [SECURITY.md](SECURITY.md) or email **security@ph
 phavo/
 ├── apps/
 │   ├── web/          # SvelteKit web dashboard (Phase 1)
-│   ├── desktop/      # Tauri 2.0 desktop app (Phase 2, stub)
-│   └── mobile/       # Tauri Mobile (Phase 3, stub)
 ├── packages/
 │   ├── ui/           # @phavo/ui — Svelte 5 component library
 │   ├── db/           # @phavo/db — Drizzle + libSQL + crypto
@@ -217,20 +190,13 @@ bun run typecheck
 bun run lint
 ```
 
-With `PHAVO_DEV_MOCK_AUTH=true`, you are automatically logged in as a Stellar tier user.
-To test Celestial tier, add `PHAVO_DEV_TIER=celestial` to the environment.
+With `PHAVO_DEV_MOCK_AUTH=true`, you are automatically logged in as a dev user.
 
 ---
 
 ## ⚖️ License
 
-After v1.0 ships, Phavo will be dual-licensed:
-
-- **AGPL-3.0** for open source / self-hosted use
-- **Commercial licence** included with Celestial tier purchase
-
-A self-compiled AGPL build defaults to Stellar tier behaviour.
-Celestial activation uses an offline Ed25519-signed license key — no account or network required.
+Phavo is open source under the [MIT License](LICENSE).
 
 ---
 

@@ -3,7 +3,7 @@
 > This document is the authoritative reference for building widgets.
 > Every agent and contributor must follow it exactly.
 > A widget built correctly from this guide requires zero visual bugfixes.
-> Updated for runtime v0.8.0 and current WidgetCard behavior.
+> Updated for runtime v0.8.2 and current WidgetCard behavior.
 
 ---
 
@@ -376,7 +376,6 @@ Every widget needs a registry entry in
   version: '1.0.0',
   author: 'phavo',
   category: 'system',           // 'system' | 'consumer' | 'integration' | 'utility'
-  tier: 'stellar',              // 'stellar' | 'celestial' — NEVER 'free' or 'standard'
   sizes: ['S', 'M', 'L'],
   defaultSize: { w: 4, h: 3 }, // M size default
   dataEndpoint: '/api/v1/metrics/my-widget',
@@ -402,7 +401,7 @@ A widget is complete when ALL of these are true:
 - [ ] No `overflow: hidden` on widget root or layout wrappers
 - [ ] Zero hardcoded hex/rgb/rgba values
 - [ ] No legacy Svelte patterns (`export let`, `$:`, `writable()`)
-- [ ] Registry entry added with correct `tier` ('stellar' or 'celestial')
+- [ ] Registry entry added with correct category, size support, endpoint, and refresh interval
 - [ ] No XL in `availableSizes` array (reserved, inactive)
 - [ ] Registered in `+page.svelte` widget render switch
 

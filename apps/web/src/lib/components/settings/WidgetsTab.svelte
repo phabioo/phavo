@@ -9,7 +9,6 @@
     WidgetCard,
   } from '@phavo/ui';
   import {
-    isWidgetDefinition,
     z,
     type WidgetCategory,
     type WidgetDefinition,
@@ -116,9 +115,7 @@
         data?: Array<unknown>;
       };
       if (defsPayload.ok && Array.isArray(defsPayload.data)) {
-        widgetDefs = defsPayload.data.filter(
-          (entry): entry is WidgetDefinition => isWidgetDefinition(entry as never),
-        );
+        widgetDefs = defsPayload.data as WidgetDefinition[];
       }
 
       const tabsPayload = (await tabsResponse.json()) as {
@@ -467,9 +464,6 @@
           <p class="settings-hero-sub">{getStatusDescription(widget)}</p>
           <div class="wt-hero-meta">
             <Badge variant="default">{widget.def.category}</Badge>
-            <Badge variant={widget.def.tier === 'celestial' ? 'accent' : 'default'}>
-              {widget.def.tier}
-            </Badge>
             {#if widget.isPlugin}
               <Badge variant="default">Plugin</Badge>
             {/if}

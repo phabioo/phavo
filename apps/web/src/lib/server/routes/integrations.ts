@@ -9,7 +9,7 @@ import { z } from 'zod';
 import { cached } from '$lib/server/agent.js';
 import { db } from '$lib/server/db.js';
 import type { AppVariables } from '$lib/server/middleware/auth.js';
-import { requireTier } from '$lib/server/middleware/auth.js';
+import { requireSession } from '$lib/server/middleware/auth.js';
 import { serverNotify } from '$lib/server/notifier.js';
 import { assertNotCloudMetadata } from '$lib/server/security.js';
 import {
@@ -377,7 +377,7 @@ function buildRssFeedAuth(
 }
 
 export function registerIntegrationRoutes(app: Hono<{ Variables: AppVariables }>): void {
-  app.get('/pihole', requireTier('celestial'), async (c) => {
+  app.get('/pihole', requireSession(), async (c) => {
     try {
       const credentials = await findConfiguredPiholeCredentials();
 
@@ -419,7 +419,7 @@ export function registerIntegrationRoutes(app: Hono<{ Variables: AppVariables }>
     }
   });
 
-  app.post('/pihole/test', requireTier('celestial'), async (c) => {
+  app.post('/pihole/test', requireSession(), async (c) => {
     try {
       let rawBody: unknown;
       try {
@@ -450,7 +450,7 @@ export function registerIntegrationRoutes(app: Hono<{ Variables: AppVariables }>
     }
   });
 
-  app.get('/rss', requireTier('celestial'), async (c) => {
+  app.get('/rss', requireSession(), async (c) => {
     try {
       const instances = await db
         .select()
@@ -511,7 +511,7 @@ export function registerIntegrationRoutes(app: Hono<{ Variables: AppVariables }>
     }
   });
 
-  app.get('/links', requireTier('celestial'), async (c) => {
+  app.get('/links', requireSession(), async (c) => {
     try {
       const instances = await db
         .select()
@@ -537,7 +537,7 @@ export function registerIntegrationRoutes(app: Hono<{ Variables: AppVariables }>
   });
 
   // ── Docker ───────────────────────────────────────────────────────────
-  app.get('/docker', requireTier('celestial'), async (c) => {
+  app.get('/docker', requireSession(), async (c) => {
     try {
       const instances = await db
         .select()
@@ -568,7 +568,7 @@ export function registerIntegrationRoutes(app: Hono<{ Variables: AppVariables }>
   });
 
   // ── Service Health ───────────────────────────────────────────────────
-  app.get('/service-health', requireTier('celestial'), async (c) => {
+  app.get('/service-health', requireSession(), async (c) => {
     try {
       const instances = await db
         .select()
@@ -619,7 +619,7 @@ export function registerIntegrationRoutes(app: Hono<{ Variables: AppVariables }>
   });
 
   // ── Speedtest ────────────────────────────────────────────────────────
-  app.get('/speedtest', requireTier('celestial'), async (c) => {
+  app.get('/speedtest', requireSession(), async (c) => {
     try {
       const rows = await db
         .select()
@@ -658,7 +658,7 @@ export function registerIntegrationRoutes(app: Hono<{ Variables: AppVariables }>
     }
   });
 
-  app.post('/speedtest', requireTier('celestial'), async (c) => {
+  app.post('/speedtest', requireSession(), async (c) => {
     if (speedtestInProgress) {
       return c.json(err('A speed test is already in progress'), 429);
     }
@@ -705,7 +705,7 @@ export function registerIntegrationRoutes(app: Hono<{ Variables: AppVariables }>
   });
 
   // ── Calendar ─────────────────────────────────────────────────────────
-  app.get('/calendar', requireTier('celestial'), async (c) => {
+  app.get('/calendar', requireSession(), async (c) => {
     try {
       const instances = await db
         .select()

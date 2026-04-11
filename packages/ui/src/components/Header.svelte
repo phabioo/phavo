@@ -18,14 +18,13 @@ interface Props {
   searchIndex?: SearchEntry[];
   searchEngineUrl?: string;
   aiProviders?: AiProviders;
-  tier?: 'stellar' | 'celestial';
   onSearchAction?: (entry: SearchEntry) => void;
   onAiChat?: (provider: 'ollama' | 'openai' | 'anthropic' | 'google' | 'custom', query: string) => Promise<string>;
 }
 
 let {
   dashboardName = 'PHAVO',
-  tierLabel = 'STELLAR',
+  tierLabel = 'CELESTIAL EDITION',
   scrolled = false,
   notificationCount,
   unreadCount = 0,
@@ -36,7 +35,6 @@ let {
   searchIndex = [],
   searchEngineUrl,
   aiProviders,
-  tier = 'stellar',
   onSearchAction,
   onAiChat,
 }: Props = $props();
@@ -72,7 +70,6 @@ const formattedTime = $derived(
       {searchIndex}
       {searchEngineUrl}
       {aiProviders}
-      {tier}
       onAction={onSearchAction}
       {onAiChat}
     />

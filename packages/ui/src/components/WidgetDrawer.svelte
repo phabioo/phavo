@@ -1,8 +1,7 @@
 <script lang="ts">
   import {
-    isWidgetDefinition,
-    isWidgetTeaserDefinition,
     type WidgetCategory,
+    type WidgetDefinition,
     type WidgetInstance,
     type WidgetManifestEntry,
     type WidgetSize,
@@ -38,8 +37,6 @@
       alreadyAdded?: string;
       remove?: string;
       removeConfirm?: string;
-      locked?: string;
-      upgradePrompt?: string;
     };
   }
 
@@ -67,7 +64,6 @@
 
   let activeFilter = $state<Category>('all');
   let confirmRemoveId = $state<string | null>(null);
-  let activeLockedId = $state<string | null>(null);
   let isDraggingFromDrawer = $state(false);
   let drawerHeight = $state(60);
   let selectedSizes = $state<Record<string, WidgetSize>>({});
@@ -86,7 +82,6 @@
         if (open) return;
         drawerHeight = 60;
         confirmRemoveId = null;
-        activeLockedId = null;
         selectedSizes = {};
       });
     });
@@ -95,23 +90,15 @@
   const filteredWidgets = $derived(
     activeFilter === 'all'
       ? widgets
-      : widgets.filter(
-          (widget) =>
-            isWidgetTeaserDefinition(widget) ||
-            (isWidgetDefinition(widget) && widget.category === activeFilter),
-        ),
+      : widgets.filter((widget) => widget.category === activeFilter),
   );
 
   function getInstanceForWidget(widgetId: string): WidgetInstance | undefined {
     return instances.find((instance) => instance.widgetId === widgetId);
   }
 
-  function isLocked(widget: WidgetManifestEntry): boolean {
-    return isWidgetTeaserDefinition(widget);
-  }
-
   function getAvailableSizes(widget: WidgetManifestEntry): WidgetSize[] {
-    return isWidgetDefinition(widget) ? widget.sizes : ['S'];
+    return widget.sizes;
   }
 
   function getDefaultSize(widget: WidgetManifestEntry): WidgetSize {
@@ -128,7 +115,7 @@
   }
 
   function handleSizeSelect(widget: WidgetManifestEntry, size: WidgetSize) {
-    if (!isWidgetDefinition(widget) || !widget.sizes.includes(size)) return;
+    if (!widget.sizes.includes(size)) return;
     selectedSizes = {
       ...selectedSizes,
       [widget.id]: size,
@@ -137,10 +124,6 @@
 
   function handleAdd(widget: WidgetManifestEntry) {
     onAdd(widget.id, getSelectedSize(widget));
-  }
-
-  function handleLockedClick(widgetId: string) {
-    activeLockedId = activeLockedId === widgetId ? null : widgetId;
   }
 
   function handleRemoveClick(instanceId: string) {
@@ -157,7 +140,7 @@
   }
 
   function handleDragStart(event: DragEvent, widget: WidgetManifestEntry) {
-    if (isLocked(widget) || !isWidgetDefinition(widget) || !event.dataTransfer) return;
+    if (!event.dataTransfer) return;
     isDraggingFromDrawer = true;
     event.dataTransfer.effectAllowed = 'copy';
     event.dataTransfer.setData(
@@ -176,7 +159,6 @@
   }
 
   function getWidgetCategory(widget: WidgetManifestEntry): TileCategory {
-    if (!isWidgetDefinition(widget)) return 'custom';
     return widget.category;
   }
 
@@ -185,17 +167,12 @@
     return category.charAt(0).toUpperCase() + category.slice(1);
   }
 
-  function getTierLabel(widget: WidgetManifestEntry): string {
-    if (isWidgetTeaserDefinition(widget)) {
-      return labels.locked ?? 'Locked';
-    }
-
-    return widget.tier.charAt(0).toUpperCase() + widget.tier.slice(1);
+  function getTierLabel(_widget: WidgetManifestEntry): string {
+    return '';
   }
 
-  function getTierColorClass(widget: WidgetManifestEntry): string {
-    if (isWidgetTeaserDefinition(widget)) return 'drawer-tile-tier-locked';
-    return widget.tier === 'celestial' ? 'drawer-tile-tier-celestial' : 'drawer-tile-tier-stellar';
+  function getTierColorClass(_widget: WidgetManifestEntry): string {
+    return '';
   }
 
   function startResize(e: MouseEvent | TouchEvent) {
@@ -277,12 +254,10 @@
       <div class="drawer-tiles-grid" role="list">
         {#each filteredWidgets as widget (widget.id)}
           {@const instance = getInstanceForWidget(widget.id)}
-          {@const locked = isLocked(widget)}
           <div
             class="drawer-tile"
-            class:drawer-tile-locked={locked}
             role="listitem"
-            draggable={!locked && !instance ? 'true' : 'false'}
+            draggable={!instance ? 'true' : 'false'}
             ondragstart={(event) => handleDragStart(event, widget)}
             ondragend={handleDragEnd}
           >
@@ -300,11 +275,6 @@
               >
                 {#if tilePreview}
                   {@render tilePreview(widget)}
-                {:else if locked}
-                  <div class="drawer-locked-preview">
-                    <Icon name="lock" size={16} />
-                    <span class="widget-category-label">{widget.name}</span>
-                  </div>
                 {:else}
                   <div class="drawer-locked-preview">
                     <span class="widget-category-label">{widget.name}</span>
@@ -317,7 +287,6 @@
             <div class="drawer-tile-info">
               <div class="drawer-tile-meta">
                 <span class="drawer-tile-category">{getWidgetCategoryLabel(widget)}</span>
-                <span class={getTierColorClass(widget)}>{getTierLabel(widget)}</span>
               </div>
               <span class="drawer-tile-name">{widget.name}</span>
               <span class="drawer-tile-desc">{widget.description}</span>
@@ -325,7 +294,6 @@
 
             <!-- Bottom: size selector + action button -->
             <div class="drawer-tile-footer">
-              {#if !locked}
                 <div class="drawer-tile-controls">
                   {#each getAvailableSizes(widget) as s}
                     <button
@@ -362,24 +330,7 @@
                     {labels.addToBoard ?? '+ Add'}
                   </button>
                 {/if}
-              {:else}
-                <button
-                  class="drawer-tile-btn drawer-tile-btn-locked"
-                  onclick={() => handleLockedClick(widget.id)}
-                >
-                  {labels.locked ?? 'Locked'}
-                </button>
-              {/if}
             </div>
-
-            {#if locked && activeLockedId === widget.id}
-              <div class="drawer-tile-message">
-                <Icon name="sparkles" size={14} />
-                <span>
-                  {labels.upgradePrompt ?? 'Upgrade to Celestial to unlock this widget.'}
-                </span>
-              </div>
-            {/if}
           </div>
         {/each}
       </div>
@@ -535,7 +486,7 @@
     transition: transform 0.15s ease;
   }
 
-  .drawer-tile:hover:not(.drawer-tile-locked) {
+  .drawer-tile:hover {
     transform: scale(1.01);
   }
 
@@ -619,10 +570,6 @@
     text-transform: uppercase;
     color: var(--color-on-surface-variant);
   }
-
-  .drawer-tile-tier-stellar  { color: var(--color-primary-fixed); }
-  .drawer-tile-tier-celestial { color: var(--color-secondary); }
-  .drawer-tile-tier-locked   { color: var(--color-outline); }
 
   .drawer-tile-preview-slot {
     min-height: 0;
@@ -715,24 +662,6 @@
   .drawer-tile-btn-remove {
     color: var(--color-error);
     background: color-mix(in srgb, var(--color-error-container) 20%, transparent);
-  }
-
-  .drawer-tile-btn-locked {
-    background: color-mix(in srgb, var(--color-outline) 10%, transparent);
-    color: var(--color-outline);
-    cursor: not-allowed;
-  }
-
-  .drawer-tile-message {
-    display: flex;
-    align-items: flex-start;
-    gap: var(--space-2);
-    padding: var(--space-3);
-    border-radius: var(--radius-lg);
-    background: color-mix(in srgb, var(--color-outline) 8%, transparent);
-    color: var(--color-on-surface);
-    font-size: 11px;
-    line-height: 1.5;
   }
 
   /* Pi 3/4 performance fallback */

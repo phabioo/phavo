@@ -6,7 +6,7 @@
 > Every agent working on PHAVO UI must follow this document exactly.
 > When in doubt: this document wins over any other reference.
 
-> Updated for v0.8.0 UI shell polish: header scroll-state styling and sidebar
+> Updated for v0.8.2 UI shell polish: header scroll-state styling and sidebar
 > page-delete affordances are now part of the baseline implementation.
 
 ---
@@ -181,9 +181,9 @@ Use `overflow: visible` or leave unset.
 - Background: color-mix(in srgb, var(--color-secondary) 10%, transparent)
 - Right border: 2px solid `--color-secondary`
 
-**Upgrade card:**
+**Edition / status card:**
 - Background: `--color-surface-card`
-- CTA button: pill, gradient `--color-primary-fixed → --color-primary-fixed-dim`
+- Use for passive product/status messaging only — never for upgrade CTAs or feature gating
 
 ### Header
 Grid layout: `grid-template-columns: 1fr auto 1fr` — guarantees mathematical centering.
@@ -303,7 +303,7 @@ filter: drop-shadow(0 0 20px rgba(77, 220, 198, 0.2));
 }
 ```
 
-Content: `POWERED BY · PHAVO · {TIER} EDITION · VERSION X.X.X · {DEVICE}`
+Content: `POWERED BY · PHAVO · CELESTIAL EDITION · VERSION X.X.X · {DEVICE}`
 
 ---
 
@@ -353,7 +353,7 @@ Must NOT conflict with the card's `background` (use `background-image` only).
 8. PHAVO wordmark: `--color-primary-fixed` (#f9e287)
 9. Ambient glows: always present in layout, fixed positioned, z:0
 10. `svelte.config.js` must never have `compilerOptions: { runes: true }`
-11. Tier identifiers in code: `stellar` / `celestial` only
+11. "Celestial Edition" is UI copy only — never a code gate or runtime entitlement
 
 ---
 

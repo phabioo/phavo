@@ -1,12 +1,11 @@
 import { decrypt, schema } from '@phavo/db';
 import { err, ok } from '@phavo/types';
 import { hashPassword, verifyPassword } from 'better-auth/crypto';
-import { asc, eq } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import type { Hono } from 'hono';
 import { z } from 'zod';
 import { checkRateLimit, getLoginAttemptCount, recordLoginAttempt } from '$lib/server/auth.js';
 import { db } from '$lib/server/db.js';
-import { activateOfflineLicense, verifyStoredLicenseActivation } from '$lib/server/license.js';
 import type { AppVariables } from '$lib/server/middleware/auth.js';
 import { requireSession } from '$lib/server/middleware/auth.js';
 import { getClientIp } from '$lib/server/middleware/rate-limit.js';
@@ -25,7 +24,6 @@ const LoginSchema = z.object({
   authMode: z.literal('local'),
   username: z.string().min(1),
   password: z.string().min(8, 'Password must be at least 8 characters'),
-  licenseKey: z.string().optional(),
 });
 
 const TotpSchema = z.object({
@@ -41,12 +39,12 @@ const PasswordSchema = z.object({
 export function registerAuthRoutes(app: Hono<{ Variables: AppVariables }>): void {
   /**
    * POST /api/v1/auth/login — public, rate-limited.
-   * Handles local authentication and optional offline license activation.
+   * Handles local authentication.
    */
   app.post('/auth/login', async (c) => {
     // In dev mode, always succeed without real credentials.
     if (DEV_MOCK_AUTH_ENABLED) {
-      const response = c.json(ok({ tier: 'stellar' as const }));
+      const response = c.json(ok(null));
       await setSessionCookies(response, 'dev', 7 * 24 * 60 * 60);
       return response;
     }
@@ -78,86 +76,8 @@ export function registerAuthRoutes(app: Hono<{ Variables: AppVariables }>): void
     const SESSION_MAX_AGE = 7 * 24 * 60 * 60; // 7 days in seconds
 
     // ── Local auth ──────────────────────────────────────────────────────────────
-    // For local auth, "username" is stored in the email field (single-user setup).
-    const { username, password, licenseKey } = body;
+    const { username, password } = body;
 
-    if (licenseKey) {
-      const activation = activateOfflineLicense(licenseKey);
-      if (!activation.valid) {
-        recordLoginAttempt(ip, false);
-        console.log(`[phavo] Login failed: ip=${ip} attempt=${getLoginAttemptCount(ip)}`);
-        return c.json(err(activation.error), 400);
-      }
-
-      const passwordHash = await hashPassword(password);
-      const newUserId = crypto.randomUUID();
-
-      // Check if user already exists (re-activation).
-      const existingLocalUsers = await db
-        .select()
-        .from(schema.users)
-        .where(eq(schema.users.authMode, 'local'));
-      let localUserId = existingLocalUsers[0]?.id;
-
-      if (localUserId) {
-        await db.update(schema.users).set({ passwordHash }).where(eq(schema.users.id, localUserId));
-      } else {
-        localUserId = newUserId;
-        await db.insert(schema.users).values({
-          id: localUserId,
-          // email field used as username for local auth (schema limitation for Phase 1).
-          email: username,
-          passwordHash,
-          authMode: 'local',
-        });
-      }
-
-      await db.insert(schema.licenseActivation).values({
-        tier: 'celestial',
-        licenseId: activation.activation.licenseId,
-        issuedAt: activation.activation.issuedAt,
-        payloadB64: activation.activation.payloadB64,
-        signatureB64: activation.activation.signatureB64,
-      });
-
-      const localUserRows = await db
-        .select()
-        .from(schema.users)
-        .where(eq(schema.users.id, localUserId));
-      const localUser = localUserRows[0];
-
-      if (localUser?.totpSecret) {
-        const partialToken = generateSessionToken();
-        if (partialSessions.size >= 1000) {
-          return c.json(err('Too many pending sessions'), 429);
-        }
-        partialSessions.set(partialToken, {
-          userId: localUserId,
-          tier: 'celestial',
-          authMode: 'local',
-          expiresMs: Date.now() + 5 * 60 * 1000,
-        });
-        return c.json(ok({ requiresTotp: true as const, partialToken }));
-      }
-
-      const token = generateSessionToken();
-      await db.insert(schema.sessions).values({
-        id: token,
-        userId: localUserId,
-        tier: 'celestial',
-        authMode: 'local',
-        validatedAt: Date.now(),
-        expiresAt: Date.now() + SESSION_MAX_AGE * 1000,
-      });
-
-      recordLoginAttempt(ip, true);
-      console.log(`[phavo] Login success: userId=${localUserId} tier=celestial ip=${ip}`);
-      const response = c.json(ok({ tier: 'celestial' as const }));
-      await setSessionCookies(response, token, SESSION_MAX_AGE);
-      return response;
-    }
-
-    // Subsequent local login (fully offline).
     const localUsers = await db
       .select()
       .from(schema.users)
@@ -177,20 +97,6 @@ export function registerAuthRoutes(app: Hono<{ Variables: AppVariables }>): void
       return c.json(err('Invalid credentials'), 401);
     }
 
-    // Verify stored license activation (if present). Invalid activation drops to Stellar.
-    const activations = await db
-      .select()
-      .from(schema.licenseActivation)
-      .orderBy(asc(schema.licenseActivation.activatedAt));
-    const latestActivation = activations[activations.length - 1];
-    const verifiedActivation = latestActivation
-      ? verifyStoredLicenseActivation({
-          payloadB64: latestActivation.payloadB64,
-          signatureB64: latestActivation.signatureB64,
-        })
-      : null;
-    const tier: 'stellar' | 'celestial' = verifiedActivation ? 'celestial' : 'stellar';
-
     // Check if TOTP is enabled for this user.
     if (user.totpSecret) {
       const partialToken = generateSessionToken();
@@ -199,7 +105,6 @@ export function registerAuthRoutes(app: Hono<{ Variables: AppVariables }>): void
       }
       partialSessions.set(partialToken, {
         userId: user.id,
-        tier,
         authMode: 'local',
         expiresMs: Date.now() + 5 * 60 * 1000,
       });
@@ -210,15 +115,14 @@ export function registerAuthRoutes(app: Hono<{ Variables: AppVariables }>): void
     await db.insert(schema.sessions).values({
       id: token,
       userId: user.id,
-      tier,
       authMode: 'local',
       validatedAt: Date.now(),
       expiresAt: Date.now() + SESSION_MAX_AGE * 1000,
     });
 
     recordLoginAttempt(ip, true);
-    console.log(`[phavo] Login success: userId=${user.id} tier=${tier} ip=${ip}`);
-    const response = c.json(ok({ tier }));
+    console.log(`[phavo] Login success: userId=${user.id} ip=${ip}`);
+    const response = c.json(ok(null));
     await setSessionCookies(response, token, SESSION_MAX_AGE);
     return response;
   });
@@ -263,14 +167,13 @@ export function registerAuthRoutes(app: Hono<{ Variables: AppVariables }>): void
     await db.insert(schema.sessions).values({
       id: token,
       userId: pending.userId,
-      tier: pending.tier,
       authMode: pending.authMode,
       validatedAt: Date.now(),
       expiresAt: Date.now() + SESSION_MAX_AGE * 1000,
     });
     partialSessions.delete(partialToken);
 
-    const response = c.json(ok({ tier: pending.tier }));
+    const response = c.json(ok(null));
     await setSessionCookies(response, token, SESSION_MAX_AGE);
     return response;
   });
@@ -288,7 +191,6 @@ export function registerAuthRoutes(app: Hono<{ Variables: AppVariables }>): void
 
   /**
    * GET /api/v1/auth/session — returns minimal session info.
-   * NOTE: tier is intentionally excluded — never sent to client (arch spec §17.5).
    */
   app.get('/auth/session', requireSession(), (c) => {
     const session = c.get('session');

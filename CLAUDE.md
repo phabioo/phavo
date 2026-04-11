@@ -10,15 +10,13 @@
 
 PHAVO is a modular, self-hosted personal dashboard. It runs locally — no cloud
 required, no account required. One binary, one Docker container, your data stays
-on your hardware.
-
-**Two tiers:**
-- **Stellar** (free) — base widgets, 1 page (Home)
-- **Celestial** (paid, one-time) — all widgets, unlimited pages, AI assistant
+on your hardware. All features are available to all users — open source under
+the MIT license.
 
 There are no subscriptions. There is no phavo.net account backend.
-Runtime auth and license are local-only: offline Ed25519 license verification and
-local session enforcement.
+Auth is local-only with local session enforcement.
+
+Current product edition name: **Celestial Edition**.
 
 ## Versioning Policy
 
@@ -29,7 +27,7 @@ Third digit .PATCH only for urgent hotfixes (e.g. v1.0.1)
 - v1.0 — First public release (MA + MB + MC complete)
 - v1.x — Post-release feature milestones
 
-Current version: 0.8.1
+Current version: 0.8.2
 
 ---
 
@@ -39,8 +37,6 @@ Current version: 0.8.1
 phavo/
 ├── apps/
 │   ├── web/          ← SvelteKit web app (the ONLY active runtime)
-│   ├── desktop/      ← Tauri stub (inactive, post-v1.0)
-│   └── mobile/       ← stub (inactive, future)
 ├── packages/
 │   ├── ui/           ← @phavo/ui — shared Svelte components + theme.css
 │   ├── db/           ← @phavo/db — Drizzle schema, migrations, crypto
@@ -95,25 +91,19 @@ Never import from `lucide-svelte` directly.
 All values come from CSS tokens defined in `packages/ui/src/theme.css`.
 If you need a color, find the token. If no token exists, add one to `theme.css` first.
 
-### 4. Tier Identifiers
-Tiers in code are `stellar` and `celestial`. No other strings.
-- Do NOT use: `free`, `standard`, `pro`, `local`
-- The `requireTier()` middleware uses these strings
-- The DB schema enum uses these strings
-
-### 5. Windows / Bun Workspace Scripts
+### 4. Windows / Bun Workspace Scripts
 On Windows, Bun's implicit bin resolution in workspaces is broken.
 `package.json` scripts call local tool entrypoints directly.
 **Never** modify these back to implicit calls — they will break on Windows.
 
-### 6. Runtime Network Boundaries
+### 5. Runtime Network Boundaries
 The app is local-first. Outbound calls must remain explicit and scoped:
 - user-initiated update check (`GET /api/v1/update/check`, 1h cache)
 - integration/data calls (Weather, RSS, Pi-hole)
 
 Never add telemetry, analytics, or background phone-home behavior.
 
-### 7. Tailwind v4 Dual-Valid
+### 6. Tailwind v4 Dual-Valid
 The `@theme` block in `theme.css` makes all tokens available both as:
 - Tailwind utility classes: `bg-surface`, `text-primary`
 - CSS variables: `var(--color-surface)`, `var(--color-primary)`
@@ -162,11 +152,10 @@ Key route modules:
 | Module | Responsibility |
 |---|---|
 | `auth.ts` | Login, session, logout, TOTP |
-| `widgets.ts` | Widget manifest (tier-filtered), instances, config |
+| `widgets.ts` | Widget manifest, instances, config |
 | `tabs.ts` | Pages CRUD |
 | `metrics.ts` | CPU, memory, disk, network, temp, uptime, weather |
 | `integrations.ts` | Pi-hole, RSS, links |
-| `license.ts` | Celestial key activation/deactivation |
 | `ai.ts` | AI provider config, chat |
 | `notifications.ts` | Notification queue, mark-read, clear-all |
 | `system.ts` | Health, version, update check |
@@ -175,9 +164,9 @@ Key route modules:
 
 ## Widget System
 
-Widget tier assignments:
-- **Stellar (7):** CPU, Memory, Disk, Network, Temperature, Uptime, Weather
-- **Celestial (7):** Pi-hole, RSS Feed, Links/Bookmarks, Docker, Service Health, Speedtest, Calendar
+Available widgets (14):
+- **System (7):** CPU, Memory, Disk, Network, Temperature, Uptime, Weather
+- **Integration (7):** Pi-hole, RSS Feed, Links/Bookmarks, Docker, Service Health, Speedtest, Calendar
 
 Widget sizes and BentoGrid spans:
 | Size | colSpan | rowSpan | Content depth |
@@ -237,18 +226,19 @@ All three collapse to `0ms` under `prefers-reduced-motion: reduce`.
 
 SQLite via Drizzle + libSQL. Migrations in `packages/db/src/migrations/`.
 Core tables: `users`, `sessions`, `config`, `tabs`, `widget_instances`,
-`credentials`, `license_activation`, `notifications`
+`credentials`, `notifications`
 
 Migrations:
 | File | Change |
 |---|---|
 | `0000_initial.sql` | Bootstrap |
-| `0001_spicy_clea.sql` | Core schema: users, sessions, config, tabs, widget_instances, credentials, license_activation |
+| `0001_spicy_clea.sql` | Core schema: users, sessions, config, tabs, widget_instances, credentials |
 | `0002_keen_luminals.sql` | Auth tables |
 | `0003_auth_mode_rename.sql` | Legacy auth mode rename in pre-v1 schema history |
 | `0004_notifications.sql` | Add `notifications` table (DB-persisted, survives restarts) |
-| `0005_local_auth_offline_license.sql` | Local-only auth normalization + offline license payload/signature schema (rebuild sessions + license_activation) |
+| `0005_local_auth_offline_license.sql` | Local-only auth normalization (rebuild sessions) |
 | `0006_plugin_data.sql` | Add `plugin_data` table (Speedtest history) |
+| `0007_remove_tier.sql` | Remove `tier` column from sessions, drop obsolete activation table |
 
 Sensitive widget config: AES-256-GCM encrypted in `widget_instances.config_encrypted`.
 Secrets: `credentials` table, keyed by widget instance path.
@@ -290,18 +280,9 @@ See `docs/rules.md` for engineering rules.
 
 ## Dev Commands
 
-**Stellar tier (default):**
 ```bash
 PHAVO_DEV_MOCK_AUTH=true PHAVO_SECRET=dev-secret PHAVO_ENV=development \
   PHAVO_PORT=3000 PHAVO_DATA_DIR=./apps/web/.dev-data \
-  ~/.bun/bin/bun run --cwd apps/web dev -- --host 0.0.0.0
-```
-
-**Celestial tier:**
-```bash
-PHAVO_DEV_MOCK_AUTH=true PHAVO_SECRET=dev-secret PHAVO_ENV=development \
-  PHAVO_PORT=3000 PHAVO_DATA_DIR=./apps/web/.dev-data \
-  PHAVO_DEV_TIER=celestial \
   ~/.bun/bin/bun run --cwd apps/web dev -- --host 0.0.0.0
 ```
 

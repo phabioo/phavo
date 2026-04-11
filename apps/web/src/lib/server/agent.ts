@@ -23,7 +23,10 @@ export async function cached<T>(key: string, ttlMs: number, fn: () => Promise<T>
     let oldestKey: string | undefined;
     let oldestTs = Infinity;
     for (const [k, v] of cache) {
-      if (v.ts < oldestTs) { oldestTs = v.ts; oldestKey = k; }
+      if (v.ts < oldestTs) {
+        oldestTs = v.ts;
+        oldestKey = k;
+      }
     }
     if (oldestKey) cache.delete(oldestKey);
   }

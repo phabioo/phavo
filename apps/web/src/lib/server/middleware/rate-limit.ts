@@ -49,7 +49,10 @@ export function checkIpRateLimit(
       let oldestKey: string | undefined;
       let oldestStart = Infinity;
       for (const [k, v] of buckets) {
-        if (v.windowStart < oldestStart) { oldestStart = v.windowStart; oldestKey = k; }
+        if (v.windowStart < oldestStart) {
+          oldestStart = v.windowStart;
+          oldestKey = k;
+        }
       }
       if (oldestKey) buckets.delete(oldestKey);
     }
@@ -80,9 +83,6 @@ export const IMPORT_RULE: RateLimitRule = { maxRequests: 5, windowMs: 10 * 60 * 
 
 /** Default for all other authenticated endpoints — 120 req / 1 min per IP. */
 export const DEFAULT_RULE: RateLimitRule = { maxRequests: 120, windowMs: 60 * 1000 };
-
-/** POST /webhooks/gumroad — 20 req / 1 min per IP. */
-export const WEBHOOK_RULE: RateLimitRule = { maxRequests: 20, windowMs: 60 * 1000 };
 
 /**
  * Extracts the client IP from a Hono request.

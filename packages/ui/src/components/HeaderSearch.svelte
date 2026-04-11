@@ -23,7 +23,6 @@
     searchIndex?: SearchEntry[];
     searchEngineUrl?: string | undefined;
     aiProviders?: AiProviders | undefined;
-    tier?: 'stellar' | 'celestial';
     onAction?: ((entry: SearchEntry) => void) | undefined;
     onAiChat?:
       | ((
@@ -37,7 +36,6 @@
     searchIndex = [],
     searchEngineUrl = 'https://duckduckgo.com/?q={query}',
     aiProviders = { ollama: false, openai: false, anthropic: false, google: false, custom: false },
-    tier = 'stellar',
     onAction,
     onAiChat,
   }: Props = $props();
@@ -132,7 +130,7 @@
   const webSearchIndex = $derived(results.length);
   const aiStartIndex = $derived(results.length + (webSearchEntry ? 1 : 0));
   const totalResults = $derived(
-    results.length + (webSearchEntry ? 1 : 0) + (tier !== 'stellar' ? aiEntries.length : 0),
+    results.length + (webSearchEntry ? 1 : 0) + aiEntries.length,
   );
 
   function clickOutside(node: HTMLElement, callback: () => void) {
@@ -368,7 +366,7 @@
           </button>
         {/if}
 
-        {#if tier !== 'stellar' && aiEntries.length > 0}
+        {#if aiEntries.length > 0}
           <div class="hs-group-label">Ask AI</div>
           {#each aiEntries as aiEntry, index (aiEntry.id ?? index)}
             <button
@@ -389,27 +387,6 @@
               </span>
             </button>
           {/each}
-        {/if}
-
-        {#if tier === 'stellar'}
-          <div class="hs-group-label">Ask AI</div>
-          <div class="hs-item hs-item--locked">
-            <span class="hs-item-icon">
-              <Icon name="lock" size={14} />
-            </span>
-            <span class="hs-item-copy">
-              <span class="hs-item-label">AI assistant is available on Standard and above</span>
-            </span>
-            <a
-              href="https://phavo.net/upgrade"
-              target="_blank"
-              rel="noopener noreferrer"
-              class="hs-upgrade"
-              onmousedown={(event) => event.stopPropagation()}
-            >
-              Upgrade
-            </a>
-          </div>
         {/if}
       {/if}
 
@@ -633,15 +610,6 @@
     border-color: color-mix(in srgb, var(--color-primary) 16%, transparent);
   }
 
-  .hs-item--locked {
-    cursor: default;
-  }
-
-  .hs-item--locked:hover {
-    background: color-mix(in srgb, var(--color-surface-dim) 28%, transparent);
-    border-color: transparent;
-  }
-
   .hs-item-icon {
     display: inline-flex;
     align-items: center;
@@ -672,22 +640,6 @@
     color: var(--color-outline);
     font-size: 11px;
     line-height: 1.4;
-  }
-
-  .hs-upgrade {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 30px;
-    padding: 0 var(--space-3);
-    border-radius: var(--radius-full);
-    border: 1px solid color-mix(in srgb, var(--color-primary) 24%, transparent);
-    background: color-mix(in srgb, var(--color-surface-dim) 64%, transparent);
-    color: var(--color-primary);
-    font-size: 11px;
-    font-weight: 700;
-    text-decoration: none;
-    flex-shrink: 0;
   }
 
   .hs-ai-response {

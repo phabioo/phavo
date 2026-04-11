@@ -122,22 +122,22 @@ body{font-family:var(--font-ui);background:var(--bg);color:var(--text);font-size
 <div class="doc-header">
   <div>
     <h1>Phavo — Road to v1.0</h1>
-    <div class="sub">S0–S9 + Audit + Infra complete · 3 Pre-Launch Milestones remaining · Updated 2026-04-11 · Runtime aligned to v0.8.1 · PRD v4.1 · Arch Spec v3.1 · Design: Celestial Wish</div>
+    <div class="sub">S0–S9 + Audit + Infra + MA + MB complete · MC remaining · Updated 2026-04-12 · Runtime aligned to v0.8.2 · PRD v5.0 · Arch Spec v3.2 · Design: Celestial Wish</div>
   </div>
   <div class="legend">
     <div class="leg-item"><div class="leg-dot" style="background:#3fc8a0"></div>Done</div>
     <div class="leg-item"><div class="leg-dot" style="background:#dcc66e"></div>Active</div>
     <div class="leg-item"><div class="leg-dot" style="background:#a89cf5"></div>Pre-launch</div>
-    <div class="leg-item"><div class="leg-dot" style="background:#5b9bd5"></div>Post-v1.0</div>
+    <div class="leg-item"><div class="leg-dot" style="background:#5b9bd5"></div>Future</div>
   </div>
 </div>
 
 <div class="progress-bar">
   <span class="progress-label">Overall progress</span>
-  <div class="progress-track"><div class="progress-fill" style="width:87%"></div></div>
-  <span class="progress-label"><b>~87%</b> to v1.0
-  &nbsp;·&nbsp; MA complete · MB nearly done (Ed25519 only)
-  &nbsp;·&nbsp; MC active (Pi-testing focus)</span>
+  <div class="progress-track"><div class="progress-fill" style="width:82%"></div></div>
+  <span class="progress-label"><b>~82%</b> to v1.0
+  &nbsp;·&nbsp; Open Source (MIT) · MA + MB complete
+  &nbsp;·&nbsp; MC remaining</span>
 </div>
 
 <div class="main">
@@ -157,14 +157,9 @@ body{font-family:var(--font-ui);background:var(--bg);color:var(--text);font-size
   <a href="#infra"     class="done">Infrastructure</a>
   <div class="sidebar-label">Pre-Launch</div>
   <a href="#ma"  class="done">MA — Design &amp; Experience</a>
-  <a href="#mb"  class="active">MB — Backend &amp; Activation</a>
+  <a href="#mb"  class="done">MB — Backend &amp; Open Source</a>
   <a href="#mc"  class="active">MC — Launch</a>
   <a href="#launch">v1.0 Checklist</a>
-  <div class="sidebar-label">Post-v1.0</div>
-  <a href="#v11"    class="post">v1.1 — Linux + Plugins</a>
-  <a href="#v12"    class="post">v1.2 — macOS</a>
-  <a href="#v13"    class="post">v1.3 — Windows</a>
-  <a href="#phase4" class="post">Phase 4 — Cloud</a>
 </nav>
 
 <div class="content">
@@ -175,7 +170,7 @@ body{font-family:var(--font-ui);background:var(--bg);color:var(--text);font-size
 <div class="session done" id="s0">
   <div class="session-header"><span class="session-num">S0</span><span class="session-title">Monorepo Scaffold</span><span class="session-subtitle">complete</span></div>
   <div class="session-body"><div class="tasks">
-    <div class="task task-done"><div class="task-icon">✅</div><div class="task-text">Turborepo monorepo — apps/web + desktop/mobile stubs + packages/ui/db/types/agent</div></div>
+    <div class="task task-done"><div class="task-icon">✅</div><div class="task-text">Turborepo monorepo — apps/web + packages/ui/db/types/agent</div></div>
     <div class="task task-done"><div class="task-icon">✅</div><div class="task-text">Dashboard layout — Sidebar, Header, widget cards, base metric widgets</div></div>
     <div class="task task-done"><div class="task-icon">✅</div><div class="task-text">Config GET/POST, update check, notification panel, Dockerfile + CI</div></div>
   </div></div>
@@ -191,9 +186,9 @@ body{font-family:var(--font-ui);background:var(--bg);color:var(--text);font-size
 </div>
 
 <div class="session done" id="s2">
-  <div class="session-header"><span class="session-num">S2</span><span class="session-title">Auth, Session Middleware &amp; Tier Enforcement</span><span class="session-subtitle">complete</span></div>
+  <div class="session-header"><span class="session-num">S2</span><span class="session-title">Auth, Session Middleware &amp; Security</span><span class="session-subtitle">complete</span></div>
   <div class="session-body"><div class="tasks">
-    <div class="task task-done"><div class="task-icon">✅</div><div class="task-text">authMiddleware, requireTier(), requireSession() — local auth only</div></div>
+    <div class="task task-done"><div class="task-icon">✅</div><div class="task-text">authMiddleware + requireSession() — local auth only</div></div>
     <div class="task task-done"><div class="task-icon">✅</div><div class="task-text">csrfMiddleware + fetchWithCsrf() — all non-GET mutations protected</div></div>
     <div class="task task-done"><div class="task-icon">✅</div><div class="task-text">Argon2id password hashing, TOTP 2FA setup + verify</div></div>
   </div></div>
@@ -220,7 +215,7 @@ body{font-family:var(--font-ui);background:var(--bg);color:var(--text);font-size
 <div class="session done" id="s5">
   <div class="session-header"><span class="session-num">S5</span><span class="session-title">Settings — All Tabs</span><span class="session-subtitle">complete</span></div>
   <div class="session-body"><div class="tasks">
-    <div class="task task-done"><div class="task-icon">✅</div><div class="task-text">General, Widgets, Backup &amp; Export, Licence, Account, Plugins, About tabs</div></div>
+    <div class="task task-done"><div class="task-icon">✅</div><div class="task-text">General, Widgets, Backup &amp; Export, Account, Plugins, About tabs</div></div>
     <div class="task task-done"><div class="task-icon">✅</div><div class="task-text">SchemaRenderer — auto-renders widget config forms from ZodSchema</div></div>
   </div></div>
 </div>
@@ -229,7 +224,7 @@ body{font-family:var(--font-ui);background:var(--bg);color:var(--text);font-size
   <div class="session-header"><span class="session-num">S6</span><span class="session-title">Backup &amp; Export</span><span class="session-subtitle">complete</span></div>
   <div class="session-body"><div class="tasks">
     <div class="task task-done"><div class="task-icon">✅</div><div class="task-text">.phavo export — JSON archive, credentials excluded by default</div></div>
-    <div class="task task-done"><div class="task-icon">✅</div><div class="task-text">Import with tier-aware page cap, passphrase-protected credential blob</div></div>
+    <div class="task task-done"><div class="task-icon">✅</div><div class="task-text">Import with passphrase-protected credential blob and schema-safe fallback handling</div></div>
   </div></div>
 </div>
 
@@ -245,7 +240,7 @@ body{font-family:var(--font-ui);background:var(--bg);color:var(--text);font-size
   <div class="session-header"><span class="session-num">S8</span><span class="session-title">Security Hardening</span><span class="session-subtitle">complete</span></div>
   <div class="session-body"><div class="tasks">
     <div class="task task-done"><div class="task-icon">✅</div><div class="task-text">SSRF guard, per-IP rate limiting, execFile subprocess safety</div></div>
-    <div class="task task-done"><div class="task-icon">✅</div><div class="task-text">Tier-filtered widget manifest — Stellar clients never receive Celestial endpoints</div></div>
+    <div class="task task-done"><div class="task-icon">✅</div><div class="task-text">Widget manifest cleanup — full registry available to every local client with no feature gates</div></div>
     <div class="task task-done"><div class="task-icon">✅</div><div class="task-text">Plugin import allowlist + permission declaration system</div></div>
   </div></div>
 </div>
@@ -300,29 +295,24 @@ body{font-family:var(--font-ui);background:var(--bg);color:var(--text);font-size
 </div>
 
 <!-- MB -->
-<div class="session active" id="mb">
-  <div class="session-header"><span class="session-num">MB</span><span class="session-title">Backend &amp; Activation</span><span class="session-subtitle">active</span></div>
+<div class="session done" id="mb">
+  <div class="session-header"><span class="session-num">MB</span><span class="session-title">Backend &amp; Open Source Alignment</span><span class="session-subtitle">done</span></div>
   <div class="session-body">
-  <div class="callout" style="margin-bottom:12px">Backend milestone. Activates the Celestial tier commercially. All API work, license flow, and database migrations live here.</div>
+  <div class="callout" style="margin-bottom:12px">Backend milestone. Widget backends, local-only auth normalization, AI integration, and open-source cleanup are complete.</div>
   <div class="tasks">
-    <div class="task task-done"><div class="task-icon">✅</div><div class="task-text">DB migration 0005 — cleanup legacy auth/tier leftovers in existing installs; canonical runtime values remain <code>stellar</code>/<code>celestial</code> and auth mode <code>local</code></div><span class="task-tag tag-db">db</span></div>
-    <div class="task task-done"><div class="task-icon">✅</div><div class="task-text">Update Drizzle schema — sessions.tier enum: <code>'stellar' | 'celestial'</code>; remove phavo-net authMode</div><span class="task-tag tag-db">db</span></div>
+    <div class="task task-done"><div class="task-icon">✅</div><div class="task-text">DB migration 0005 — local-only auth normalization and cleanup of legacy activation leftovers in existing installs</div><span class="task-tag tag-db">db</span></div>
     <div class="task task-done"><div class="task-icon">✅</div><div class="task-text">Register Docker widget — wire <code>GET /api/v1/integrations/docker</code> handler (container list, CPU/RAM, restart)</div><span class="task-tag tag-api">api</span></div>
     <div class="task task-done"><div class="task-icon">✅</div><div class="task-text">Register Service Health widget — wire <code>GET /api/v1/integrations/service-health</code> handler</div><span class="task-tag tag-api">api</span></div>
     <div class="task task-done"><div class="task-icon">✅</div><div class="task-text">Register Speedtest widget — wire <code>POST /api/v1/integrations/speedtest</code>; rate-limit 1/5min; 30-result history</div><span class="task-tag tag-api">api</span></div>
     <div class="task task-done"><div class="task-icon">✅</div><div class="task-text">Register Calendar widget — wire CalDAV handler; credentials in credentials table</div><span class="task-tag tag-api">api</span></div>
     <div class="task task-done"><div class="task-icon">✅</div><div class="task-text">DB migration 0006 — add <code>plugin_data</code> table (Speedtest history)</div><span class="task-tag tag-db">db</span></div>
-    <div class="task"><div class="task-icon">⬜</div><div class="task-text">Ed25519 key generation — private key in GitHub Actions Secrets; two public keys embedded in binary</div><span class="task-tag tag-security">security</span></div>
-    <div class="task task-done"><div class="task-icon">✅</div><div class="task-text"><code>POST /api/v1/license/activate</code> — offline Ed25519 verification, no network call</div><span class="task-tag tag-api">api</span></div>
-    <div class="task task-done"><div class="task-icon">✅</div><div class="task-text"><code>POST /api/v1/license/deactivate</code></div><span class="task-tag tag-api">api</span></div>
-    <div class="task task-done"><div class="task-icon">✅</div><div class="task-text">Server startup re-verification of stored license key</div><span class="task-tag tag-security">security</span></div>
-    <div class="task task-done"><div class="task-icon">✅</div><div class="task-text">Settings → Licence page wired to activation endpoints</div><span class="task-tag tag-ui">ui</span></div>
+    <div class="task task-done"><div class="task-icon">✅</div><div class="task-text">DB migration 0007 — remove legacy entitlement fields and obsolete activation tables from schema history</div><span class="task-tag tag-db">db</span></div>
     <div class="task task-done"><div class="task-icon">✅</div><div class="task-text">
   AI SDK integration — Vercel AI SDK (<code>ai</code> + <code>ollama-ai-provider</code>);
   unified provider abstraction for Ollama (local), OpenAI, and Anthropic;
   streaming via Hono SSE; searchbar AI uses stream
 </div><span class="task-tag tag-api">api</span></div>
-    <div class="task task-done"><div class="task-icon">✅</div><div class="task-text">Gumroad webhook → phavo.net key generation → email key to buyer</div><span class="task-tag tag-infra">infra</span></div>
+    <div class="task task-done"><div class="task-icon">✅</div><div class="task-text">Docs + packaging aligned for MIT open-source release with no feature gates</div><span class="task-tag tag-infra">infra</span></div>
   </div></div>
 </div>
 
@@ -330,16 +320,15 @@ body{font-family:var(--font-ui);background:var(--bg);color:var(--text);font-size
 <div class="session active" id="mc">
   <div class="session-header"><span class="session-num">MC</span><span class="session-title">Launch</span><span class="session-subtitle">active — Pi-testing focus</span></div>
   <div class="session-body">
-  <div class="callout" style="margin-bottom:12px">Launch milestone. MA complete, MB nearly done. Immediate goal: working Docker Hub install + in-app updates so the Pi can be used as the real test target.</div>
+  <div class="callout" style="margin-bottom:12px">Launch milestone. MA and MB are complete. Immediate goal: Docker hardening, in-app updates, and a clean Raspberry Pi validation pass for v1.0.</div>
   <div class="callout gold" style="margin-bottom:12px">Pi-testing prerequisite track — complete these first: Docker hardening → in-app update → Pi smoke test. Everything else follows.</div>
   <div class="tasks">
     <div class="task"><div class="task-icon">⬜</div><div class="task-text">Docker hardening — non-root user, read-only filesystem, Trivy scan, HEALTHCHECK</div><span class="task-tag tag-infra">infra</span></div>
     <div class="task"><div class="task-icon">⬜</div><div class="task-text">In-app update — version-available badge in header notification; <code>POST /api/v1/system/update</code> triggers Docker pull + container restart; Watchtower-compatible; shown only when newer version detected via update check</div><span class="task-tag tag-api">api</span></div>
     <div class="task"><div class="task-icon">⬜</div><div class="task-text">Raspberry Pi 4/5 arm64 smoke test — fresh <code>docker compose up</code> from Docker Hub, all 14 widgets, full setup wizard, in-app update round-trip</div><span class="task-tag tag-infra">infra</span></div>
     <div class="task"><div class="task-icon">⬜</div><div class="task-text"><code>bun audit</code> clean, Trivy 0 critical/high CVEs</div><span class="task-tag tag-security">security</span></div>
-    <div class="task"><div class="task-icon">⬜</div><div class="task-text">Security pen-test — auth flows, CSRF bypass, rate limit evasion, tier enforcement bypass</div><span class="task-tag tag-security">security</span></div>
+    <div class="task"><div class="task-icon">⬜</div><div class="task-text">Security pen-test — auth flows, CSRF bypass, rate limit evasion, update flow abuse</div><span class="task-tag tag-security">security</span></div>
     <div class="task"><div class="task-icon">⬜</div><div class="task-text">Verify AES-256-GCM credential encryption at rest</div><span class="task-tag tag-security">security</span></div>
-    <div class="task"><div class="task-icon">⬜</div><div class="task-text">Ed25519 license — test tampered payload rejection, tampered signature rejection</div><span class="task-tag tag-security">security</span></div>
     <div class="task"><div class="task-icon">⬜</div><div class="task-text">SSRF guard — private IPs, localhost, cloud metadata (169.254.169.254) → all 400</div><span class="task-tag tag-security">security</span></div>
     <div class="task"><div class="task-icon">⬜</div><div class="task-text">
   Populate dashboard for hero screenshot — representative widget layout
@@ -349,11 +338,10 @@ body{font-family:var(--font-ui);background:var(--bg);color:var(--text);font-size
   Capture hero screenshot at 1440px — primary marketing asset for
   phavo.net, Reddit, Discord, Product Hunt
 </div><span class="task-tag tag-design">design</span></div>
-    <div class="task"><div class="task-icon">⬜</div><div class="task-text">phavo.net landing page — hero screenshot, Stellar/Celestial pricing, Docker one-liner</div><span class="task-tag tag-infra">infra</span></div>
-    <div class="task"><div class="task-icon">⬜</div><div class="task-text">docs.phavo.net — installation, setup, widget reference, license activation, FAQ</div><span class="task-tag tag-infra">infra</span></div>
-    <div class="task"><div class="task-icon">⬜</div><div class="task-text">README.md final — screenshots, pricing table, badges</div><span class="task-tag tag-infra">infra</span></div>
+    <div class="task"><div class="task-icon">⬜</div><div class="task-text">phavo.net landing page — hero screenshot, open-source messaging, Docker one-liner</div><span class="task-tag tag-infra">infra</span></div>
+    <div class="task"><div class="task-icon">⬜</div><div class="task-text">docs.phavo.net — installation, setup, widget reference, FAQ</div><span class="task-tag tag-infra">infra</span></div>
+    <div class="task"><div class="task-icon">⬜</div><div class="task-text">README.md final — screenshots, quick start, badges</div><span class="task-tag tag-infra">infra</span></div>
     <div class="task"><div class="task-icon">⬜</div><div class="task-text">SECURITY.md — responsible disclosure policy</div><span class="task-tag tag-security">security</span></div>
-    <div class="task"><div class="task-icon">⬜</div><div class="task-text">Gumroad product live — €16.99, 14-day refund, description + screenshots</div><span class="task-tag tag-infra">infra</span></div>
     <div class="task"><div class="task-icon">⬜</div><div class="task-text">Public demo instance on phavo.net</div><span class="task-tag tag-infra">infra</span></div>
   </div></div>
 </div>
@@ -368,62 +356,42 @@ body{font-family:var(--font-ui);background:var(--bg);color:var(--text);font-size
   <div class="launch-item">MA–MC milestones complete</div>
   <div class="launch-item"><code>bun run release:minor</code> → v1.0.0 → Docker CI → getphavo/phavo:1.0.0 on Docker Hub</div>
   <div class="launch-item">Raspberry Pi 4/5 arm64 smoke test — fresh docker compose up, all 14 widgets, full setup</div>
-  <div class="launch-item">phavo.net landing page live — hero screenshot, Stellar/Celestial pricing</div>
-  <div class="launch-item">Gumroad product live — Celestial €16.99 launch price, 14-day refund visible</div>
-  <div class="launch-item">Ed25519 key generation webhook live and tested end-to-end</div>
+  <div class="launch-item">phavo.net landing page live — hero screenshot, open-source messaging, Docker one-liner</div>
+  <div class="launch-item">README.md final — screenshots, quick start, badges</div>
+  <div class="launch-item">docs.phavo.net live — installation, setup, widget reference, FAQ</div>
   <div class="launch-item">Public demo instance on phavo.net</div>
   <div class="launch-item">Post launch: r/selfhosted, r/homelab, Product Hunt, Hacker News Show HN</div>
 </div>
 
-<!-- POST V1.0 -->
-<div class="phase-divider"><span class="phase-divider-label">Post-v1.0 Roadmap</span><div class="phase-divider-line"></div></div>
-
-<div class="callout">
-  Post-v1.0 scope is conditional on v1.0 traction. Ecosystem features (Widget Store, Developer Accounts, Marketplace) are only built if v1.0 proves product-market fit.
+<div class="phase-divider">
+  <span class="phase-divider-label">Future — No Timeline</span>
+  <div class="phase-divider-line"></div>
 </div>
 
-<div class="session post" id="v11">
-  <div class="session-header"><span class="session-num">v1.1</span><span class="session-title">Linux Desktop Installer + User Plugin Upload</span><span class="session-subtitle">post-v1.0</span></div>
-  <div class="session-body"><div class="tasks">
-    <div class="task"><div class="task-icon">⬜</div><div class="task-text">Tauri 2.0 desktop app — Linux .deb + AppImage; Bun server as sidecar; no changes to apps/web/</div><span class="task-tag tag-infra">infra</span></div>
-    <div class="task"><div class="task-icon">⬜</div><div class="task-text">User plugin upload — <code>POST /api/v1/plugins/upload</code> two-phase (validate → confirm); Settings → Plugins UI; hot-reload</div><span class="task-tag tag-plugin">plugin</span></div>
-    <div class="task"><div class="task-icon">⬜</div><div class="task-text">.phwidget bundle format — ZIP build-step for first-party widgets; <code>registry.registerPlugin()</code> load path</div><span class="task-tag tag-plugin">plugin</span></div>
-    <div class="task"><div class="task-icon">⬜</div><div class="task-text">Local Dev-Mode — <code>PHAVO_PLUGIN_DEV_DIR</code> env var; hot-reload from local directory; dev env only</div><span class="task-tag tag-plugin">plugin</span></div>
-    <div class="task"><div class="task-icon">⬜</div><div class="task-text">Spotify widget (Celestial) — OAuth relay on phavo.net; now playing, album art, playback controls</div><span class="task-tag tag-api">api</span></div>
-  </div></div>
-</div>
-
-<div class="session post" id="v12">
-  <div class="session-header"><span class="session-num">v1.2</span><span class="session-title">macOS Desktop Installer</span><span class="session-subtitle">post-v1.0</span></div>
-  <div class="session-body"><div class="tasks">
-    <div class="task"><div class="task-icon">⬜</div><div class="task-text">Tauri — macOS .dmg (Universal: Apple Silicon + Intel); system tray, autostart option</div><span class="task-tag tag-infra">infra</span></div>
-    <div class="task"><div class="task-icon">⬜</div><div class="task-text">Apple Developer ID + Notarization — €99/year; register before this milestone (review takes days)</div><span class="task-tag tag-infra">infra</span></div>
-    <div class="task"><div class="task-icon">⬜</div><div class="task-text">Tauri Updater — Ed25519-signed automatic updates via phavo.net endpoint</div><span class="task-tag tag-infra">infra</span></div>
-    <div class="task"><div class="task-icon">⬜</div><div class="task-text">Homebrew Cask submission</div><span class="task-tag tag-infra">infra</span></div>
-  </div></div>
-</div>
-
-<div class="session post" id="v13">
-  <div class="session-header"><span class="session-num">v1.3</span><span class="session-title">Windows Desktop Installer</span><span class="session-subtitle">post-v1.0</span></div>
-  <div class="session-body"><div class="tasks">
-    <div class="task"><div class="task-icon">⬜</div><div class="task-text">Tauri — Windows .msi + NSIS .exe; unsigned or Standard Cert (SmartScreen warning acceptable for homelab)</div><span class="task-tag tag-infra">infra</span></div>
-    <div class="task"><div class="task-icon">⬜</div><div class="task-text">EV cert deferred — ~€300–400/year + hardware token; only if Windows user base proven</div><span class="task-tag tag-infra">infra</span></div>
-    <div class="task"><div class="task-icon">⬜</div><div class="task-text">winget submission (stretch goal)</div><span class="task-tag tag-infra">infra</span></div>
-  </div></div>
-</div>
-
-<div class="session post" id="phase4">
-  <div class="session-header"><span class="session-num">P4</span><span class="session-title">Phase 4 — Cloud + Marketplace (Traction-Dependent)</span><span class="session-subtitle">conditional</span></div>
-  <div class="session-body">
-  <div class="callout" style="margin-bottom:12px">All items below are only built if v1.0 demonstrates sufficient adoption and commercial traction. No development effort, no stubs, no placeholders before then.</div>
+<div class="session post" id="future">
+  <div class="session-header">
+    <span class="session-num">∞</span>
+    <span class="session-title">Future Direction</span>
+    <span class="session-subtitle">no timeline</span>
+  </div>
+  <div class="callout" style="margin-bottom:12px">
+    These are anecdotal future ideas. No timeline, no committed scope,
+    no stubs. They happen when they happen.
+  </div>
   <div class="tasks">
-    <div class="task"><div class="task-icon">⬜</div><div class="task-text">Widget Store — store.phavo.net; in-app browsing (Celestial); web download (all users)</div><span class="task-tag tag-infra">infra</span></div>
-    <div class="task"><div class="task-icon">⬜</div><div class="task-text">@phavo/plugin-sdk npm publish — docs.phavo.net/plugins required first; developer ships working plugin in &lt;30min</div><span class="task-tag tag-plugin">plugin</span></div>
-    <div class="task"><div class="task-icon">⬜</div><div class="task-text">Developer Accounts — phavo.net accounts for third-party plugin authors; three-tier trust model (Official / Verified Developer / Unverified)</div><span class="task-tag tag-security">security</span></div>
-    <div class="task"><div class="task-icon">⬜</div><div class="task-text">Revenue share — 70% developer / 30% Phavo; plugin pricing caps (€9.99 one-time / €2.99/month max)</div><span class="task-tag tag-infra">infra</span></div>
-    <div class="task"><div class="task-icon">⬜</div><div class="task-text">Phase 4 Cloud — Turso multi-device sync; CloudBackupProvider; hosted public instance</div><span class="task-tag tag-api">api</span></div>
-    <div class="task"><div class="task-icon">⬜</div><div class="task-text">Process-level plugin sandboxing — Bun worker threads or subprocess per plugin; IPC-only communication</div><span class="task-tag tag-security">security</span></div>
-  </div></div>
+    <div class="task">
+      <div class="task-icon">💭</div>
+      <div class="task-text">Desktop apps — Tauri wrapper for Linux, macOS, Windows</div>
+    </div>
+    <div class="task">
+      <div class="task-icon">💭</div>
+      <div class="task-text">Widget Marketplace — community plugin distribution</div>
+    </div>
+    <div class="task">
+      <div class="task-icon">💭</div>
+      <div class="task-text">Cloud sync — optional multi-device sync</div>
+    </div>
+  </div>
 </div>
 
 </div>

@@ -11,7 +11,7 @@ import { createOllama } from 'ollama-ai-provider';
 import { z } from 'zod';
 import { db } from '$lib/server/db.js';
 import type { AppVariables } from '$lib/server/middleware/auth.js';
-import { requireSession, requireTier } from '$lib/server/middleware/auth.js';
+import { requireSession } from '$lib/server/middleware/auth.js';
 import { assertNotCloudMetadata } from '$lib/server/security.js';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -248,8 +248,8 @@ export function registerAiRoutes(app: Hono<{ Variables: AppVariables }>): void {
     }
   });
 
-  // POST /ai/chat — streaming AI chat via SSE (Celestial only)
-  app.post('/ai/chat', requireSession(), requireTier('celestial'), async (c) => {
+  // POST /ai/chat — streaming AI chat via SSE
+  app.post('/ai/chat', requireSession(), async (c) => {
     const body = await c.req.json().catch(() => null);
     const parsed = AiChatSchema.safeParse(body);
     if (!parsed.success) {

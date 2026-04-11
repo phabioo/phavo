@@ -1,12 +1,11 @@
-import {
-  type DiskMetrics,
-  isWidgetDefinition,
-  type Tab,
-  type TemperatureMetrics,
-  type WidgetDefinition,
-  type WidgetInstance,
-  type WidgetManifestEntry,
-  type WidgetSize,
+import type {
+  DiskMetrics,
+  Tab,
+  TemperatureMetrics,
+  WidgetDefinition,
+  WidgetInstance,
+  WidgetManifestEntry,
+  WidgetSize,
 } from '@phavo/types';
 import en from '$lib/i18n/en.json';
 import { notify } from '$lib/stores/notifications.svelte';
@@ -116,8 +115,7 @@ export async function retryWidget(instanceId: string): Promise<void> {
 }
 
 function getDefinition(widgetId: string): WidgetDefinition | undefined {
-  const entry = widgetManifest.find((widget) => widget.id === widgetId);
-  return entry && isWidgetDefinition(entry) ? entry : undefined;
+  return widgetManifest.find((widget) => widget.id === widgetId);
 }
 
 function canPollInstance(instance: WidgetInstance, def: WidgetDefinition): boolean {
@@ -649,7 +647,6 @@ $effect.root(() => {
 
     const previewDefs = widgetManifest.filter(
       (entry): entry is WidgetDefinition =>
-        isWidgetDefinition(entry) &&
         widgetData[entry.id] === undefined &&
         drawerPreviewRequests[entry.id] !== drawerPreviewToken,
     );
@@ -677,8 +674,7 @@ $effect.root(() => {
 
   $effect(() => {
     const activeDefinitions = widgetManifest.filter(
-      (entry): entry is WidgetDefinition =>
-        isWidgetDefinition(entry) && getPollableInstances(entry.id).length > 0,
+      (entry): entry is WidgetDefinition => getPollableInstances(entry.id).length > 0,
     );
 
     if (activeDefinitions.length === 0) return;
@@ -695,9 +691,7 @@ $effect.root(() => {
     for (const [i, def] of pollable.entries()) {
       timeouts.push(
         setTimeout(() => {
-          intervals.push(
-            setInterval(() => void fetchWidgetData(def, true), def.refreshInterval),
-          );
+          intervals.push(setInterval(() => void fetchWidgetData(def, true), def.refreshInterval));
         }, i * 1500),
       );
     }

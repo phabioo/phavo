@@ -27,8 +27,6 @@ export const sessions = sqliteTable('sessions', {
   userId: text('user_id')
     .notNull()
     .references(() => users.id),
-  // Single source of truth for tier enforcement. Set by server on login only.
-  tier: text('tier', { enum: ['stellar', 'celestial'] }).notNull(),
   authMode: text('auth_mode', { enum: ['local'] }).notNull(),
   // Unix ms. Last successful local auth.
   validatedAt: integer('validated_at').notNull(),
@@ -87,21 +85,6 @@ export const credentials = sqliteTable('credentials', {
   valueEncrypted: text('value_encrypted').notNull(),
   createdAt: integer('created_at').notNull().default(nowMs),
   updatedAt: integer('updated_at').notNull().default(nowMs),
-});
-
-export const licenseActivation = sqliteTable('license_activation', {
-  id: text('id')
-    .primaryKey()
-    .$defaultFn(() => crypto.randomUUID()),
-  // Only 'celestial' tier activates here — see arch spec.
-  tier: text('tier', { enum: ['celestial'] }).notNull(),
-  // Signed payload metadata extracted after offline Ed25519 verification.
-  licenseId: text('license_id').notNull(),
-  issuedAt: text('issued_at').notNull(),
-  // Stored payload/signature for re-verification; raw key is never persisted.
-  payloadB64: text('payload_b64').notNull(),
-  signatureB64: text('signature_b64').notNull(),
-  activatedAt: integer('activated_at').notNull().default(nowMs),
 });
 
 export const pluginData = sqliteTable('plugin_data', {

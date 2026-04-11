@@ -1,22 +1,14 @@
 # Phavo — Product Requirements Document
 
-**Version:** 4.1
-**Date:** 2026-04-09
-**Status:** Active — MA Design & Experience in progress · Pre-Launch
+**Version:** 5.0
+**Date:** 2026-04-11
+**Status:** Active — targeting v1.0 from the v0.8.2 baseline
 **Owner:** getphavo
 
-**Changelog v4.1:** Documentation alignment with the v0.8.0 runtime. UI updates include
-header scroll state handling and sidebar delete-page actions. Server updates include
-expanded notification routes, current auth/session behavior, and current license
-activation flow.
-
-**Changelog v4.0:** Complete product model revision. Tiers simplified to Stellar (free)
-+ Celestial (one-time, €24.99). No subscriptions, no phavo.net account infrastructure,
-no cloud backend. Runtime auth/license is local-only in v1.0: offline Ed25519
-verification + local session enforcement.
-Design language updated to Celestial Wish. Phase 4 cloud/sync/marketplace deferred
-indefinitely. Auth mode is `local` at runtime.
-Tier identifiers in code: `stellar` / `celestial`.
+**Changelog v5.0:** Open source transition. Single free edition
+(Celestial Edition). MIT license. Desktop/mobile/cloud removed from versioned roadmap
+(anecdotal future ideas only). All commercial gating references removed.
+Auth is local-only with no feature gates.
 
 ---
 
@@ -33,29 +25,18 @@ that works beautifully without friction — and differ only in their entry point
 The core promise: **beautiful by default, infinitely extensible, yours to own — built
 with security at every layer, and no cloud required.**
 
-### Product Tiers
+### Edition
 
-| | Stellar | Celestial |
-|---|---|---|
-| **Price** | €0 forever | €24.99 one-time (launch: €16.99) |
-| **License** | None required | Ed25519 offline key via Gumroad |
-| **Internet required** | Never | Never (after key import) |
-| **Pages** | 1 (Home only) | Unlimited |
-| **Widgets** | Stellar set (7) | All widgets (14+) |
-| **AI Assistant** | ✗ | ✓ |
-| **Phavo branding** | Visible | Removable |
-| **Refund** | N/A | 14-day guarantee |
-| **Updates** | All v1.x | All v1.x |
-| **Code identifier** | `stellar` | `celestial` |
+PHAVO is free and open source (MIT). All features available to all users.
+The current edition is **Celestial Edition**.
 
-**There are no subscriptions.** The product is a one-time purchase.
-All 1.x feature updates are included in the Celestial purchase.
+There are no subscriptions, no tiers, no feature gates. One edition, fully featured.
 
 ### Open Source Strategy
 
-Open source release is deferred to post-v1.0. Codebase is currently closed source
-(all rights reserved). After v1.0 proves commercial viability, a dual-licence release
-(AGPL-3.0 + commercial) will be evaluated.
+PHAVO is released under the MIT license. The codebase is public at
+`github.com/getphavo/phavo`. All widgets, AI assistant, multi-page support,
+and plugin system are available to every user.
 
 ---
 
@@ -64,7 +45,7 @@ Open source release is deferred to post-v1.0. Codebase is currently closed sourc
 Phavo is the successor to **phaboard** — a locally-hosted Node.js/Svelte dashboard
 running on a Raspberry Pi. Phaboard proved the concept: modular widgets, system
 metrics, Pi-hole integration. Phavo rebuilds it from scratch with a production-grade
-stack, a proper business model, and a multi-platform roadmap.
+stack and a clearer open-source product direction.
 
 **Existing tools and their gap:**
 
@@ -76,7 +57,7 @@ stack, a proper business model, and a multi-platform roadmap.
 | iStat Menus | System monitoring only, not extensible |
 
 Phavo's differentiator: **polished Celestial Wish design, guided setup, resizable
-widgets, extensible plugin system, free Stellar tier to drive adoption, fully offline.**
+widgets, extensible plugin system, fully open source, fully offline.**
 
 ---
 
@@ -86,8 +67,7 @@ widgets, extensible plugin system, free Stellar tier to drive adoption, fully of
 - Ship a self-hosted web dashboard with a curated set of launch widgets
 - Deliver both Quick Setup and Full Setup guided experiences
 - Establish a clean widget schema and plugin API as the foundation for the ecosystem
-- Launch a free Stellar tier to drive adoption; convert to Celestial via one-time purchase
-- Generate initial revenue; validate product-market fit
+- Release as open source (MIT) to drive adoption and community contribution
 
 ### Secondary Goals (v1.0)
 - Deliver the Celestial Wish design — a visually distinctive, atmospheric dark dashboard
@@ -96,10 +76,9 @@ widgets, extensible plugin system, free Stellar tier to drive adoption, fully of
 - Establish documentation and a support channel at launch
 
 ### Non-Goals (v1.0)
-- Cloud sync or multi-user support (deferred indefinitely)
-- Widget marketplace (deferred until traction proven)
-- Mobile or desktop native apps (v1.1+)
-- phavo.net account infrastructure — no server-side session validation
+- Cloud sync or multi-user support
+- Widget marketplace
+- Mobile or desktop native apps
 - Subscriptions of any kind
 - Multi-device or multi-user
 
@@ -113,16 +92,14 @@ widgets, extensible plugin system, free Stellar tier to drive adoption, fully of
 - Wants system metrics, Pi-hole stats, and service monitoring in one place
 - Comfortable with Docker and basic configuration
 - Values reliability, performance data, and extensibility
-- **Entry point:** Stellar tier → upgrades to Celestial for full widget set + AI
+- **Entry point:** Docker pull → running dashboard in minutes
 
 ### Persona B — The Informed Consumer
 - Non-technical but digitally fluent
 - Wants a personal dashboard: weather, news, bookmarks
 - Values design quality and ease of use
 - May not own a server — runs Phavo on a home machine via Docker
-- **Phase 1 limitation:** Docker knowledge required. A native installer (v1.1 desktop
-  app) removes this barrier.
-- **Entry point:** Sees screenshot/demo, buys Celestial directly
+- **Entry point:** Sees screenshot/demo, pulls Docker image
 
 ---
 
@@ -134,9 +111,7 @@ Language:   TypeScript (strict)
 Linting:    Biome
 
 apps/
-  web/        SvelteKit + Svelte 5 Runes (Phase 1 — active)
-  desktop/    Tauri 2.0 stub (v1.1+)
-  mobile/     Tauri Mobile stub (future)
+  web/        SvelteKit + Svelte 5 Runes (active)
 
 packages/
   ui/         @phavo/ui — Svelte 5 component library + Celestial Wish theme
@@ -164,13 +139,8 @@ CI/CD:      GitHub Actions
 A SvelteKit web application served via Docker (or direct Bun process). Users access
 it via browser at their local IP or custom domain. All data stays local, always.
 
-**Stellar tier (free):** No account, no key, no internet. Just run and go.
-Base widgets + 1 page (Home). Phavo branding visible.
-
-**Celestial tier (paid, one-time):** User pastes a Gumroad license key in
-Settings → Licence. The app verifies the Ed25519 signature offline against the
-embedded public key. After verification, tier is persisted in the DB. No further
-network calls ever — not on login, not on restart, not ever.
+All features are available to all users. No entitlement flow, no internet
+required. Just run and go.
 
 ### 6.2 Core Features
 
@@ -194,11 +164,9 @@ Each step has a back button and a progress indicator.
 3. **Dashboard name** — Text input, default "My Dashboard". 1–40 chars.
 4. **Weather location** — City search with geocode. Skippable.
 5. **Pages** — Add/rename/reorder pages. Default: one page "Home".
-   Stellar: add button disabled after first page with upgrade prompt.
 6. **Plugin installation (optional)** — Upload `.phwidget` files. Permissions shown.
    Skip available. Installed plugins appear in next step.
-7. **Widget selection** — Grid loaded from registry manifest. Locked Celestial widgets
-   shown as teasers. Multi-select Stellar widgets to start.
+7. **Widget selection** — Grid loaded from registry manifest. Multi-select widgets to start.
 8. **Widget configuration** — Only for widgets with `configSchema`. Per-widget:
    - Pi-hole: URL + token + "Test connection"
    - RSS: feed URL(s) + optional auth
@@ -212,7 +180,7 @@ not lose progress. If `setupComplete = false`, redirect to `/setup` at last step
 
 - BentoGrid: 12-column CSS grid. Widget sizes S/M/L/XL with grid snapping.
   colSpan × rowSpan from widget instance config.
-- Multiple named pages with per-page widget assignment (Celestial; Stellar: 1 page)
+- Multiple named pages with per-page widget assignment
 - Layout persisted to database per page
 - Sidebar navigation (collapsible, 240px expanded / 64px collapsed)
 - Live clock + weather summary in header
@@ -230,7 +198,7 @@ not lose progress. If `setupComplete = false`, redirect to `/setup` at last step
   1h cache, user-initiated only)
 - Clicking opens update panel: current version, new version, full changelog
 - Shows exact update command for user's install method (Docker Compose snippet,
-  Bun CLI, Tauri auto-update)
+  Bun CLI)
 - Docker Compose: optional one-click update if Docker socket is accessible (opt-in)
 - Accessible at any time via Settings → About
 
@@ -242,7 +210,6 @@ Master-detail layout: Sidebar (280px) = navigation cards, detail panel = full-wi
 - **General** — Dashboard name, weather location, display preferences
 - **Widgets** — Per-widget configuration, size selection, data endpoint status
 - **Backup & Export** — .phavo export/import, credential inclusion toggle
-- **Licence** — Celestial key activation/deactivation, tier status, Gumroad link
 - **Account** — Username, password change, TOTP 2FA setup
 - **Plugins** — Installed plugin list, .phwidget upload
 - **About** — Version info, update check, system health
@@ -267,23 +234,12 @@ interface WidgetDefinition {
   version: string               // semver
   author: string                // "phavo" for built-ins
   category: 'system' | 'consumer' | 'integration' | 'utility' | 'custom'
-  tier: 'stellar' | 'celestial' // 'stellar' available on both tiers
   sizes: ('S' | 'M' | 'L' | 'XL')[]
   configSchema?: ZodSchema       // drives auto-rendered settings panel
   dataEndpoint: string           // relative path served by widget's Hono handler
   refreshInterval: number        // ms; minimum enforced: 1000ms
   permissions: WidgetPermission[]
   notifications?: { condition: string; type: Notification['type'] }[]
-}
-
-// Teaser sent to browser for locked Celestial widgets (Stellar users):
-interface WidgetTeaserDefinition {
-  id: string
-  name: string
-  description: string
-  tier: 'celestial'
-  locked: true
-  // No dataEndpoint, configSchema, or permissions ever sent to Stellar clients
 }
 ```
 
@@ -342,7 +298,7 @@ encrypted with user-provided passphrase.
 
 ### 6.3 Launch Widgets
 
-#### Stellar Tier Widgets
+#### System Widgets
 
 | Widget | Data |
 |---|---|
@@ -354,7 +310,7 @@ encrypted with user-provided passphrase.
 | Uptime | System uptime, human-readable |
 | Weather | Open-Meteo, no API key. Current + 5-day forecast. |
 
-#### Celestial Tier Widgets (all Stellar + the following)
+#### Integration Widgets
 
 | Widget | Details |
 |---|---|
@@ -366,63 +322,9 @@ encrypted with user-provided passphrase.
 | Speedtest | On-demand speed test + 30-result history chart. Rate-limited 1/5min. |
 | Calendar | CalDAV feed or local events. Upcoming events view. |
 
-#### Post-v1.0 Widgets
-
-| Widget | Notes |
-|---|---|
-| Spotify | OAuth relay via phavo.net. Now playing, controls. Celestial only. |
-
 ---
 
-### 6.4 Celestial Tier Conversion Strategy
-
-Conversion levers built into the product:
-
-- **Widget drawer upgrade prompt:** Celestial widgets visible but locked for Stellar
-  users — lock icon + "LOCKED" label. Click triggers upgrade prompt with Gumroad link.
-  Split manifest: Stellar clients receive teaser entries only (no `dataEndpoint`,
-  `configSchema`, or `permissions`).
-- **Page limit prompt:** Attempting to add a second page on Stellar shows upgrade prompt.
-- **Phavo branding:** "Powered by PHAVO" footer badge on Stellar. Removable on Celestial.
-- **No feature degradation:** Stellar tier stays free indefinitely.
-
----
-
-### 6.5 License Architecture (Celestial — Local-First)
-
-Runtime is local-only for auth/license in v1.0.
-
-License key format:
-```
-base64url(ed25519_signature || json_payload)
-
-Payload:
-{
-  "tier": "celestial",
-  "licenseId": "<uuid>",
-  "issuedAt": "<iso8601>"
-}
-```
-
-Activation flow:
-1. User purchases on Gumroad → receives key via email
-2. User pastes key in Settings → Licence
-3. App verifies key offline against embedded/public Ed25519 key and writes activation payload/signature
-4. On success: tier written to `license_activation` table, session updated
-5. Session/tier enforcement remains server-side in local runtime
-
-**Ed25519 key management:**
-- Private key: GitHub Actions Secrets only, never in repo
-- Two public keys embedded in binary (current + next) for rotation
-- Key rotation: bump `next` → `current` in next release, generate new `next`
-- Tampered key: signature verification fails → falls back to Stellar behaviour
-
-**Deactivation:** User can clear their license in Settings → Licence.
-Falls back to Stellar. Re-activation requires the same key.
-
----
-
-### 6.6 API Design
+### 6.4 API Design
 
 All endpoints follow a consistent response envelope:
 ```typescript
@@ -460,10 +362,6 @@ GET  /api/v1/auth/session
 POST /api/v1/auth/totp/setup
 POST /api/v1/auth/totp/verify
 
-POST /api/v1/license/activate
-POST /api/v1/license/deactivate
-GET  /api/v1/license/status
-
 GET  /api/v1/update/check
 POST /api/v1/update/apply
 
@@ -496,7 +394,7 @@ GET  /api/v1/system/health
 GET  /api/v1/system/about
 ```
 
-**AI Assistant (Celestial tier):**
+**AI Assistant:**
 The AI Assistant uses the Vercel AI SDK (`ai` package) with a unified provider
 abstraction supporting Ollama (local, fully offline via `ollama-ai-provider`),
 OpenAI (`@ai-sdk/openai`), and Anthropic (`@ai-sdk/anthropic`).
@@ -504,12 +402,12 @@ Streaming responses via Hono SSE (`streamSSE` helper). The searchbar AI mode
 consumes the same streaming endpoint. API keys are stored server-side in
 encrypted form (`credentials` table) and never exposed to the browser.
 
-**Runtime note (v4.1):**
-Auth and license paths are local-only (`local` mode). Session and tier enforcement remain server-side.
+**Runtime note (v5.0):**
+Auth is local-only. No tier enforcement — all features available to all users.
 
 ---
 
-### 6.7 Design System — Celestial Wish
+### 6.5 Design System — Celestial Wish
 
 Full specification: `docs/design.md`. Summary:
 
@@ -537,14 +435,14 @@ Static (no animation) for Pi 3 performance.
 
 ---
 
-### 6.8 Docker
+### 6.6 Docker
 
 Target: `docker run -p 3000:3000 -v phavo-data:/data getphavo/phavo`
 
 - Single-container
 - Multi-arch: amd64 + arm64 (Raspberry Pi 3/4/5)
 - Docker Hub: `getphavo/phavo` — tagged `:VERSION` + `:latest`
-- Volume `phavo-data` persists database, config, plugins, license activation
+- Volume `phavo-data` persists database, config, and plugins
 - Runs as non-root user
 - Read-only filesystem except for `phavo-data` volume
 - **TLS — three modes:**
@@ -552,105 +450,40 @@ Target: `docker run -p 3000:3000 -v phavo-data:/data getphavo/phavo`
   - Custom cert — user provides cert + key via volume
   - Let's Encrypt/ACME — for publicly reachable instances
 
-### 6.9 Platform Abstraction
+### 6.7 Platform Abstraction
 
 All server code uses environment variables — no hardcoded paths or ports.
-Required for Phase 2 Tauri compatibility without code changes.
 
-| Variable | Default (Docker) | Tauri value | Purpose |
-|---|---|---|---|
-| `PHAVO_DB_PATH` | `/data/phavo.db` | OS app data dir | libSQL location |
-| `PHAVO_DATA_DIR` | `/data` | OS app data dir | Parent for all data |
-| `PHAVO_PORT` | `3000` | Dynamic free port | HTTP port |
-| `PHAVO_ENV` | `docker` | `tauri` | Platform identifier |
+| Variable | Default (Docker) | Purpose |
+|---|---|---|
+| `PHAVO_DB_PATH` | `/data/phavo.db` | libSQL location |
+| `PHAVO_DATA_DIR` | `/data` | Parent for all data |
+| `PHAVO_PORT` | `3000` | HTTP port |
+| `PHAVO_ENV` | `docker` | Platform identifier |
 
 **Iron rule:** Never use `/data/` as a literal string. Always `process.env.PHAVO_DATA_DIR`.
 
 ---
 
-## 7. Phase 2 — Desktop App (v1.1+)
+## 7. Future Direction
 
-Tauri 2.0 wraps the existing SvelteKit/Hono server as a sidecar process.
-No changes to `apps/web/` — the platform abstraction layer is the only prerequisite.
+These are anecdotal future ideas. No timeline, no committed scope, no stubs.
 
-**Installer roadmap:**
-- **v1.1** — Linux: `.deb` + AppImage. No signing.
-- **v1.2** — macOS: Apple Developer ID (€99/year, register before milestone).
-- **v1.3** — Windows: unsigned or standard cert (SmartScreen warning acceptable).
-
-**Features:** System tray, auto-update (Tauri Updater + Ed25519), autostart option.
+- **Desktop apps** — Tauri wrapper for Linux, macOS, Windows
+- **Widget Marketplace** — Community plugin distribution
+- **Plugin ecosystem expansion** — richer SDK and distribution workflow for third-party widgets
 
 ---
 
-## 8. Phase 3 — Mobile (Future)
+## 8. Security
 
-Tauri 2.0 Mobile. Same `@phavo/ui` components. Touch-optimized layout.
-iOS, iPadOS, Android. Dependent on Phase 2 success.
-
----
-
-## 9. Phase 4 — Cloud + Marketplace (Deferred)
-
-**Status: Deferred indefinitely. No development until v1.0 proves traction.**
-
-If v1.0 achieves sufficient adoption, potential future scope:
-- Turso cloud libSQL for multi-device sync
-- Widget Marketplace at `store.phavo.net`
-- Phase 4 subscription (separate product, does not affect one-time pricing)
-- Developer accounts + revenue share
-- Hosted public demo instance
-
-No code, no stubs, no placeholders for Phase 4 in the current codebase.
-
----
-
-## 10. Monetization
-
-### Pricing
-
-| Tier | Price | Model |
-|---|---|---|
-| Stellar | €0 | Free forever |
-| Celestial | €24.99 (launch: €16.99) | One-time purchase, all v1.x updates |
-
-**Payment processor:** Gumroad (Merchant of Record — handles EU VAT automatically).
-**Delivery:** License key emailed after purchase. Pasted into Settings → Licence.
-**Refund:** 14-day money-back guarantee, no questions asked. Via Gumroad.
-**Launch pricing:** First 30 days. Price increases announced ≥7 days in advance.
-
-### Revenue Model
-
-No recurring revenue at v1.0. Pure one-time licence sales.
-Phase 4 subscription is a separate future product decision.
-
----
-
-## 11. Security
-
-### 11.1 Auth
+### 8.1 Auth
 
 - Local username + password (Argon2id), local-only runtime mode.
 - Session: DB-backed, cookie-token based (random 32-byte session ID, not JWT).
-- No tier data in cookie — tier derived from `license_activation` table on every request.
 - Optional TOTP 2FA.
-- No phavo.net account backend. No online auth/license runtime dependency.
 
-### 11.2 Tier Enforcement
-
-- `requireTier('celestial')` middleware on all Celestial API routes.
-- Tier re-read from DB on every request — never from cookie payload.
-- Widget manifest is tier-filtered server-side — Stellar clients never receive
-  `dataEndpoint`, `configSchema`, or `permissions` for Celestial widgets.
-- No tier column in `users` table — tier flows only via `license_activation` record.
-
-### 11.3 License Security
-
-- Ed25519 signature verification on activation and on every server start.
-- Manually edited activation record → signature fails → fall back to Stellar.
-- Two public keys embedded in binary for key rotation.
-- Private key never in repo — GitHub Actions Secrets only.
-
-### 11.4 Data Security
+### 8.2 Data Security
 
 - AES-256-GCM encryption + HKDF key derivation for widget credentials at rest.
 - CSRF double-submit protection on all non-GET mutations.
@@ -658,14 +491,12 @@ Phase 4 subscription is a separate future product decision.
 - SSRF guard on all user-provided URLs.
 - Subprocess safety: `execFile` only, never `exec`.
 
-### 11.5 Client-Side Hardening
+### 8.3 Client-Side Hardening
 
-- Tier never serialised into HTML or client-accessible store.
-- Widget manifest tier-filtering is the security gate — upgrade prompts are cosmetic UX.
 - No debug endpoints in production.
 - No telemetry. No analytics. No background network calls.
 
-### 11.6 Rate Limits
+### 8.4 Rate Limits
 
 | Endpoint | Limit | Window |
 |---|---|---|
@@ -674,9 +505,8 @@ Phase 4 subscription is a separate future product decision.
 | Integration endpoints | 60 requests | 1 min per session |
 | `GET /api/v1/update/check` | 1 request | 1 hour per session |
 | `POST /api/v1/config` | 20 requests | 1 min per session |
-| `POST /api/v1/license/activate` | 5 requests | 1 hour per IP |
 
-### 11.7 What Is Intentionally Not Hardened
+### 8.5 What Is Intentionally Not Hardened
 
 - Users reading their own data from the volume — they own the hardware.
 - Network interception between browser and local instance — local network, user's trust.
@@ -684,23 +514,23 @@ Phase 4 subscription is a separate future product decision.
 
 ---
 
-## 12. Plugin System
+## 9. Plugin System
 
-### 12.1 Phase 1 — First-Party Structure
+### 9.1 First-Party Structure
 
 First-party widgets adopt the plugin file structure internally.
 Third-party `.phwidget` ZIP bundle format is supported for user uploads.
 
-### 12.2 Plugin File Structure
+### 9.2 Plugin File Structure
 
 ```
 my-widget.phwidget (ZIP)
-├── manifest.json       # id, name, version, tier, permissions, configSchema, ...
+├── manifest.json       # id, name, version, permissions, configSchema, ...
 ├── handler.ts          # Hono route handler (server-side)
 └── Widget.svelte       # Svelte component (frontend)
 ```
 
-### 12.3 Plugin Security
+### 9.3 Plugin Security
 
 - Import allowlist: `@phavo/types`, `@phavo/agent`, `@phavo/plugin-sdk`, `hono`,
   `zod`, Node/Bun built-ins. No arbitrary npm packages.
@@ -708,25 +538,24 @@ my-widget.phwidget (ZIP)
 - Upload rate limit: 5 complete uploads per 10 minutes per session.
 - Permissions declared in `manifest.json`, shown to user at install time.
 
-### 12.4 Local Dev Mode
+### 9.4 Local Dev Mode
 
 `PHAVO_PLUGIN_DEV_DIR` env var enables hot-reload from a local directory.
 Dev env only — not available in production builds.
 
 ---
 
-## 13. Success Metrics (v1.0 Launch)
+## 10. Success Metrics (v1.0 Launch)
 
 - 500+ Docker Hub pulls in first month
-- 50+ Celestial license sales within 60 days
-- Stellar → Celestial conversion rate ≥ 8%
+- 100+ GitHub stars within 60 days
 - Setup completion rate ≥ 80%
 - < 5 critical bug reports in first 2 weeks
 - Positive reception on r/selfhosted, r/homelab, Product Hunt
 
 ---
 
-## 14. Launch Checklist (v1.0)
+## 11. Launch Checklist (v1.0)
 
 - [x] Docker Hub — `getphavo/phavo` public + GitHub Secrets set
 - [x] Hetzner Mail — MX + SPF + DKIM in Cloudflare
@@ -736,8 +565,6 @@ Dev env only — not available in production builds.
 - [ ] `bun run release:minor` → v1.0.0 → Docker CI → `getphavo/phavo:1.0.0`
 - [ ] Pi 4/5 arm64 smoke test — fresh docker compose up, all 14 widgets
 - [ ] phavo.net landing page live (hero screenshot from MA)
-- [ ] Gumroad product live — Celestial €16.99 launch price, 14-day refund visible
-- [ ] Public demo instance on phavo.net
 - [ ] Launch channels: r/selfhosted, r/homelab, Product Hunt, Hacker News Show HN
 
 ---
@@ -746,26 +573,18 @@ Dev env only — not available in production builds.
 
 | # | Decision |
 |---|---|
-| 1 | **Two tiers only:** Stellar (free) + Celestial (one-time). No subscriptions. |
-| 2 | **Fully offline:** No phavo.net account infrastructure. License is Ed25519-signed key. |
-| 3 | **Tier identifiers in code:** `stellar` / `celestial`. No other strings. |
-| 4 | **Gumroad as MoR:** Handles EU VAT. License key delivered via email. |
-| 5 | **No machine lock in v1.0:** Key is not bound to hardware. Revisit in v1.1. |
-| 6 | **No telemetry:** Neither tier sends any data anywhere. No toggle needed. |
-| 7 | **Phase 4 deferred indefinitely:** No cloud, no marketplace, no sync in roadmap. |
-| 8 | **Auth mode is `local` only:** Session and middleware paths enforce local-only runtime behavior. |
-| 9 | **Design: Celestial Wish:** Atmospheric dark, Soft Gold primary, Teal secondary. |
-| 10 | **Fonts via @fontsource:** Geist + Geist Mono. Google Fonts CDN never used. |
-| 11 | **Icons via `<Icon>` abstraction:** Never `lucide-svelte` direct imports. |
-| 12 | **No hardcoded values in @phavo/ui:** CSS tokens only. Iron rule, no exceptions. |
-| 13 | **Glassmorphism Pi fallback:** `max-resolution: 1.5dppx` disables backdrop-filter. |
-| 14 | **Widget manifest tier-filtered server-side:** Stellar clients never see Celestial endpoints. |
-| 15 | **`requireTier()` reads from DB on every request:** Never from cookie or client. |
-| 16 | **Two Ed25519 public keys embedded:** Current + next, for key rotation without breaking installs. |
-| 17 | **Plugin import allowlist enforced at load time:** Arbitrary npm blocked until Phase 4. |
-| 18 | **`plugin_data` quota:** 10MB per plugin_id, enforced server-side. |
-| 19 | **Version management:** Single source in root `package.json`. Vite injects `PHAVO_VERSION`. |
-| 20 | **Desktop roadmap:** v1.1 Linux, v1.2 macOS (register Apple Developer ID first), v1.3 Windows. |
+| 1 | **Open source (MIT):** All features free to all users. Single edition: Celestial Edition. |
+| 2 | **Fully offline:** No account infrastructure. Auth is local-only. |
+| 3 | **No telemetry:** No data sent anywhere. No toggle needed. |
+| 4 | **Design: Celestial Wish:** Atmospheric dark, Soft Gold primary, Teal secondary. |
+| 5 | **Fonts via @fontsource:** Geist + Geist Mono. Google Fonts CDN never used. |
+| 6 | **Icons via `<Icon>` abstraction:** Never `lucide-svelte` direct imports. |
+| 7 | **No hardcoded values in @phavo/ui:** CSS tokens only. Iron rule, no exceptions. |
+| 8 | **Glassmorphism Pi fallback:** `max-resolution: 1.5dppx` disables backdrop-filter. |
+| 9 | **Plugin import allowlist enforced at load time:** Arbitrary npm blocked. |
+| 10 | **`plugin_data` quota:** 10MB per plugin_id, enforced server-side. |
+| 11 | **Version management:** Single source in root `package.json`. Vite injects `PHAVO_VERSION`. |
+| 12 | **Future direction:** Desktop packaging, marketplace ideas, and plugin ecosystem expansion are anecdotal directions, not roadmap items. |
 
 ---
 

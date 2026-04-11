@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.8.2] - 2026-04-12
+
+### Docs & Release Hygiene
+
+- Ignore AI planning and screenshot artifact folders under `docs/` in both `.gitignore` and `.dockerignore`
+- Bump workspace and runtime version references to `0.8.2`
+- Preserve `Celestial Edition` as UI naming while keeping the repo aligned to the MIT single-edition model
+
 ## [0.8.1] - 2026-04-11
 
 ### Performance & Infrastructure

@@ -2,7 +2,6 @@
 import { onMount } from 'svelte';
 import { page } from '$app/state';
 import {
-  isWidgetDefinition,
   type WidgetDefinition,
   type WidgetManifestEntry,
   type WidgetSize,
@@ -46,12 +45,6 @@ let pageNameInput = $state<HTMLInputElement | null>(null);
 const config = $derived(getConfig());
 const session = $derived(getSession());
 
-const sessionTierLabel = $derived(
-  session?.tier === 'celestial'
-    ? 'CELESTIAL'
-    : 'STELLAR',
-);
-
 async function handleTelemetryChoice(enabled: boolean) {
   telemetryOpen = false;
   updateConfig({ telemetryAsked: true, telemetryEnabled: enabled });
@@ -63,8 +56,7 @@ async function handleTelemetryChoice(enabled: boolean) {
 }
 
 function getDef(widgetId: string): WidgetDefinition | undefined {
-  const entry = getWidgetManifest().find((widget) => widget.id === widgetId);
-  return entry && isWidgetDefinition(entry) ? entry : undefined;
+  return getWidgetManifest().find((widget) => widget.id === widgetId);
 }
 
 const COL_SPAN_MAP: Record<WidgetSize, number> = { S: 1, M: 2, L: 4, XL: 8 };
@@ -172,8 +164,7 @@ onMount(() => {
     $effect(() => {
       if (
         config.setupComplete &&
-        !config.telemetryAsked &&
-        session?.tier !== 'celestial'
+        !config.telemetryAsked
       ) {
         telemetryOpen = true;
       }
@@ -346,7 +337,7 @@ onMount(() => {
         <span class="f-dim">POWERED BY</span>
         <span class="f-brand">PHAVO</span>
         <span class="f-dot"></span>
-        <span class="f-dim">{sessionTierLabel} EDITION</span>
+        <span class="f-dim">CELESTIAL EDITION</span>
         <span class="f-dot"></span>
         <span class="f-dim">VERSION {PHAVO_VERSION}</span>
         {#if deviceName}
@@ -359,22 +350,12 @@ onMount(() => {
 </div>
 
 {#snippet drawerTilePreview(widget: WidgetManifestEntry)}
-  {@const liveData = isWidgetDefinition(widget) ? getWidgetData(widget.id) : null}
-  {@const previewLoading = isWidgetDefinition(widget) ? getWidgetPreviewLoading(widget.id) : false}
-  {@const previewError = isWidgetDefinition(widget) ? getWidgetPreviewError(widget.id) : null}
-  {@const WidgetComponent = isWidgetDefinition(widget) ? getWidgetComponent(widget.id) : null}
+  {@const liveData = getWidgetData(widget.id)}
+  {@const previewLoading = getWidgetPreviewLoading(widget.id)}
+  {@const previewError = getWidgetPreviewError(widget.id)}
+  {@const WidgetComponent = getWidgetComponent(widget.id)}
 
-  {#if !isWidgetDefinition(widget)}
-    <div class="tray-live-state tray-live-state-locked">
-      <span class="tray-live-icon" aria-hidden="true">
-        <Icon name="lock" size={16} />
-      </span>
-      <div class="tray-live-copy-group">
-        <span class="tray-live-kicker">Preview locked</span>
-        <p class="tray-live-copy">Upgrade to unlock this widget and its live dashboard data.</p>
-      </div>
-    </div>
-  {:else if previewLoading && !liveData}
+  {#if previewLoading && !liveData}
     <div class="tray-live-state">
       <span class="tray-live-icon" aria-hidden="true">
         <Icon name="activity" size={16} />
@@ -404,7 +385,7 @@ onMount(() => {
         </p>
       </div>
     </div>
-  {:else if isWidgetDefinition(widget) && widget.configSchema}
+  {:else if widget.configSchema}
     <div class="tray-live-state">
       <span class="tray-live-icon" aria-hidden="true">
         <Icon name="sliders-horizontal" size={16} />
@@ -459,8 +440,6 @@ onMount(() => {
     alreadyAdded: en.dashboard.alreadyAdded,
     remove: en.dashboard.remove,
     removeConfirm: en.dashboard.removeConfirm,
-    locked: en.dashboard.locked,
-    upgradePrompt: en.upgrade.widgetLocked,
   }}
 />
 
@@ -695,11 +674,6 @@ onMount(() => {
     border: 1px solid color-mix(in srgb, var(--color-border-subtle) 88%, transparent);
     background: color-mix(in srgb, var(--color-bg-base) 42%, transparent);
     overflow: hidden;
-  }
-
-  .tray-live-state-locked {
-    border-color: color-mix(in srgb, var(--color-warning) 24%, transparent);
-    background: color-mix(in srgb, var(--color-warning-subtle) 72%, transparent);
   }
 
   .tray-live-icon {

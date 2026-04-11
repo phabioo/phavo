@@ -18,7 +18,7 @@ export function registerWidgetRoutes(app: Hono<{ Variables: AppVariables }>): vo
   app.get('/widgets', requireSession(), (c) => {
     const session = c.get('session');
     if (!session) return c.json(err('Unauthorized'), 401);
-    return c.json(ok(registry.getManifest(session.tier)));
+    return c.json(ok(registry.getManifest()));
   });
 
   // ─── Widget Instances ──────────────────────────────────────────────────
@@ -182,10 +182,6 @@ export function registerWidgetRoutes(app: Hono<{ Variables: AppVariables }>): vo
       const widget = registry.getById(instance.widgetId);
       if (!widget) {
         return c.json(err('Unknown widget'), 404);
-      }
-
-      if (widget.tier === 'celestial' && session.tier === 'stellar') {
-        return c.json(err('Upgrade required'), 403);
       }
 
       if (!widget.configSchema) {

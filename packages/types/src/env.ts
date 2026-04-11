@@ -21,9 +21,4 @@ export const env = {
   platform,
   nodeEnv: process.env.NODE_ENV ?? 'development',
   trustProxy: process.env.PHAVO_TRUST_PROXY === 'true',
-
-  // Gumroad webhook (phavo.net only)
-  PHAVO_GUMROAD_WEBHOOK_SECRET: process.env.PHAVO_GUMROAD_WEBHOOK_SECRET,
-  PHAVO_LICENSE_PRIVATE_KEY: process.env.PHAVO_LICENSE_PRIVATE_KEY,
-  PHAVO_GUMROAD_API_KEY: process.env.PHAVO_GUMROAD_API_KEY,
 } as const;

@@ -124,21 +124,18 @@ const config = {
 
 ---
 
-## 6. Tier Identifiers
+## 6. Edition Naming & License
 
-Tier strings in all code, DB, and UI are `stellar` and `celestial`. No others.
+PHAVO is MIT licensed. All code in this repository is covered by the MIT license.
 
-```typescript
-// ✅
-requireTier('celestial')
-tier: 'stellar' | 'celestial'
-"STELLAR EDITION" / "CELESTIAL EDITION"
+"Celestial Edition" is the product edition name. It can appear in the UI
+(for example the footer pill or About page), but it is never a feature gate,
+database enum, or middleware decision.
 
-// ❌ — these strings no longer exist in PHAVO
-'free' / 'standard' / 'pro' / 'local'
+```text
+✅ UI copy: "CELESTIAL EDITION"
+❌ Code gate: requireTier(...), session.tier, widget tier filters
 ```
-
-If you see any of the forbidden strings in non-comment code, fix them.
 
 ---
 
@@ -333,7 +330,7 @@ Never:
 - Streaming via `streamText()` + Hono `streamSSE` — never buffer full response
 - Local Ollama: `baseURL` configurable via `PHAVO_OLLAMA_URL` env var
 - API keys stored encrypted in `credentials` table — never exposed to browser
-- AI features are Celestial-tier only — always behind `requireTier('celestial')`
+- AI features are available to all users — never gate them behind edition checks
 
 ---
 

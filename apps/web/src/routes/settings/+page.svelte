@@ -6,7 +6,6 @@ import { fade } from 'svelte/transition';
   import { Badge, Button, Icon, Input, Select, Tooltip } from '@phavo/ui';
 import en from '$lib/i18n/en.json';
 import ImportExportTab from '$lib/components/settings/ImportExportTab.svelte';
-import LicenceTab from '$lib/components/settings/LicenceTab.svelte';
 import SettingsLayout from '$lib/components/settings/SettingsLayout.svelte';
 import WidgetsTab from '$lib/components/settings/WidgetsTab.svelte';
 import type { AiStatusResponseData } from '$lib/stores/ai.svelte';
@@ -14,7 +13,7 @@ import { updateAiStatusFromPayload } from '$lib/stores/ai.svelte';
 import { setConfig, updateConfig } from '$lib/stores/config.svelte';
 import { fetchWithCsrf } from '$lib/utils/api';
 
-type TabId = 'general' | 'widgets' | 'import-export' | 'license' | 'account' | 'ai' | 'plugins' | 'about';
+type TabId = 'general' | 'widgets' | 'import-export' | 'account' | 'ai' | 'plugins' | 'about';
 type SaveState = 'idle' | 'saving' | 'saved';
 type GeoResult = {
   id: number;
@@ -25,15 +24,12 @@ type GeoResult = {
 };
 type SessionInfo = {
   userId: string;
-  tier: 'stellar' | 'celestial';
   authMode: 'local';
   validatedAt: number;
   email: string | null;
 } | null;
 type AboutInfo = {
   version: string;
-  tier: 'stellar' | 'celestial';
-  licenseKeyMasked: string | null;
 };
 type UpdateInfo = {
   updateAvailable: boolean;
@@ -72,13 +68,12 @@ type AiSettingsResponseData = AiStatusResponseData & {
   hasCustomKey: boolean;
 };
 
-const settingsTabs: Array<{ id: TabId; label: string; icon: string; statusLabel: string; status: 'active' | 'inactive' | 'warning' | 'error'; celestialOnly?: boolean }> = [
+const settingsTabs: Array<{ id: TabId; label: string; icon: string; statusLabel: string; status: 'active' | 'inactive' | 'warning' | 'error' }> = [
   { id: 'general', label: 'General', icon: 'settings-2', statusLabel: 'Configured', status: 'active' },
   { id: 'widgets', label: 'Widgets', icon: 'puzzle', statusLabel: 'Active', status: 'active' },
   { id: 'import-export', label: 'Backup & Export', icon: 'archive', statusLabel: 'Ready', status: 'active' },
-  { id: 'license', label: 'Licence', icon: 'shield-check', statusLabel: 'Active', status: 'active' },
   { id: 'account', label: 'Account', icon: 'user', statusLabel: 'Secured', status: 'active' },
-  { id: 'ai', label: 'AI', icon: 'sparkles', statusLabel: 'Not configured', status: 'inactive', celestialOnly: true },
+  { id: 'ai', label: 'AI', icon: 'sparkles', statusLabel: 'Not configured', status: 'inactive' },
   { id: 'plugins', label: 'Plugins', icon: 'plug', statusLabel: 'Coming soon', status: 'inactive' },
   { id: 'about', label: 'About', icon: 'info', statusLabel: 'Up to date', status: 'active' },
 ];
@@ -95,10 +90,6 @@ const tabMeta: Record<TabId, { title: string; description: string }> = {
   'import-export': {
     title: 'Backup & Export',
     description: 'Create portable backups, restore previous exports, and manage credential-protected bundles.',
-  },
-  license: {
-    title: 'Licence',
-    description: 'Check the active tier on this installation and manage licence activation where applicable.',
   },
   account: {
     title: 'Account',
@@ -139,7 +130,7 @@ const newPasswordInputId = 'settings-new-password';
 const confirmPasswordInputId = 'settings-confirm-password';
 const sessionTimeoutSelectId = 'settings-session-timeout';
 
-const validTabs = new Set<TabId>(['general', 'widgets', 'import-export', 'license', 'account', 'ai', 'plugins', 'about']);
+const validTabs = new Set<TabId>(['general', 'widgets', 'import-export', 'account', 'ai', 'plugins', 'about']);
 const activeTab = $derived.by(() => {
   const tab = page.url.searchParams.get('tab') as TabId | null;
   return tab && validTabs.has(tab) ? tab : 'general';
@@ -158,7 +149,7 @@ let geoTimer: ReturnType<typeof setTimeout> | null = null;
 
 let sessionTimeout = $state<'1d' | '7d' | '30d' | 'never'>('7d');
 let sessionInfo = $state<SessionInfo>(null);
-let aboutInfo = $state<AboutInfo>({ version: '0.8.1', tier: 'stellar', licenseKeyMasked: null });
+let aboutInfo = $state<AboutInfo>({ version: '0.8.2' });
 let updateInfo = $state<UpdateInfo | null>(null);
 let checkingUpdates = $state(false);
 let applying = $state(false);
@@ -261,7 +252,6 @@ let saveStates = $state<Record<TabId, SaveState>>({
   general: 'idle',
   account: 'idle',
   widgets: 'idle',
-  license: 'idle',
   'import-export': 'idle',
   ai: 'idle',
   plugins: 'idle',
@@ -271,7 +261,6 @@ let tabErrors = $state<Record<TabId, string>>({
   general: '',
   account: '',
   widgets: '',
-  license: '',
   'import-export': '',
   ai: '',
   plugins: '',
@@ -324,14 +313,12 @@ onMount(() => {
   });
 });
 
-function tierVariant(tier: 'stellar' | 'celestial') {
-  if (tier === 'celestial') return 'accent';
-  return 'default';
+function tierVariant(_tier: string) {
+  return 'accent';
 }
 
-function tierLabel(tier: 'stellar' | 'celestial') {
-  if (tier === 'celestial') return en.settings.tierStandard;
-  return en.settings.tierFree;
+function tierLabel(_tier: string) {
+  return 'Celestial';
 }
 
 function formatTimestamp(value?: number | null) {
@@ -875,11 +862,6 @@ function formatReleaseDate(iso: string): string {
   {:else if activeTab === 'import-export'}
     <ImportExportTab />
 
-  {:else if activeTab === 'license'}
-    <LicenceTab
-      tier={sessionInfo?.tier ?? aboutInfo.tier}
-      licenseKeyMasked={aboutInfo.licenseKeyMasked}
-    />
 
   {:else if activeTab === 'account'}
     <div class="settings-cards-grid">
@@ -899,10 +881,10 @@ function formatReleaseDate(iso: string): string {
           <span class="settings-meta-value">Local</span>
         </div>
         <div class="settings-meta-item">
-          <span class="settings-field-label">Tier</span>
+          <span class="settings-field-label">Edition</span>
           <div>
-            <Badge variant={tierVariant(sessionInfo?.tier ?? aboutInfo.tier)}>
-              {tierLabel(sessionInfo?.tier ?? aboutInfo.tier)}
+            <Badge variant="accent">
+              Celestial
             </Badge>
           </div>
         </div>
@@ -973,15 +955,6 @@ function formatReleaseDate(iso: string): string {
     </div>
 
   {:else if activeTab === 'ai'}
-    {#if (sessionInfo?.tier ?? aboutInfo.tier) !== 'celestial'}
-      <div class="settings-cards-grid">
-        <div class="settings-hero-card settings-card-full">
-          <span class="settings-card-label">AI ASSISTANT</span>
-          <h2 class="settings-hero-value">Celestial Only</h2>
-          <p class="settings-hero-sub">AI features require the Celestial tier.</p>
-        </div>
-      </div>
-    {:else}
       <div class="settings-cards-grid">
         <div class="settings-hero-card settings-card-full">
           <span class="settings-card-label">AI ASSISTANT</span>
@@ -1131,7 +1104,6 @@ function formatReleaseDate(iso: string): string {
           {currentSaveLabel}
         </Button>
       </div>
-    {/if}
 
   {:else if activeTab === 'plugins'}
     <div class="settings-cards-grid">
@@ -1160,7 +1132,7 @@ function formatReleaseDate(iso: string): string {
       <span class="settings-card-label">VERSION</span>
       <h2 class="settings-hero-value">v{aboutInfo.version}</h2>
       <p class="settings-hero-sub">
-        {aboutInfo.tier === 'celestial' ? 'Celestial Edition' : 'Stellar Edition'}
+        Celestial Edition
       </p>
     </div>
 

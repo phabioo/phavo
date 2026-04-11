@@ -31,6 +31,8 @@ secret.key
 .playwright-mcp/
 
 # ─── Docs / dev-only files ───────────────────────────────────────────────────
+docs/screenshots/
+docs/superpowers/
 docs/
 *.md
 !packages/db/src/migrations/

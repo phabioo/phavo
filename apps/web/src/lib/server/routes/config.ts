@@ -377,12 +377,8 @@ export function registerConfigRoutes(app: Hono<{ Variables: AppVariables }>): vo
       const exportData = exportResult.data;
       const warnings: string[] = [];
 
-      // ── Resolve which tabs will actually be imported (free tier cap = 1) ──────
-      let tabsToImport = exportData.tabs;
-      if (session.tier === 'stellar' && tabsToImport.length > 1) {
-        tabsToImport = tabsToImport.slice(0, 1);
-        warnings.push(`Tab count reduced to 1 (Free tier limit)`);
-      }
+      // ── Resolve which tabs will actually be imported ──────
+      const tabsToImport = exportData.tabs;
       const keptTabIds = new Set(tabsToImport.map((t) => t.id));
 
       // All DB mutations inside a single transaction — atomic rollback on failure.

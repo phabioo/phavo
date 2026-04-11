@@ -1,5 +1,4 @@
 import { execFile } from 'node:child_process';
-import { schema } from '@phavo/db';
 import { err, ok } from '@phavo/types';
 import { env } from '@phavo/types/env';
 import { sql } from 'drizzle-orm';
@@ -46,12 +45,6 @@ async function fetchUpdateInfo(fallback: UpdateInfo): Promise<UpdateInfo> {
   };
 }
 
-function maskLicenseId(licenseId?: string | null): string | null {
-  if (!licenseId) return null;
-  if (licenseId.length <= 8) return licenseId;
-  return `${licenseId.slice(0, 4)}••••${licenseId.slice(-4)}`;
-}
-
 export function registerSystemRoutes(app: Hono<{ Variables: AppVariables }>): void {
   // Health check — always public, no auth. Polled by the frontend status pill.
   app.get('/system/health', async (c) => {
@@ -67,17 +60,13 @@ export function registerSystemRoutes(app: Hono<{ Variables: AppVariables }>): vo
     try {
       const session = c.get('session');
       if (!session) return c.json(err('Unauthorized'), 401);
-      const licenseRows = await db.select().from(schema.licenseActivation);
-      const latestLicense = licenseRows[licenseRows.length - 1];
       return c.json(
         ok({
           version: PHAVO_VERSION,
-          tier: session.tier,
-          licenseKeyMasked: maskLicenseId(latestLicense?.licenseId ?? null),
         }),
       );
     } catch {
-      return c.json(ok({ version: PHAVO_VERSION, tier: 'stellar', licenseKeyMasked: null }));
+      return c.json(ok({ version: PHAVO_VERSION }));
     }
   });
 

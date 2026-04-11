@@ -80,7 +80,6 @@ export const load = async ({ cookies, url }: ServerLoadEvent) => {
 
       session = {
         userId: row.userId,
-        tier: row.tier,
         authMode: row.authMode,
         validatedAt: row.validatedAt,
       };

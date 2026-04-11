@@ -1,6 +1,6 @@
 // apps/web/src/lib/server/middleware/auth.ts
 // authMiddleware: validates session cookie against DB on every request.
-// requireSession / requireTier: per-route access guards.
+// requireSession: per-route access guard.
 
 import { schema } from '@phavo/db';
 import { err } from '@phavo/types';
@@ -15,17 +15,8 @@ export type AppVariables = {
   session?: SessionRecord;
 };
 
-type Tier = 'stellar' | 'celestial';
-
-const TIER_RANK: Record<Tier, number> = { stellar: 0, celestial: 1 };
-
 // Routes that bypass session validation entirely (no auth required).
-const PUBLIC_PATHS = new Set([
-  '/api/v1/system/health',
-  '/api/v1/auth/login',
-  '/api/v1/auth/totp',
-  '/api/v1/webhooks/gumroad',
-]);
+const PUBLIC_PATHS = new Set(['/api/v1/system/health', '/api/v1/auth/login', '/api/v1/auth/totp']);
 
 function parseCookieValue(header: string, name: string): string | undefined {
   return header
@@ -47,7 +38,6 @@ export const authMiddleware: MiddlewareHandler<{ Variables: AppVariables }> = as
     const devSession: SessionRecord = {
       id: 'dev',
       userId: mockSession.userId,
-      tier: mockSession.tier,
       authMode: mockSession.authMode,
       validatedAt: mockSession.validatedAt,
       expiresAt: Date.now() + 7 * 24 * 60 * 60 * 1000,
@@ -61,7 +51,7 @@ export const authMiddleware: MiddlewareHandler<{ Variables: AppVariables }> = as
   const token = parseCookieValue(cookieHeader, 'phavo_session');
   if (!token) return c.json(err('Unauthorized'), 401);
 
-  // Validate session against DB — tier always comes from DB, never from cookie payload.
+  // Validate session against DB.
   const rows = await db.select().from(schema.sessions).where(eq(schema.sessions.id, token));
   const session = rows[0];
   if (!session) return c.json(err('Unauthorized'), 401);
@@ -81,17 +71,6 @@ export const authMiddleware: MiddlewareHandler<{ Variables: AppVariables }> = as
 export function requireSession(): MiddlewareHandler<{ Variables: AppVariables }> {
   return async (c, next) => {
     if (!c.get('session')) return c.json(err('Unauthorized'), 401);
-    await next();
-  };
-}
-
-export function requireTier(minimum: Tier): MiddlewareHandler<{ Variables: AppVariables }> {
-  return async (c, next) => {
-    const session = c.get('session');
-    if (!session) return c.json(err('Unauthorized'), 401);
-    if (TIER_RANK[session.tier] < TIER_RANK[minimum]) {
-      return c.json(err('Upgrade required'), 403);
-    }
     await next();
   };
 }

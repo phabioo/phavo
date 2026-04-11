@@ -4,7 +4,7 @@ import { onMount, type Snippet } from 'svelte';
 import { fade } from 'svelte/transition';
 import { goto } from '$app/navigation';
 import { page } from '$app/state';
-import { Sidebar, Header, NotificationPanel, Modal, Button, Icon } from '@phavo/ui';
+import { Sidebar, Header, NotificationPanel, Icon } from '@phavo/ui';
 import type { SearchEntry } from '@phavo/ui';
 import type { DashboardConfig, Notification, Session } from '@phavo/types';
 import en from '$lib/i18n/en.json';
@@ -58,7 +58,6 @@ let { data, children }: Props = $props();
 
 let sidebarCollapsed = $state(false);
 let currentPathname = $state('/');
-let tabLimitModalOpen = $state(false);
 let headerWeatherFallback = $state<{ temp: number; condition: string } | undefined>(undefined);
 let systemOnline = $state<boolean | null>(null);
 let headerScrolled = $state(false);
@@ -67,7 +66,6 @@ const sidebarItems = [
   { id: 'general', label: 'General', icon: 'settings-2', status: { type: 'active' as const, label: 'Configured' } },
   { id: 'widgets', label: 'Widgets', icon: 'puzzle', status: { type: 'active' as const, label: 'Active' } },
   { id: 'import-export', label: 'Backup & Export', icon: 'archive', status: { type: 'active' as const, label: 'Ready' } },
-  { id: 'license', label: 'Licence', icon: 'shield-check', status: { type: 'active' as const, label: 'Active' } },
   { id: 'account', label: 'Account', icon: 'user', status: { type: 'active' as const, label: 'Secured' } },
   { id: 'ai', label: 'AI', icon: 'sparkles', status: { type: 'inactive' as const, label: 'Not Configured' } },
   { id: 'plugins', label: 'Plugins', icon: 'plug', status: { type: 'inactive' as const, label: 'Coming Soon' } },
@@ -89,14 +87,6 @@ const activeSidebarItem = $derived.by(() => {
   const tab = page.url.searchParams.get('tab');
   if (!path.startsWith('/settings')) return 'home';
   return tab && SETTINGS_TAB_IDS.has(tab) ? tab : 'general';
-});
-
-const shellTier = $derived(data.session?.tier ?? 'stellar');
-
-const shellTierLabel = $derived.by(() => {
-  const t = shellTier;
-  if (t === 'celestial') return 'CELESTIAL';
-  return 'STELLAR';
 });
 
 const aiStatus = $derived(getAiStatus());
@@ -185,19 +175,11 @@ async function handleDashboardTabSelect(tabId: string): Promise<void> {
 }
 
 async function handleSidebarNewTab(): Promise<void> {
-  if (shellTier === 'stellar' && getTabs().length >= 1) {
-    tabLimitModalOpen = true;
-    return;
-  }
-
   const nextLabel = getTabs().length === 0 ? 'Home' : `Page ${getTabs().length + 1}`;
   const previousCount = getTabs().length;
   const result = await createTab(nextLabel);
 
   if (!result.ok) {
-    if (result.error?.includes('Tab limit')) {
-      tabLimitModalOpen = true;
-    }
     return;
   }
 
@@ -212,7 +194,6 @@ async function handleSidebarNewTab(): Promise<void> {
 const COMMAND_SETTINGS_TABS = [
   { id: 'general', label: 'General' },
   { id: 'widgets', label: 'Widgets' },
-  { id: 'license', label: 'Licence' },
   { id: 'account', label: 'Account' },
   { id: 'plugins', label: 'Plugins' },
   { id: 'import-export', label: 'Backup & Export' },
@@ -508,7 +489,6 @@ function handleNotificationClick(n: Notification) {
     <div class="ambient-glow ambient-glow-teal" style="position: fixed; pointer-events: none; z-index: 0;"></div>
     <Sidebar
       bind:collapsed={sidebarCollapsed}
-      tier={shellTier}
       deviceName={data.hostname ?? ''}
       tabs={getTabs()}
       activeTab={getCurrentTabId()}
@@ -524,7 +504,7 @@ function handleNotificationClick(n: Notification) {
     <main class="main-content" class:sidebar-collapsed={sidebarCollapsed}>
       <Header
         dashboardName={getConfig().dashboardName ?? data.dashboardName ?? 'PHAVO'}
-        tierLabel={shellTierLabel}
+        tierLabel="CELESTIAL"
         weather={headerWeather}
         scrolled={headerScrolled}
         unreadCount={getUnreadCount()}
@@ -541,7 +521,6 @@ function handleNotificationClick(n: Notification) {
         {searchIndex}
         searchEngineUrl={aiStatus.searchEngineUrl}
         aiProviders={aiStatus.providers}
-        tier={shellTier}
         onAiChat={handleAiChat}
       />
       {#key currentPathname}
@@ -560,23 +539,6 @@ function handleNotificationClick(n: Notification) {
       onaction={(n) => handleNotificationClick(n)}
       onmuteall={() => toggleMute()}
     />
-    <Modal bind:open={tabLimitModalOpen}>
-      <div class="flex flex-col items-center gap-4 text-center p-4">
-        <Icon name="lock" size={32} class="text-accent" />
-        <h2 class="text-lg font-bold text-text">Page limit reached</h2>
-        <p class="text-sm text-text-secondary max-w-[36ch] leading-relaxed">
-          Stellar tier supports 1 dashboard page. Upgrade to Celestial to create unlimited pages.
-        </p>
-        <div class="flex gap-3 mt-2">
-          <Button variant="secondary" onclick={() => (tabLimitModalOpen = false)}>
-            Close
-          </Button>
-          <Button onclick={() => { tabLimitModalOpen = false; navigateToSettings('license'); }}>
-            View Licence
-          </Button>
-        </div>
-      </div>
-    </Modal>
   </div>
 {:else}
   {@render children()}

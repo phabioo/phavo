@@ -52,13 +52,6 @@ export function registerTabRoutes(app: Hono<{ Variables: AppVariables }>): void 
       const body = CreateTabBodySchema.safeParse(rawBody);
       if (!body.success) return c.json(err('Invalid tab data'), 400);
 
-      if (session.tier === 'stellar') {
-        const existing = await db.select().from(schema.tabs);
-        if (existing.length >= 1) {
-          return c.json(err('Tab limit reached — upgrade to Celestial'), 403);
-        }
-      }
-
       const allTabs = await db.select().from(schema.tabs);
       const nextOrder = allTabs.length > 0 ? Math.max(...allTabs.map((t) => t.order)) + 1 : 0;
 
