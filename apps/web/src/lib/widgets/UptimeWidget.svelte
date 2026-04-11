@@ -20,9 +20,9 @@
 
 <div class="uptime-widget">
   {#if size === 'S'}
-    <div class="s-row">
-      <Icon name="clock" size={16} class="text-accent" />
-      <span class="metric-value mono hero-glow">{formatted}</span>
+    <div class="uptime-s">
+      <span class="widget-category-label">SYSTEM UPTIME</span>
+      <span class="uptime-s-value mono hero-glow">{formatted}</span>
     </div>
   {:else if size === 'M'}
     <div class="widget-header">
@@ -75,10 +75,20 @@
     height: 100%;
   }
 
-  .s-row {
+  .uptime-s {
     display: flex;
+    flex-direction: column;
     align-items: center;
-    gap: var(--space-2);
+    justify-content: center;
+    height: 100%;
+    gap: 4px;
+  }
+
+  .uptime-s-value {
+    font-size: clamp(20px, 3.5vw, 32px);
+    font-weight: 700;
+    color: var(--color-primary-fixed);
+    line-height: 1;
   }
 
   .primary-metric {
@@ -94,10 +104,6 @@
     letter-spacing: -0.03em;
     line-height: 1;
     filter: drop-shadow(0 0 20px color-mix(in srgb, var(--color-primary-fixed) 30%, transparent));
-  }
-
-  .s-row .metric-value {
-    font-size: 20px;
   }
 
   .human-label {
