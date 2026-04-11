@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.8.1] - 2026-04-11
+
+### Performance & Infrastructure
+
+- Pi 3/4 GPU fallbacks across all `@phavo/ui` components: `backdrop-filter`, `will-change`, hover scale transforms, and ambient blur glows disabled via `@media (max-resolution: 1.5dppx)`
+- Core metrics polling intervals doubled (CPU/Memory/Disk/Network 5s→10s, Temperature 10s→15s)
+- Widget polling start staggered (1500ms × index) to spread server CPU load on boot
+- Agent response cache capped at 200 entries; rate-limiter bucket map capped at 500 entries
+- Sidebar `font-weight` reduced from 900 to 700 (eliminates unused font variant)
+- Dockerfile: production `node_modules` pruned after build; add `.dockerignore`; remove unused `EXPOSE 3443`
+- `docker-compose.yml`: remove unimplemented `PHAVO_TLS_MODE`/`PHAVO_DOMAIN` vars
+- Docs: Pi fallback rule expanded in `rules.md`; archspec polling pattern updated; `CLAUDE.md` aligned
+
 ## [0.8.0] - 2026-04-10
 
 ### Major Changes

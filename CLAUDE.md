@@ -29,7 +29,7 @@ Third digit .PATCH only for urgent hotfixes (e.g. v1.0.1)
 - v1.0 — First public release (MA + MB + MC complete)
 - v1.x — Post-release feature milestones
 
-Current version: 0.8.0
+Current version: 0.8.1
 
 ---
 

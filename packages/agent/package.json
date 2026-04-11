@@ -1,6 +1,6 @@
 {
   "name": "@phavo/agent",
-  "version": "0.8.0",
+  "version": "0.8.1",
   "main": "./src/index.ts",
   "exports": {
     ".": "./src/index.ts"

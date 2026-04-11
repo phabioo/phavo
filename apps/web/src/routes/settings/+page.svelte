@@ -158,7 +158,7 @@ let geoTimer: ReturnType<typeof setTimeout> | null = null;
 
 let sessionTimeout = $state<'1d' | '7d' | '30d' | 'never'>('7d');
 let sessionInfo = $state<SessionInfo>(null);
-let aboutInfo = $state<AboutInfo>({ version: '0.8.0', tier: 'stellar', licenseKeyMasked: null });
+let aboutInfo = $state<AboutInfo>({ version: '0.8.1', tier: 'stellar', licenseKeyMasked: null });
 let updateInfo = $state<UpdateInfo | null>(null);
 let checkingUpdates = $state(false);
 let applying = $state(false);

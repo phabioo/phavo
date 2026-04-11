@@ -1,0 +1,44 @@
+# ─── Version control ─────────────────────────────────────────────────────────
+.git/
+.gitignore
+.gitattributes
+
+# ─── Dependencies (reinstalled inside the build stage) ───────────────────────
+node_modules/
+**/node_modules/
+
+# ─── Build outputs ────────────────────────────────────────────────────────────
+**/build/
+**/.svelte-kit/
+**/dist/
+**/.turbo/
+
+# ─── Dev runtime data ────────────────────────────────────────────────────────
+**/.dev-data/
+**/.phavo-data/
+/data/
+
+# ─── Secrets / environment ───────────────────────────────────────────────────
+.env
+.env.*
+*.pem
+*.key
+secret.key
+
+# ─── AI tooling ──────────────────────────────────────────────────────────────
+.claude/
+.superpowers/
+.playwright-mcp/
+
+# ─── Docs / dev-only files ───────────────────────────────────────────────────
+docs/
+*.md
+!packages/db/src/migrations/
+
+# ─── OS / editor ─────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo

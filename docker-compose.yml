@@ -18,8 +18,8 @@ services:
       # Set to true if running behind a reverse proxy
       # (nginx, Caddy, Traefik) that sets X-Forwarded-For
       # - PHAVO_TRUST_PROXY=true
-      - PHAVO_TLS_MODE=${PHAVO_TLS_MODE:-self-signed}
-      - PHAVO_DOMAIN=${PHAVO_DOMAIN:-}
+      # TLS termination: use a reverse proxy (nginx, Caddy, Traefik) in front of PHAVO.
+      # Set PHAVO_TRUST_PROXY=true when doing so.
     restart: unless-stopped
     read_only: true
     tmpfs:

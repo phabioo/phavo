@@ -30,7 +30,7 @@ RUN chown -R phavo:phavo /app
 USER phavo
 # Data volume for database and config
 VOLUME ["/data"]
-EXPOSE 3000 3443
+EXPOSE 3000
 # PHAVO_MIGRATIONS_DIR tells runMigrations() where to find the SQL files.
 ENV PHAVO_MIGRATIONS_DIR=/app/migrations
 HEALTHCHECK --interval=30s --timeout=5s \
