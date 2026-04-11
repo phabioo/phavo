@@ -687,12 +687,24 @@ $effect.root(() => {
       void fetchWidgetData(def, false);
     }
 
-    const intervals = activeDefinitions
-      .filter((def) => def.refreshInterval > 0)
-      .map((def) => setInterval(() => void fetchWidgetData(def, true), def.refreshInterval));
+    const pollable = activeDefinitions.filter((def) => def.refreshInterval > 0);
+    const timeouts: ReturnType<typeof setTimeout>[] = [];
+    const intervals: ReturnType<typeof setInterval>[] = [];
+
+    // Stagger initial polls to spread CPU load (especially on low-power devices).
+    for (const [i, def] of pollable.entries()) {
+      timeouts.push(
+        setTimeout(() => {
+          intervals.push(
+            setInterval(() => void fetchWidgetData(def, true), def.refreshInterval),
+          );
+        }, i * 1500),
+      );
+    }
 
     return () => {
-      for (const interval of intervals) clearInterval(interval);
+      for (const t of timeouts) clearTimeout(t);
+      for (const iv of intervals) clearInterval(iv);
     };
   });
 });

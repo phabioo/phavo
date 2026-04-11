@@ -67,11 +67,11 @@ function getDef(widgetId: string): WidgetDefinition | undefined {
   return entry && isWidgetDefinition(entry) ? entry : undefined;
 }
 
-const COL_SPAN_MAP: Record<WidgetSize, number> = { S: 3, M: 4, L: 6, XL: 8 };
-const ROW_SPAN_MAP: Record<WidgetSize, number> = { S: 1, M: 2, L: 2, XL: 3 };
+const COL_SPAN_MAP: Record<WidgetSize, number> = { S: 1, M: 2, L: 4, XL: 8 };
+const ROW_SPAN_MAP: Record<WidgetSize, number> = { S: 1, M: 2, L: 4, XL: 4 };
 
 function colSpanFor(size: WidgetSize): number {
-  return COL_SPAN_MAP[size] ?? 4;
+  return COL_SPAN_MAP[size] ?? 2;
 }
 
 function rowSpanFor(size: WidgetSize): number {

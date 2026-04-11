@@ -122,7 +122,7 @@ body{font-family:var(--font-ui);background:var(--bg);color:var(--text);font-size
 <div class="doc-header">
   <div>
     <h1>Phavo — Road to v1.0</h1>
-    <div class="sub">S0–S9 + Audit + Infra complete · 3 Pre-Launch Milestones remaining · Updated 2026-04-09 · Runtime aligned to v0.8.0 · PRD v4.1 · Arch Spec v3.1 · Design: Celestial Wish</div>
+    <div class="sub">S0–S9 + Audit + Infra complete · 3 Pre-Launch Milestones remaining · Updated 2026-04-11 · Runtime aligned to v0.8.0 · PRD v4.1 · Arch Spec v3.1 · Design: Celestial Wish</div>
   </div>
   <div class="legend">
     <div class="leg-item"><div class="leg-dot" style="background:#3fc8a0"></div>Done</div>
@@ -134,10 +134,10 @@ body{font-family:var(--font-ui);background:var(--bg);color:var(--text);font-size
 
 <div class="progress-bar">
   <span class="progress-label">Overall progress</span>
-  <div class="progress-track"><div class="progress-fill" style="width:82%"></div></div>
-  <span class="progress-label"><b>~82%</b> to v1.0
-  &nbsp;·&nbsp; MA complete · MB in progress
-  &nbsp;·&nbsp; MC remaining</span>
+  <div class="progress-track"><div class="progress-fill" style="width:87%"></div></div>
+  <span class="progress-label"><b>~87%</b> to v1.0
+  &nbsp;·&nbsp; MA complete · MB nearly done (Ed25519 only)
+  &nbsp;·&nbsp; MC active (Pi-testing focus)</span>
 </div>
 
 <div class="main">
@@ -158,7 +158,7 @@ body{font-family:var(--font-ui);background:var(--bg);color:var(--text);font-size
   <div class="sidebar-label">Pre-Launch</div>
   <a href="#ma"  class="done">MA — Design &amp; Experience</a>
   <a href="#mb"  class="active">MB — Backend &amp; Activation</a>
-  <a href="#mc"  class="upcoming">MC — Launch</a>
+  <a href="#mc"  class="active">MC — Launch</a>
   <a href="#launch">v1.0 Checklist</a>
   <div class="sidebar-label">Post-v1.0</div>
   <a href="#v11"    class="post">v1.1 — Linux + Plugins</a>
@@ -237,7 +237,7 @@ body{font-family:var(--font-ui);background:var(--bg);color:var(--text);font-size
   <div class="session-header"><span class="session-num">S7</span><span class="session-title">Mobile Responsiveness</span><span class="session-subtitle">complete</span></div>
   <div class="session-body"><div class="tasks">
     <div class="task task-done"><div class="task-icon">✅</div><div class="task-text">Mobile (&lt;640px): bottom nav bar, single-column grid</div></div>
-    <div class="task task-done"><div class="task-icon">✅</div><div class="task-text">Tablet (640–1024px): icon rail, 6-column grid</div></div>
+    <div class="task task-done"><div class="task-icon">✅</div><div class="task-text">Tablet (640–1024px): icon rail, 4-column grid</div></div>
   </div></div>
 </div>
 
@@ -263,7 +263,7 @@ body{font-family:var(--font-ui);background:var(--bg);color:var(--text);font-size
   <div class="session-body"><div class="tasks">
     <div class="task task-done"><div class="task-icon">✅</div><div class="task-text">Dashboard parity, navigation migration to sidebar, drawer + state fixes</div></div>
     <div class="task task-done"><div class="task-icon">✅</div><div class="task-text">Layout correctness, settings integration, visual cohesion, header polish</div></div>
-    <div class="task task-done"><div class="task-icon">✅</div><div class="task-text">0 typecheck errors · 0 lint violations (89 CRLF warnings from Windows git — known/ignored)</div></div>
+    <div class="task task-done"><div class="task-icon">✅</div><div class="task-text">0 typecheck errors · 0 lint violations · CRLF resolved via <code>.gitattributes eol=lf</code></div></div>
   </div></div>
 </div>
 
@@ -317,22 +317,30 @@ body{font-family:var(--font-ui);background:var(--bg);color:var(--text);font-size
     <div class="task task-done"><div class="task-icon">✅</div><div class="task-text"><code>POST /api/v1/license/deactivate</code></div><span class="task-tag tag-api">api</span></div>
     <div class="task task-done"><div class="task-icon">✅</div><div class="task-text">Server startup re-verification of stored license key</div><span class="task-tag tag-security">security</span></div>
     <div class="task task-done"><div class="task-icon">✅</div><div class="task-text">Settings → Licence page wired to activation endpoints</div><span class="task-tag tag-ui">ui</span></div>
-    <div class="task"><div class="task-icon">⬜</div><div class="task-text">
-  AI SDK integration — replace custom AI route with Vercel AI SDK (<code>ai</code> +
-  <code>ollama-ai-provider</code>); unified provider abstraction for Ollama (local),
-  OpenAI, and Anthropic; streaming via Hono SSE; searchbar AI uses stream
+    <div class="task task-done"><div class="task-icon">✅</div><div class="task-text">
+  AI SDK integration — Vercel AI SDK (<code>ai</code> + <code>ollama-ai-provider</code>);
+  unified provider abstraction for Ollama (local), OpenAI, and Anthropic;
+  streaming via Hono SSE; searchbar AI uses stream
 </div><span class="task-tag tag-api">api</span></div>
-    <div class="task"><div class="task-icon">⬜</div><div class="task-text">Ed25519 key generation — private key in GitHub Actions Secrets; two public keys embedded in binary</div><span class="task-tag tag-security">security</span></div>
-    <div class="task"><div class="task-icon">⬜</div><div class="task-text">Gumroad webhook → phavo.net key generation → email key to buyer</div><span class="task-tag tag-infra">infra</span></div>
+    <div class="task task-done"><div class="task-icon">✅</div><div class="task-text">Gumroad webhook → phavo.net key generation → email key to buyer</div><span class="task-tag tag-infra">infra</span></div>
   </div></div>
 </div>
 
 <!-- MC -->
-<div class="session upcoming" id="mc">
-  <div class="session-header"><span class="session-num">MC</span><span class="session-title">Launch</span><span class="session-subtitle">upcoming</span></div>
+<div class="session active" id="mc">
+  <div class="session-header"><span class="session-num">MC</span><span class="session-title">Launch</span><span class="session-subtitle">active — Pi-testing focus</span></div>
   <div class="session-body">
-  <div class="callout" style="margin-bottom:12px">Launch milestone. Nothing ships until MA and MB are complete. MC produces phavo.net, the Gumroad product, and the first public release.</div>
+  <div class="callout" style="margin-bottom:12px">Launch milestone. MA complete, MB nearly done. Immediate goal: working Docker Hub install + in-app updates so the Pi can be used as the real test target.</div>
+  <div class="callout gold" style="margin-bottom:12px">Pi-testing prerequisite track — complete these first: Docker hardening → in-app update → Pi smoke test. Everything else follows.</div>
   <div class="tasks">
+    <div class="task"><div class="task-icon">⬜</div><div class="task-text">Docker hardening — non-root user, read-only filesystem, Trivy scan, HEALTHCHECK</div><span class="task-tag tag-infra">infra</span></div>
+    <div class="task"><div class="task-icon">⬜</div><div class="task-text">In-app update — version-available badge in header notification; <code>POST /api/v1/system/update</code> triggers Docker pull + container restart; Watchtower-compatible; shown only when newer version detected via update check</div><span class="task-tag tag-api">api</span></div>
+    <div class="task"><div class="task-icon">⬜</div><div class="task-text">Raspberry Pi 4/5 arm64 smoke test — fresh <code>docker compose up</code> from Docker Hub, all 14 widgets, full setup wizard, in-app update round-trip</div><span class="task-tag tag-infra">infra</span></div>
+    <div class="task"><div class="task-icon">⬜</div><div class="task-text"><code>bun audit</code> clean, Trivy 0 critical/high CVEs</div><span class="task-tag tag-security">security</span></div>
+    <div class="task"><div class="task-icon">⬜</div><div class="task-text">Security pen-test — auth flows, CSRF bypass, rate limit evasion, tier enforcement bypass</div><span class="task-tag tag-security">security</span></div>
+    <div class="task"><div class="task-icon">⬜</div><div class="task-text">Verify AES-256-GCM credential encryption at rest</div><span class="task-tag tag-security">security</span></div>
+    <div class="task"><div class="task-icon">⬜</div><div class="task-text">Ed25519 license — test tampered payload rejection, tampered signature rejection</div><span class="task-tag tag-security">security</span></div>
+    <div class="task"><div class="task-icon">⬜</div><div class="task-text">SSRF guard — private IPs, localhost, cloud metadata (169.254.169.254) → all 400</div><span class="task-tag tag-security">security</span></div>
     <div class="task"><div class="task-icon">⬜</div><div class="task-text">
   Populate dashboard for hero screenshot — representative widget layout
   (CPU L, Memory M, Network M, Disk M, Weather M, RSS L)
@@ -341,13 +349,6 @@ body{font-family:var(--font-ui);background:var(--bg);color:var(--text);font-size
   Capture hero screenshot at 1440px — primary marketing asset for
   phavo.net, Reddit, Discord, Product Hunt
 </div><span class="task-tag tag-design">design</span></div>
-    <div class="task"><div class="task-icon">⬜</div><div class="task-text">Security pen-test — auth flows, CSRF bypass, rate limit evasion, tier enforcement bypass</div><span class="task-tag tag-security">security</span></div>
-    <div class="task"><div class="task-icon">⬜</div><div class="task-text">Verify AES-256-GCM credential encryption at rest</div><span class="task-tag tag-security">security</span></div>
-    <div class="task"><div class="task-icon">⬜</div><div class="task-text">Ed25519 license — test tampered payload rejection, tampered signature rejection</div><span class="task-tag tag-security">security</span></div>
-    <div class="task"><div class="task-icon">⬜</div><div class="task-text">SSRF guard — private IPs, localhost, cloud metadata (169.254.169.254) → all 400</div><span class="task-tag tag-security">security</span></div>
-    <div class="task"><div class="task-icon">⬜</div><div class="task-text">Docker hardening — non-root user, read-only filesystem, Trivy scan, HEALTHCHECK</div><span class="task-tag tag-infra">infra</span></div>
-    <div class="task"><div class="task-icon">⬜</div><div class="task-text">Raspberry Pi 4/5 arm64 smoke test — fresh <code>docker compose up</code>, all 14 widgets, full setup</div><span class="task-tag tag-infra">infra</span></div>
-    <div class="task"><div class="task-icon">⬜</div><div class="task-text"><code>bun audit</code> clean, Trivy 0 critical/high CVEs</div><span class="task-tag tag-security">security</span></div>
     <div class="task"><div class="task-icon">⬜</div><div class="task-text">phavo.net landing page — hero screenshot, Stellar/Celestial pricing, Docker one-liner</div><span class="task-tag tag-infra">infra</span></div>
     <div class="task"><div class="task-icon">⬜</div><div class="task-text">docs.phavo.net — installation, setup, widget reference, license activation, FAQ</div><span class="task-tag tag-infra">infra</span></div>
     <div class="task"><div class="task-icon">⬜</div><div class="task-text">README.md final — screenshots, pricing table, badges</div><span class="task-tag tag-infra">infra</span></div>

@@ -9,10 +9,17 @@ build/
 # ─── Turborepo ───────────────────────────────────────────────────────────────
 .turbo/
 
+# ─── TypeScript ──────────────────────────────────────────────────────────────
+*.tsbuildinfo
+
 # ─── Dev runtime data ────────────────────────────────────────────────────────
 # Local dev data directories (server creates these at ${PHAVO_DATA_DIR})
 .dev-data/
 .phavo-data/
+
+# Nested dev-data artifact: happens when PHAVO_DATA_DIR=./apps/web/.dev-data
+# is resolved relative to --cwd apps/web instead of the repo root
+apps/web/apps/
 
 # Container / production data dir (never committed)
 /data/
@@ -25,12 +32,14 @@ build/
 # ─── Secrets / environment ───────────────────────────────────────────────────
 .env
 .env.local
+.env.*.local
 secret.key
 *.pem
 *.key
 
 # ─── Build outputs ───────────────────────────────────────────────────────────
 dist/
+coverage/
 
 # ─── Logs ────────────────────────────────────────────────────────────────────
 *.log
@@ -39,14 +48,25 @@ dist/
 .DS_Store
 Thumbs.db
 desktop.ini
+$RECYCLE.BIN/
 
 # ─── Editor ──────────────────────────────────────────────────────────────────
 .idea/
 *.swp
 *.swo
-# Keep .vscode/extensions.json — ignore only user-specific settings
-.vscode/settings.json
+# Ignore all VS Code user-specific files; keep shared extension recommendations
+.vscode/*
+!.vscode/extensions.json
 
 # ─── Old AI context docs ─────────────────────────────────────────────────────
 CLAUDE_v*.txt
 CLAUDE_v*.md
+
+# ─── AI tooling ──────────────────────────────────────────────────────────────
+.claude/
+.superpowers/
+.playwright-mcp/
+
+# ─── Generated / ephemeral docs ──────────────────────────────────────────────
+docs/ui-audit-report.md
+docs/archspec.md

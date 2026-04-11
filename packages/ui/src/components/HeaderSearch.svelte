@@ -781,4 +781,16 @@
       max-height: min(60dvh, 420px);
     }
   }
+
+  /* Pi 3/4 performance fallback */
+  @media (prefers-reduced-motion: reduce), (max-resolution: 1.5dppx) {
+    .hs-container {
+      backdrop-filter: none;
+      background: var(--color-surface-bright);
+    }
+    .hs-dropdown {
+      backdrop-filter: none;
+      background: var(--color-surface-bright);
+    }
+  }
 </style>

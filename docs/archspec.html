@@ -984,27 +984,29 @@ POST /api/v1/auth/totp/verify  { token }  → validates TOTP before completing l
 </table></div>
 
 <h3>Widget polling pattern</h3>
+<p>Widgets with <code>refreshInterval &gt; 0</code> are polled on a staggered schedule: each widget starts
+1500ms after the previous one. This spreads CPU load on constrained hardware (Pi 3/4). Polling
+uses separate <code>timeouts[]</code> and <code>intervals[]</code> arrays so teardown can use
+<code>clearTimeout</code> for pending starts and <code>clearInterval</code> for running polls.</p>
 <pre><span class="cm">// widgets.svelte.ts — simplified</span>
-<span class="kw">class</span> <span class="ty">WidgetStore</span> {
-  instances = <span class="fn">$state</span>&lt;<span class="ty">WidgetInstance</span>[]&gt;([])
+<span class="cm">// polls start staggered (1500ms × index) to spread CPU load</span>
+<span class="kw">const</span> timeouts: <span class="ty">ReturnType</span>&lt;<span class="kw">typeof</span> setTimeout&gt;[] = []
+<span class="kw">const</span> intervals: <span class="ty">ReturnType</span>&lt;<span class="kw">typeof</span> setInterval&gt;[] = []
 
-  <span class="fn">startPolling</span>(instance: <span class="ty">WidgetInstance</span>) {
-    <span class="kw">const</span> poll = <span class="kw">async</span> () => {
-      instance.status = <span class="str">'loading'</span>
-      <span class="kw">try</span> {
-        <span class="kw">const</span> res = <span class="kw">await</span> <span class="fn">fetch</span>(instance.definition.dataEndpoint)
-        instance.data   = <span class="kw">await</span> res.<span class="fn">json</span>()
-        instance.status = <span class="str">'active'</span>
-        instance.lastUpdated = Date.now()
-      } <span class="kw">catch</span> {
-        instance.status = Date.now() - instance.lastUpdated &gt; <span class="num">2</span> * instance.definition.refreshInterval
-          ? <span class="str">'stale'</span> : <span class="str">'error'</span>
-      }
-    }
-    <span class="fn">poll</span>()
-    <span class="kw">return</span> <span class="fn">setInterval</span>(poll, instance.definition.refreshInterval)
-  }
+activeDefinitions.<span class="fn">forEach</span>((def, i) => {
+  <span class="kw">const</span> t = <span class="fn">setTimeout</span>(() => {
+    intervals.<span class="fn">push</span>(<span class="fn">setInterval</span>(() => <span class="fn">fetchWidgetData</span>(def, <span class="kw">true</span>), def.refreshInterval))
+  }, i * <span class="num">1500</span>)
+  timeouts.<span class="fn">push</span>(t)
+})
+
+<span class="cm">// teardown — clear pending starts separately from running polls</span>
+<span class="kw">return</span> () => {
+  <span class="kw">for</span> (<span class="kw">const</span> id <span class="kw">of</span> timeouts) <span class="fn">clearTimeout</span>(id)
+  <span class="kw">for</span> (<span class="kw">const</span> id <span class="kw">of</span> intervals) <span class="fn">clearInterval</span>(id)
 }</pre>
+
+<p>Stale detection: if <code>Date.now() − lastUpdated &gt; 2 × refreshInterval</code> on a failed poll, status becomes <code>stale</code>; otherwise <code>error</code>.</p>
 </section>
 
 <!-- ═══════════════════════════════════════════════════════ -->
@@ -1068,10 +1070,10 @@ POST /api/v1/auth/totp/verify  { token }  → validates TOTP before completing l
 <div class="tbl-wrap"><table>
 <thead><tr><th>Size</th><th>colSpan</th><th>rowSpan</th><th>Content depth</th></tr></thead>
 <tbody>
-  <tr><td>S</td><td>3</td><td>1</td><td class="note">Number + label only</td></tr>
-  <tr><td>M</td><td>4</td><td>2</td><td class="note">Stat + progress + subtitle</td></tr>
-  <tr><td>L</td><td>6</td><td>2</td><td class="note">Stat + chart or list</td></tr>
-  <tr><td>XL</td><td>8</td><td>3</td><td class="note">Full data story + nebula glow + WishStar</td></tr>
+  <tr><td>S</td><td>1</td><td>1</td><td class="note">Number + label only</td></tr>
+  <tr><td>M</td><td>2</td><td>2</td><td class="note">Stat + progress + subtitle</td></tr>
+  <tr><td>L</td><td>4</td><td>4</td><td class="note">Stat + chart or list</td></tr>
+  <tr><td>XL</td><td>8</td><td>4</td><td class="note">Full data story + nebula glow + WishStar</td></tr>
 </tbody>
 </table></div>
 </section>
@@ -1341,8 +1343,8 @@ volumes:
 <thead><tr><th>Element</th><th>Mobile (&lt;640px)</th><th>Tablet (640–1024px)</th><th>Desktop (&gt;1024px)</th></tr></thead>
 <tbody>
   <tr><td>Sidebar</td><td class="note">Hidden → bottom nav bar (tab icons)</td><td class="note">Icon-only rail (64px), hover tooltip</td><td class="note">Full sidebar (240px) with labels</td></tr>
-  <tr><td>Widget grid</td><td class="note">1 column, full width</td><td class="note">6-column (half)</td><td class="note">12-column BentoGrid</td></tr>
-  <tr><td>Widget S/M</td><td class="note">Expand to full width</td><td class="note">Span adjusted</td><td class="note">Native colSpan</td></tr>
+  <tr><td>Widget grid</td><td class="note">2 columns</td><td class="note">4-column BentoGrid</td><td class="note">8-column BentoGrid</td></tr>
+  <tr><td>Widget S/M</td><td class="note">S=1col, M/L=full width</td><td class="note">S=1col, M=2col, L=full width</td><td class="note">S=1col, M=2col, L=4col</td></tr>
   <tr><td>Header</td><td class="note">Logo + bell + hamburger</td><td class="note">Full header (clock, bell, avatar)</td><td class="note">Full header</td></tr>
   <tr><td>Settings</td><td class="note">Tab list stacks vertically</td><td class="note">Horizontal tab bar</td><td class="note">Horizontal tab bar</td></tr>
   <tr><td>Notification panel</td><td class="note">Full-screen overlay</td><td class="note">380px right drawer</td><td class="note">380px right drawer</td></tr>

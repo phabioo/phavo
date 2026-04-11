@@ -93,7 +93,7 @@ registry.register({
   defaultSize: { w: 4, h: 3 },
   minSize: { w: 2, h: 2 },
   dataEndpoint: '/api/v1/cpu',
-  refreshInterval: 5000,
+  refreshInterval: 10000,
 });
 
 registry.register({
@@ -106,7 +106,7 @@ registry.register({
   defaultSize: { w: 4, h: 3 },
   minSize: { w: 2, h: 2 },
   dataEndpoint: '/api/v1/memory',
-  refreshInterval: 5000,
+  refreshInterval: 10000,
 });
 
 registry.register({
@@ -119,7 +119,7 @@ registry.register({
   defaultSize: { w: 4, h: 3 },
   minSize: { w: 2, h: 2 },
   dataEndpoint: '/api/v1/disk',
-  refreshInterval: 5000,
+  refreshInterval: 10000,
 });
 
 registry.register({
@@ -132,7 +132,7 @@ registry.register({
   defaultSize: { w: 4, h: 3 },
   minSize: { w: 2, h: 2 },
   dataEndpoint: '/api/v1/network',
-  refreshInterval: 5000,
+  refreshInterval: 10000,
 });
 
 registry.register({
@@ -145,7 +145,7 @@ registry.register({
   defaultSize: { w: 2, h: 2 },
   minSize: { w: 2, h: 2 },
   dataEndpoint: '/api/v1/temperature',
-  refreshInterval: 10000,
+  refreshInterval: 15000,
 });
 
 registry.register({

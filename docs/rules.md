@@ -166,9 +166,16 @@ Never modify these back to implicit calls — they will silently break on Window
 
 ---
 
-## 9. Glassmorphism Always Needs a Fallback
+## 9. Pi 3/4 Performance Fallback
 
-Every use of `backdrop-filter: blur()` must include a Pi 3/4 fallback.
+Every `@phavo/ui` component must include a Pi 3/4 fallback block. The media query covers:
+`prefers-reduced-motion: reduce` (a11y) and `max-resolution: 1.5dppx` (Pi 3/4 at 1080p without GPU compositor).
+
+**What to disable in the fallback:**
+- `backdrop-filter: blur()` — replace with an opaque background token
+- `will-change: transform` — reset to `will-change: auto`
+- hover `transform: scale()` — remove the scale
+- ambient blur glows (`filter: blur(100px+)`) — hide entirely (`display: none` or `opacity: 0`)
 
 ```css
 /* ✅ Always */
@@ -181,10 +188,12 @@ Every use of `backdrop-filter: blur()` must include a Pi 3/4 fallback.
     background: var(--color-surface-high);
     backdrop-filter: none;
   }
+  .card:hover { transform: none; }
+  .glow-ambient { display: none; }
 }
 ```
 
-`max-resolution: 1.5dppx` catches Raspberry Pi 3/4 at 1080p without GPU backdrop-filter support. Pi 5 still gets glass.
+Pi 5 has a GPU compositor and is NOT caught by `max-resolution: 1.5dppx` — it still gets glass.
 
 ---
 

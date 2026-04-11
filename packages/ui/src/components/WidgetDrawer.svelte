@@ -415,7 +415,7 @@
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    animation: drawer-slide-up 0.25s cubic-bezier(0.32, 0.72, 0, 1);
+    animation: drawer-slide-up var(--motion-component);
   }
 
   .drawer-handle {
@@ -733,5 +733,13 @@
     color: var(--color-on-surface);
     font-size: 11px;
     line-height: 1.5;
+  }
+
+  /* Pi 3/4 performance fallback */
+  @media (prefers-reduced-motion: reduce), (max-resolution: 1.5dppx) {
+    .drawer-backdrop {
+      backdrop-filter: none;
+      background: color-mix(in srgb, var(--color-surface-dim) 80%, transparent);
+    }
   }
 </style>

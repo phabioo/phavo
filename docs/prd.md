@@ -218,8 +218,8 @@ not lose progress. If `setupComplete = false`, redirect to `/setup` at last step
 - Live clock + weather summary in header
 - **Mobile responsive:** ≥375px usable
   - Mobile (<640px): sidebar → bottom nav bar. Single-column grid. S/M → full-width.
-  - Tablet (640–1024px): icon rail (64px). 2-column grid.
-  - Desktop (>1024px): full sidebar (240px), 12-column grid.
+  - Tablet (640–1024px): icon rail (64px). 4-column BentoGrid.
+  - Desktop (>1024px): full sidebar (240px), 8-column BentoGrid.
   - Minimum touch targets: 44×44px (WCAG 2.1 AA)
   - No horizontal scroll at any breakpoint
 - **Widget drawer:** `+` button adds/removes widgets without setup re-run
@@ -301,10 +301,10 @@ interface WidgetTeaserDefinition {
 
 | Size | colSpan | rowSpan | Content depth |
 |---|---|---|---|
-| S | 3 | 1 | Number + label only |
-| M | 4 | 2 | Stat + progress + subtitle |
-| L | 6 | 2 | Stat + chart or list |
-| XL | 8 | 3 | Full data story + nebula glow + WishStar |
+| S | 1 | 1 | Number + label only |
+| M | 2 | 2 | Stat + progress + subtitle |
+| L | 4 | 4 | Stat + chart or list |
+| XL | 8 | 4 | Full data story + nebula glow + WishStar |
 
 Widgets are always **presentational** — no self-fetching.
 Data flows: store → widget component. Never widget → API.

@@ -11,6 +11,8 @@ ENV NODE_ENV=$NODE_ENV
 # Generate .svelte-kit/ (tsconfig.json + ambient types) before the build.
 RUN cd apps/web && bunx svelte-kit sync
 RUN bun run build
+# Re-install without devDependencies for a slimmer production image.
+RUN rm -rf node_modules && bun install --frozen-lockfile --production
 
 # Stage 2: production
 FROM oven/bun:1-alpine AS runner

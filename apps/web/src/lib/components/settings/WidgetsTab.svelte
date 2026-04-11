@@ -499,14 +499,14 @@
         {#if confirmRemove}
           <span class="wt-confirm-text">Remove all instances of this widget?</span>
           <div class="wt-confirm-actions">
-            <Button variant="danger" onclick={() => removeAllInstances(widget)} disabled={removing}>
+            <Button variant="destructive" onclick={() => removeAllInstances(widget)} disabled={removing}>
               <Icon name="trash-2" size={14} />
               {removing ? 'Removing...' : 'Confirm remove'}
             </Button>
             <Button variant="ghost" onclick={() => (confirmRemove = false)}>Cancel</Button>
           </div>
         {:else}
-          <Button variant="danger" onclick={() => (confirmRemove = true)}>
+          <Button variant="destructive" onclick={() => (confirmRemove = true)}>
             <Icon name="trash-2" size={14} />
             Remove all instances
           </Button>
@@ -590,6 +590,7 @@
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: var(--space-4);
+    padding-top: 4px;
   }
 
   .wt-preview-scale {

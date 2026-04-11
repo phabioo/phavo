@@ -54,31 +54,141 @@ function handleBackdropClick() {
 }
 </script>
 
-<div class={open ? 'relative z-[1200] flex flex-col gap-1' : 'relative flex flex-col gap-1'}>
+<style>
+  .phavo-select-wrapper {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .phavo-select-open {
+    z-index: 1200;
+  }
+
+  .phavo-select-label {
+    font-size: 0.75rem;
+    color: var(--color-text-muted, var(--color-outline));
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 4px;
+  }
+
+  .phavo-select-trigger {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--color-surface-card);
+    border: 1px solid color-mix(in srgb, var(--color-outline-variant) 20%, transparent);
+    border-radius: var(--radius-md);
+    padding: var(--space-2) var(--space-3);
+    font-size: var(--font-size-sm);
+    font-family: var(--font-mono);
+    color: var(--color-on-surface);
+    outline: none;
+    cursor: pointer;
+    width: 100%;
+    transition: background var(--motion-micro), border-color var(--motion-micro);
+  }
+
+  .phavo-select-trigger:hover {
+    background: var(--color-surface-high);
+    border-color: color-mix(in srgb, var(--color-outline-variant) 40%, transparent);
+  }
+
+  .phavo-select-trigger:focus {
+    border-color: var(--color-accent, var(--color-primary));
+  }
+
+  .phavo-select-value {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .phavo-select-chevron {
+    color: var(--color-outline);
+    margin-left: var(--space-2);
+    flex-shrink: 0;
+  }
+
+  .phavo-select-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 1190;
+  }
+
+  .phavo-select-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    margin-top: 4px;
+    background: var(--color-surface-card);
+    border: 1px solid color-mix(in srgb, var(--color-outline-variant) 20%, transparent);
+    border-radius: var(--radius-md);
+    box-shadow: 0 8px 24px color-mix(in srgb, var(--color-surface-dim) 60%, transparent);
+    z-index: 1200;
+    padding: var(--space-1) 0;
+    max-height: 15rem;
+    overflow-y: auto;
+    list-style: none;
+    margin-left: 0;
+    margin-right: 0;
+  }
+
+  .phavo-select-option {
+    padding: var(--space-2) var(--space-3);
+    font-size: var(--font-size-sm);
+    cursor: pointer;
+    color: var(--color-on-surface);
+    transition: background var(--motion-micro);
+  }
+
+  .phavo-select-option:hover {
+    background: var(--color-surface-high);
+  }
+
+  .phavo-select-option-selected {
+    color: var(--color-accent, var(--color-primary));
+  }
+
+  .phavo-select-option-btn {
+    width: 100%;
+    text-align: left;
+    background: transparent;
+    border: none;
+    padding: 0;
+    font: inherit;
+    color: inherit;
+    cursor: pointer;
+  }
+</style>
+
+<div class="phavo-select-wrapper" class:phavo-select-open={open}>
   {#if label}
-    <label class="text-xs text-text-muted uppercase tracking-widest mb-1" for={selectId}>{label}</label>
+    <label class="phavo-select-label" for={selectId}>{label}</label>
   {/if}
 
   <button
     bind:this={triggerEl}
     id={selectId}
     type="button"
-    class="phavo-select-trigger flex items-center justify-between bg-surface-card border border-border rounded-md px-3 py-2 text-sm font-mono text-text outline-none transition-colors
-      hover:bg-surface-high hover:border-outline-variant/40 focus:border-accent focus:ring-1 focus:ring-accent/30 cursor-pointer"
+    class="phavo-select-trigger"
     aria-haspopup="listbox"
     aria-expanded={open}
     onclick={toggle}
     onkeydown={handleKeydown}
   >
-    <span class="truncate">{selectedLabel || '\u00A0'}</span>
-    <Icon name="chevron-down" size={14} class="text-text-muted ml-2 shrink-0" />
+    <span class="phavo-select-value">{selectedLabel || '\u00A0'}</span>
+    <span class="phavo-select-chevron"><Icon name="chevron-down" size={14} /></span>
   </button>
 
   {#if open}
     <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
-    <div class="fixed inset-0 z-[1190]" onclick={handleBackdropClick} aria-hidden="true"></div>
+    <div class="phavo-select-backdrop" onclick={handleBackdropClick} aria-hidden="true"></div>
     <ul
-      class="absolute top-full left-0 right-0 mt-1 bg-surface-card border border-border rounded-md shadow-lg z-[1200] py-1 max-h-60 overflow-auto"
+      class="phavo-select-dropdown"
       role="listbox"
       aria-labelledby={selectId}
     >
@@ -86,13 +196,12 @@ function handleBackdropClick() {
         <li
           role="option"
           aria-selected={value === opt.value}
-          class="px-3 py-2 text-sm cursor-pointer transition-colors
-            {value === opt.value ? 'text-accent' : 'text-text'}
-            hover:bg-hover"
+          class="phavo-select-option"
+          class:phavo-select-option-selected={value === opt.value}
         >
           <button
             type="button"
-            class="w-full text-left bg-transparent border-none p-0 font-inherit text-inherit cursor-pointer"
+            class="phavo-select-option-btn"
             onclick={() => select(opt)}
           >
             {opt.label}

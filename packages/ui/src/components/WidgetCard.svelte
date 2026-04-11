@@ -57,8 +57,8 @@ let {
   subtitle,
   icon,
   showHeader = true,
-  colSpan = 4,
-  rowSpan = 1,
+  colSpan = 2,
+  rowSpan = 2,
   class: cls = '',
   availableSizes = ALL_SIZES,
   size = 'M',
@@ -307,7 +307,7 @@ function isSizeAvailable(s: WidgetSize): boolean {
     border-radius: 2rem;
     display: flex;
     flex-direction: column;
-    min-height: 188px;
+    min-height: 80px;
     box-shadow: var(--shadow-md);
     transition: transform var(--motion-component), box-shadow var(--motion-component);
     will-change: transform;
@@ -604,11 +604,27 @@ function isSizeAvailable(s: WidgetSize): boolean {
   }
 
   /* ── Responsive overrides ────────────────────────────────────────────── */
+
+  /* Mobile (<640px) — 2-column grid */
   @media (max-width: 639px) {
     .widget-card-outer {
+      min-height: 80px;
+    }
+
+    .widget-size-s {
       grid-column: span 1 !important;
-      grid-row: auto !important;
-      min-height: 120px;
+      grid-row: span 1 !important;
+    }
+
+    .widget-size-m {
+      grid-column: span 2 !important;
+      grid-row: span 2 !important;
+    }
+
+    .widget-size-l,
+    .widget-size-xl {
+      grid-column: span 2 !important;
+      grid-row: span 3 !important;
     }
 
     .widget-controls {
@@ -616,28 +632,28 @@ function isSizeAvailable(s: WidgetSize): boolean {
       pointer-events: auto;
     }
 
-    .ctrl-size {
-      display: none;
-    }
-
+    .ctrl-size,
     .ctrl-divider {
       display: none;
     }
   }
 
+  /* Tablet (640–1023px) — 4-column grid */
   @media (min-width: 640px) and (max-width: 1023px) {
-    .widget-card-outer {
-      grid-row: auto !important;
+    .widget-size-s {
+      grid-column: span 1 !important;
+      grid-row: span 1 !important;
     }
 
-    .widget-size-s,
     .widget-size-m {
       grid-column: span 2 !important;
+      grid-row: span 2 !important;
     }
 
     .widget-size-l,
     .widget-size-xl {
-      grid-column: span 3 !important;
+      grid-column: span 4 !important;
+      grid-row: span 3 !important;
     }
   }
 
@@ -654,6 +670,21 @@ function isSizeAvailable(s: WidgetSize): boolean {
     pointer-events: none;
     border-radius: inherit;
     z-index: 0;
+  }
+
+  /* ── Pi 3/4 performance fallback ─────────────────────────────────────── */
+  @media (prefers-reduced-motion: reduce), (max-resolution: 1.5dppx) {
+    .widget-card-outer {
+      will-change: auto;
+    }
+    .widget-card-outer:hover {
+      transform: none;
+    }
+    .widget-controls {
+      backdrop-filter: none;
+      -webkit-backdrop-filter: none;
+      background: var(--color-surface-dim);
+    }
   }
 
 </style>

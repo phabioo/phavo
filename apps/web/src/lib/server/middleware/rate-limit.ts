@@ -15,6 +15,7 @@ interface RateLimitRule {
   windowMs: number;
 }
 
+const MAX_BUCKETS = 500;
 const buckets = new Map<string, BucketEntry>();
 
 // Prune stale buckets every 5 minutes to keep memory bounded.
@@ -43,6 +44,15 @@ export function checkIpRateLimit(
   const entry = buckets.get(key);
 
   if (!entry || now - entry.windowStart >= rule.windowMs) {
+    // Evict oldest bucket when at capacity to keep memory bounded on Pi.
+    if (!entry && buckets.size >= MAX_BUCKETS) {
+      let oldestKey: string | undefined;
+      let oldestStart = Infinity;
+      for (const [k, v] of buckets) {
+        if (v.windowStart < oldestStart) { oldestStart = v.windowStart; oldestKey = k; }
+      }
+      if (oldestKey) buckets.delete(oldestKey);
+    }
     // New window.
     buckets.set(key, { count: 1, windowStart: now });
     return { allowed: true };

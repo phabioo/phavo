@@ -135,12 +135,15 @@ tonal depth (no borders for layout). Full spec: `docs/design.md`.
 - Widget category labels: ALL CAPS, `letter-spacing: 0.1em`
 - Glassmorphism: `backdrop-filter: blur(20px)` with Pi 3/4 fallback
 
-**Pi Performance Fallback:**
+**Pi Performance Fallback** (required in every `@phavo/ui` component):
 ```css
 @media (prefers-reduced-motion: reduce), (max-resolution: 1.5dppx) {
+  /* backdrop-filter → opaque surface token */
   .glass { background: var(--color-surface-high); backdrop-filter: none; }
+  /* also disable: will-change, hover scale transforms, ambient blur glows */
 }
 ```
+Covers: `backdrop-filter`, `will-change: transform`, hover `scale()`, ambient blur glows (`filter: blur(100px+)`). Pi 5 is NOT caught — it still gets glass.
 
 ---
 
@@ -179,13 +182,17 @@ Widget tier assignments:
 Widget sizes and BentoGrid spans:
 | Size | colSpan | rowSpan | Content depth |
 |---|---|---|---|
-| S | 3 | 1 | Compact stat only |
-| M | 4 | 2 | Header + hero stat + one secondary element |
-| L | 6 | 2 | Header + hero stat + meaningful expanded content |
-| XL | 8 | 3 | Reserved — exists in WidgetSize but NO widget registers it |
+| S | 1 | 1 | Compact stat only |
+| M | 2 | 2 | Header + hero stat + one secondary element |
+| L | 4 | 4 | Header + hero stat + meaningful expanded content |
+| XL | 8 | 4 | Reserved — exists in WidgetSize but NO widget registers it |
 
 > **Note:** XL exists in the `WidgetSize` type but is intentionally inactive —
 > no widget currently registers it. Reserved for future use. Do not add XL to `availableSizes` arrays.
+
+BentoGrid columns: **8** (desktop ≥1024px) · **4** (tablet 640–1023px) · **2** (mobile <640px)
+Row height: `clamp(120px, 7vw, 160px)` desktop/tablet · `clamp(80px, 20vw, 120px)` mobile
+L rowSpan is capped at **3** on mobile/tablet (full 4 rows only on desktop).
 
 Widgets are always **presentational** — no self-fetching.
 Data flows: store → widget component. Never widget → API.

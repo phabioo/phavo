@@ -295,7 +295,7 @@ const mobileNavItems = $derived([{ id: 'home', label: 'Dashboard', icon: 'layout
 
   .sidebar-wordmark {
     font-size: 18px;
-    font-weight: 900;
+    font-weight: 700;
     letter-spacing: -0.02em;
     color: var(--color-primary-fixed);
     font-family: var(--font-ui);
@@ -688,10 +688,19 @@ const mobileNavItems = $derived([{ id: 'home', label: 'Dashboard', icon: 'layout
     padding: var(--space-2);
     display: flex;
     justify-content: center;
+    background: transparent;
+    border-color: transparent;
   }
 
   .sidebar-collapsed .sidebar-upgrade-text {
     display: none;
+  }
+
+  .sidebar-collapsed .upgrade-btn {
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    border-radius: 50%;
   }
 
   .sidebar-footer {
@@ -887,6 +896,15 @@ const mobileNavItems = $derived([{ id: 'home', label: 'Dashboard', icon: 'layout
     .bottom-nav {
       display: flex;
       scroll-snap-type: x proximity;
+    }
+  }
+
+  /* Pi 3/4 performance fallback */
+  @media (prefers-reduced-motion: reduce), (max-resolution: 1.5dppx) {
+    .bottom-nav {
+      backdrop-filter: none;
+      -webkit-backdrop-filter: none;
+      background: var(--color-surface-card);
     }
   }
 </style>

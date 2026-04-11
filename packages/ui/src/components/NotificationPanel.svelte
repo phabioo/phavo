@@ -541,4 +541,12 @@
   @media (prefers-reduced-motion: reduce) {
     .notif-panel { transition: none; }
   }
+
+  /* Pi 3/4 performance fallback */
+  @media (prefers-reduced-motion: reduce), (max-resolution: 1.5dppx) {
+    .notif-panel {
+      backdrop-filter: none;
+      background: var(--color-surface-dim);
+    }
+  }
 </style>

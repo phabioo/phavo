@@ -24,21 +24,23 @@
 <style>
   .bento-grid {
     display: grid;
-    grid-template-columns: repeat(1, 1fr);
+    grid-template-columns: repeat(2, 1fr);
+    grid-auto-rows: clamp(80px, 20vw, 120px);
     gap: var(--bento-gap, 1.5rem);
     width: 100%;
   }
 
   @media (min-width: 640px) {
     .bento-grid {
-      grid-template-columns: repeat(6, 1fr);
+      grid-template-columns: repeat(4, 1fr);
+      grid-auto-rows: clamp(120px, 7vw, 160px);
     }
   }
 
   @media (min-width: 1024px) {
     .bento-grid {
-      grid-template-columns: repeat(12, 1fr);
-      align-items: start;
+      grid-template-columns: repeat(8, 1fr);
+      grid-auto-rows: clamp(120px, 7vw, 160px);
     }
   }
 </style>

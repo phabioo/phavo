@@ -854,7 +854,7 @@ function formatReleaseDate(iso: string): string {
       <p class="settings-hero-sub" style="color: var(--color-on-surface-variant);">
         Re-open guided setup to rebuild the onboarding baseline.
       </p>
-      <Button variant="ghost" onclick={reRunSetup}>Re-run Setup</Button>
+      <Button variant="secondary" onclick={reRunSetup}>Re-run Setup</Button>
     </div>
     </div>
 
@@ -1182,7 +1182,7 @@ function formatReleaseDate(iso: string): string {
           Check for the latest version.
         </p>
       {/if}
-      <Button variant="ghost" onclick={checkForUpdates} disabled={checkingUpdates}>
+      <Button variant="secondary" onclick={checkForUpdates} disabled={checkingUpdates}>
         <Icon name="refresh-cw" size={14} />
         {checkingUpdates ? 'Checking…' : 'Check Updates'}
       </Button>

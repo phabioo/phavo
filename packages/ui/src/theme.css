@@ -1,13 +1,7 @@
 @import "tailwindcss";
 
-@import '@fontsource/geist/300.css';
-@import '@fontsource/geist/400.css';
-@import '@fontsource/geist/500.css';
-@import '@fontsource/geist/700.css';
-@import '@fontsource/geist/900.css';
-@import '@fontsource/geist-mono/400.css';
-@import '@fontsource/geist-mono/500.css';
-@import '@fontsource/geist-mono/700.css';
+@import '@fontsource-variable/geist';
+@import '@fontsource-variable/geist-mono';
 
 @theme {
   /* ── Fonts ─────────────────────────────────────────── */
@@ -229,6 +223,13 @@ html, body {
   filter: blur(100px);
   z-index: 0;
 }
+@media (prefers-reduced-motion: reduce), (max-resolution: 1.5dppx) {
+  .ambient-glow-purple,
+  .ambient-glow-teal {
+    filter: none;
+    display: none;
+  }
+}
 
 /* ── Monospace utility ───────────────────────────────── */
 .mono, .metric { font-family: var(--font-mono); }
@@ -292,6 +293,11 @@ html, body {
 .hero-glow {
   filter: drop-shadow(0 0 24px color-mix(in srgb, var(--widget-glow, var(--color-primary-fixed)) 40%, transparent))
           drop-shadow(0 0 48px color-mix(in srgb, var(--widget-glow, var(--color-primary-fixed)) 20%, transparent));
+}
+@media (prefers-reduced-motion: reduce), (max-resolution: 1.5dppx) {
+  .hero-glow {
+    filter: drop-shadow(0 0 12px color-mix(in srgb, var(--widget-glow, var(--color-primary-fixed)) 25%, transparent));
+  }
 }
 
 /* ══════════════════════════════════════════════════════════════════════ */
