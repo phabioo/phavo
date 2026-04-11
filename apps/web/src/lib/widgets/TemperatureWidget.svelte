@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { TemperatureMetrics, WidgetSize } from '@phavo/types';
-  import { Badge, Icon } from '@phavo/ui';
+  import { Icon } from '@phavo/ui';
 
   interface Props {
     data: TemperatureMetrics;
@@ -13,9 +13,6 @@
   const temp = $derived(data.cpuTemp ?? 0);
   const tempState = $derived(
     !hasTemp ? 'unknown' : temp >= 80 ? 'hot' : temp >= 60 ? 'warm' : 'cool',
-  );
-  const badgeVariant = $derived(
-    tempState === 'hot' ? 'danger' : tempState === 'warm' ? 'warning' : 'success',
   );
   const badgeLabel = $derived(
     tempState === 'hot' ? 'Hot' : tempState === 'warm' ? 'Warm' : 'Cool',
@@ -33,9 +30,9 @@
       <span class="no-sensor-text">Not available</span>
     </div>
   {:else if size === 'S'}
-    <div class="s-row">
-      <Icon name="thermometer" size={16} class="text-accent" />
-      <span class="metric-value mono hero-glow">{temp.toFixed(0)}°C</span>
+    <div class="temp-s">
+      <span class="widget-category-label">THERMAL</span>
+      <span class="temp-s-value hero-glow">{temp.toFixed(0)}<span class="temp-s-unit">°C</span></span>
     </div>
   {:else if size === 'M'}
     <div class="widget-header">
@@ -47,7 +44,7 @@
       <span class="metric-unit">°{data.unit}</span>
     </div>
 
-    <Badge variant={badgeVariant}>{badgeLabel}</Badge>
+    <span class="temp-status temp-status-{tempState}">&bull; {badgeLabel.toUpperCase()}</span>
   {:else}
     <div class="widget-header">
       <span class="widget-category-label">TEMPERATURE</span>
@@ -58,7 +55,7 @@
       <span class="metric-unit">°{data.unit}</span>
     </div>
 
-    <Badge variant={badgeVariant}>{badgeLabel}</Badge>
+    <span class="temp-status temp-status-{tempState}">&bull; {badgeLabel.toUpperCase()}</span>
 
     <!-- L-only: per-sensor list -->
     {#if sensors.length > 1}
@@ -93,10 +90,26 @@
     height: 100%;
   }
 
-  .s-row {
+  .temp-s {
     display: flex;
+    flex-direction: column;
     align-items: center;
-    gap: var(--space-2);
+    justify-content: center;
+    height: 100%;
+    gap: var(--space-1);
+  }
+
+  .temp-s-value {
+    font-size: 32px;
+    font-weight: 700;
+    color: var(--color-primary-fixed);
+    line-height: 1;
+  }
+
+  .temp-s-unit {
+    font-size: 16px;
+    font-weight: 300;
+    color: var(--color-on-surface-variant);
   }
 
   .primary-metric {
@@ -112,10 +125,6 @@
     letter-spacing: -0.03em;
     line-height: 1;
     filter: drop-shadow(0 0 20px color-mix(in srgb, var(--color-primary-fixed) 30%, transparent));
-  }
-
-  .s-row .metric-value {
-    font-size: 20px;
   }
 
   .metric-unit {
@@ -190,5 +199,24 @@
     color: var(--color-on-surface-variant);
     min-width: 32px;
     text-align: right;
+  }
+
+  .temp-status {
+    font-size: var(--font-size-sm);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .temp-status-cool {
+    color: var(--color-secondary);
+  }
+
+  .temp-status-warm {
+    color: var(--color-warning);
+  }
+
+  .temp-status-hot {
+    color: var(--color-error);
   }
 </style>
