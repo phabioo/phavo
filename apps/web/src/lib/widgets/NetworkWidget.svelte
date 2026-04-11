@@ -52,24 +52,12 @@
       <Icon name="activity" size={18} class="widget-icon" />
     </div>
 
+    <span class="net-hero hero-glow">{downSpeed}</span>
+
     <div class="net-chart">
       {#each sparkBars as bar, i (i)}
         <div class="net-bar" style="height: {bar}%"></div>
       {/each}
-    </div>
-
-    <div class="net-stats">
-      <div class="net-stat-group">
-        <div class="net-stat">
-          <span class="widget-meta-label">DOWN</span>
-          <span class="net-stat-value hero-glow">{downSpeed}</span>
-        </div>
-        <div class="net-stat">
-          <span class="widget-meta-label">UP</span>
-          <span class="net-stat-value hero-glow">{upSpeed}</span>
-        </div>
-      </div>
-      <span class="net-stable-badge">STABLE</span>
     </div>
   </div>
 {:else}
@@ -82,24 +70,22 @@
       <Icon name="activity" size={18} class="widget-icon" />
     </div>
 
+    <!-- L-size: dual stats side-by-side at 40px -->
+    <div class="net-dual">
+      <div class="net-dual-stat">
+        <span class="net-dual-label">DOWN</span>
+        <span class="net-dual-value hero-glow">{downSpeed}</span>
+      </div>
+      <div class="net-dual-stat">
+        <span class="net-dual-label">UP</span>
+        <span class="net-dual-value hero-glow">{upSpeed}</span>
+      </div>
+    </div>
+
     <div class="net-chart">
       {#each sparkBars as bar, i (i)}
         <div class="net-bar" style="height: {bar}%"></div>
       {/each}
-    </div>
-
-    <div class="net-stats">
-      <div class="net-stat-group">
-        <div class="net-stat">
-          <span class="widget-meta-label">DOWN</span>
-          <span class="net-stat-value hero-glow">{downSpeed}</span>
-        </div>
-        <div class="net-stat">
-          <span class="widget-meta-label">UP</span>
-          <span class="net-stat-value hero-glow">{upSpeed}</span>
-        </div>
-      </div>
-      <span class="net-stable-badge">STABLE</span>
     </div>
 
     <!-- L-only: bandwidth bars -->
@@ -123,6 +109,7 @@
 {/if}
 
 <style>
+  /* ── S-size ─────────────────────────────────────────────────────────── */
   .net-s {
     display: flex;
     flex-direction: column;
@@ -135,11 +122,12 @@
   .net-value-s {
     font-size: 24px;
     font-weight: 700;
-    color: var(--color-secondary);
+    color: var(--color-primary-fixed);
     letter-spacing: -0.02em;
     font-family: var(--font-mono);
   }
 
+  /* ── M-size ─────────────────────────────────────────────────────────── */
   .net-m {
     display: flex;
     flex-direction: column;
@@ -147,6 +135,16 @@
     height: 100%;
   }
 
+  .net-hero {
+    font-size: var(--font-size-hero);
+    font-weight: 700;
+    color: var(--color-primary-fixed);
+    line-height: 1;
+    font-family: var(--font-mono);
+    display: block;
+  }
+
+  /* ── shared ─────────────────────────────────────────────────────────── */
   .net-title {
     font-size: var(--font-size-xl);
     font-weight: 600;
@@ -178,46 +176,40 @@
     transition: height 0.5s ease;
   }
 
-  .net-stats {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-end;
-  }
-
-  .net-stat-group { display: flex; gap: var(--space-6); }
-
-  .net-stat {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-1);
-  }
-
-  .net-stat-value {
-    font-size: var(--font-size-lg);
-    font-weight: 700;
-    color: var(--color-on-surface);
-    display: block;
-    font-family: var(--font-mono);
-  }
-
-  .net-stable-badge {
-    font-size: var(--font-size-xs);
-    font-weight: 700;
-    font-family: var(--font-mono);
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--color-secondary);
-    background: color-mix(in srgb, var(--color-secondary) 10%, transparent);
-    padding: var(--space-1) var(--space-2);
-    border-radius: var(--radius-sm);
-  }
-
   /* ── L-size layout ──────────────────────────────────────────────────── */
   .net-l {
     display: flex;
     flex-direction: column;
     justify-content: space-between;
     height: 100%;
+  }
+
+  .net-dual {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-6);
+  }
+
+  .net-dual-stat {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+  }
+
+  .net-dual-value {
+    font-size: 40px;
+    font-weight: 700;
+    color: var(--color-primary-fixed);
+    line-height: 1;
+    font-family: var(--font-mono);
+  }
+
+  .net-dual-label {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--color-outline);
   }
 
   .net-bars-section {
