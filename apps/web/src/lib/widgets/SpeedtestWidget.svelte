@@ -72,35 +72,11 @@
         <span>No results yet</span>
       </div>
     {:else}
-      <div class="speed-hero-wrap">
-        <div class="speed-hero-block">
-          <span class="widget-meta-label">DOWNLOAD</span>
-          <span class="speed-hero hero-glow">
-            {fmtSpeed(latest.downloadMbps)}<span class="speed-hero-unit">{fmtSpeedUnit(latest.downloadMbps)}</span>
-          </span>
-        </div>
-        <div class="speed-hero-block">
-          <span class="widget-meta-label">UPLOAD</span>
-          <span class="speed-secondary">
-            {fmtSpeed(latest.uploadMbps)}<span class="speed-secondary-unit">{fmtSpeedUnit(latest.uploadMbps)}</span>
-          </span>
-        </div>
-      </div>
+      <span class="speed-hero hero-glow">{fmtSpeed(latest.downloadMbps)}<span class="speed-unit">{fmtSpeedUnit(latest.downloadMbps)}</span></span>
 
       <div class="speed-meta">
         <span class="speed-meta-item">Ping {latest.latencyMs.toFixed(0)}ms</span>
         <span class="speed-meta-item">{fmtTime(latest.timestamp)}</span>
-      </div>
-
-      <div class="speed-bars">
-        <div class="speed-bar-row">
-          <span class="speed-bar-label">Down</span>
-          <div class="speed-bar-track"><div class="speed-bar-fill" style:width={`${Math.min(latest.downloadMbps / 10, 100)}%`}></div></div>
-        </div>
-        <div class="speed-bar-row">
-          <span class="speed-bar-label">Up</span>
-          <div class="speed-bar-track"><div class="speed-bar-fill speed-bar-fill-dim" style:width={`${Math.min(latest.uploadMbps / 10, 100)}%`}></div></div>
-        </div>
       </div>
     {/if}
 
@@ -135,18 +111,14 @@
         <span>No results yet</span>
       </div>
     {:else}
-      <div class="speed-hero-wrap">
-        <div class="speed-hero-block">
-          <span class="widget-meta-label">DOWNLOAD</span>
-          <span class="speed-hero hero-glow">
-            {fmtSpeed(latest.downloadMbps)}<span class="speed-hero-unit">{fmtSpeedUnit(latest.downloadMbps)}</span>
-          </span>
+      <div class="speed-dual">
+        <div class="speed-dual-stat">
+          <span class="speed-dual-label">DOWNLOAD</span>
+          <span class="speed-dual-value hero-glow">{fmtSpeed(latest.downloadMbps)}<span class="speed-dual-unit">{fmtSpeedUnit(latest.downloadMbps)}</span></span>
         </div>
-        <div class="speed-hero-block">
-          <span class="widget-meta-label">UPLOAD</span>
-          <span class="speed-secondary">
-            {fmtSpeed(latest.uploadMbps)}<span class="speed-secondary-unit">{fmtSpeedUnit(latest.uploadMbps)}</span>
-          </span>
+        <div class="speed-dual-stat">
+          <span class="speed-dual-label">UPLOAD</span>
+          <span class="speed-dual-value hero-glow">{fmtSpeed(latest.uploadMbps)}<span class="speed-dual-unit">{fmtSpeedUnit(latest.uploadMbps)}</span></span>
         </div>
       </div>
 
@@ -244,47 +216,55 @@
     gap: var(--space-4);
   }
 
-  /* ── Hero stat ──────────────────────────────────────── */
-  .speed-hero-wrap {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-4);
-    justify-content: center;
+  /* ── M hero stat ────────────────────────────────────── */
+  .speed-hero {
+    font-size: var(--font-size-hero);  /* 72px */
+    font-weight: 700;
+    color: var(--color-primary-fixed);
+    line-height: 1;
+    font-family: var(--font-mono);
   }
 
-  .speed-hero-block {
+  .speed-unit {
+    font-size: 28px;
+    font-weight: 300;
+    color: var(--color-on-surface-variant);
+    margin-left: 4px;
+  }
+
+  /* ── L dual stats ───────────────────────────────────── */
+  .speed-dual {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-6);
+  }
+
+  .speed-dual-stat {
     display: flex;
     flex-direction: column;
     gap: var(--space-1);
   }
 
-  .speed-hero {
-    font-size: 56px;
+  .speed-dual-value {
+    font-size: 40px;
     font-weight: 700;
     color: var(--color-primary-fixed);
-    letter-spacing: -0.03em;
     line-height: 1;
+    font-family: var(--font-mono);
   }
 
-  .speed-hero-unit {
-    font-size: 24px;
+  .speed-dual-unit {
+    font-size: 16px;
     font-weight: 300;
     color: var(--color-on-surface-variant);
   }
 
-  .speed-secondary {
-    font-size: 36px;
+  .speed-dual-label {
+    font-size: 9px;
     font-weight: 700;
-    color: var(--color-primary-fixed);
-    letter-spacing: -0.02em;
-    line-height: 1;
-  }
-
-  .speed-secondary-unit {
-    font-size: 18px;
-    font-weight: 300;
-    color: var(--color-on-surface-variant);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--color-outline);
   }
 
   /* ── Empty state ────────────────────────────────────── */

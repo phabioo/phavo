@@ -122,7 +122,7 @@
   }
 
   .pi-hero {
-    font-size: 56px;
+    font-size: var(--font-size-hero);  /* 72px */
     font-weight: 700;
     color: var(--color-primary-fixed);
     letter-spacing: -0.03em;
@@ -130,7 +130,7 @@
   }
 
   .pi-hero-unit {
-    font-size: 24px;
+    font-size: 30px;
     font-weight: 300;
     color: var(--color-on-surface-variant);
     margin-left: 4px;

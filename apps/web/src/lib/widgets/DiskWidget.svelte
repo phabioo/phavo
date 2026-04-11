@@ -139,7 +139,7 @@
   }
 
   .disk-hero {
-    font-size: var(--font-size-4xl);
+    font-size: var(--font-size-hero);  /* 72px */
     font-weight: 700;
     color: var(--color-primary-fixed);
     letter-spacing: -0.02em;
@@ -148,7 +148,7 @@
   }
 
   .disk-unit {
-    font-size: var(--font-size-xl);
+    font-size: 30px;
     font-weight: 300;
     color: var(--color-on-surface-variant);
     white-space: nowrap;
