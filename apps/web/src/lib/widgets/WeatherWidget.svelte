@@ -22,9 +22,9 @@
     95: 'Thunderstorm', 96: 'Thunderstorm w/ Hail', 99: 'Thunderstorm w/ Heavy Hail',
   };
 
-  const condition = $derived(WMO_LABELS[data.conditionCode] ?? `Code ${data.conditionCode}`);
+  const conditionLabel = $derived(WMO_LABELS[data.conditionCode] ?? `Code ${data.conditionCode}`);
 
-  function wmoIcon(code: number): string {
+  function conditionToIcon(code: number): string {
     if (code === 0 || code === 1) return 'sun';
     if (code === 2) return 'cloud-sun';
     if (code === 3 || code === 45 || code === 48) return 'cloud';
@@ -36,11 +36,13 @@
     return 'cloud';
   }
 
-  const weatherIcon = $derived(wmoIcon(data.conditionCode));
+  const weatherIcon = $derived(conditionToIcon(data.conditionCode));
+  const currentTemp = $derived(Math.round(data.currentTemp));
+  const today = $derived(data.forecast[0]);
 
-  function formatForecastDate(dateStr: string): string {
+  function formatDay(dateStr: string): string {
     const d = new Date(dateStr + 'T12:00:00');
-    return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+    return d.toLocaleDateString('en-US', { weekday: 'short' });
   }
 </script>
 
@@ -48,36 +50,74 @@
   <div class="weather-bg" aria-hidden="true"></div>
 
   {#if size === 'S'}
-    <div class="s-row">
-      <Icon name={weatherIcon} size={16} class="text-accent" />
-      <span class="metric-value mono hero-glow">{Math.round(data.currentTemp)}°C</span>
-    </div>
-  {:else}
-    <div class="current-row">
-      <div class="current-temp">
-        <span class="temp mono">{Math.round(data.currentTemp)}<span class="unit">°C</span></span>
-        <span class="condition">{condition}</span>
+    <div class="weather-s">
+      <span class="widget-category-label">WEATHER</span>
+      <div class="weather-s-hero">
+        <span class="weather-s-temp hero-glow">{currentTemp}<span class="weather-s-unit">°C</span></span>
       </div>
-      <Icon name={weatherIcon} size={32} class="weather-icon" />
     </div>
 
-    {#if data.city}
-      <span class="city-label">{data.city}</span>
-    {/if}
+  {:else if size === 'M'}
+    <div class="widget-header">
+      <span class="widget-category-label">WEATHER</span>
+      <Icon name={weatherIcon} size={18} class="widget-icon" />
+    </div>
+    <div class="weather-hero">
+      <span class="weather-temp hero-glow">{currentTemp}<span class="weather-unit">°C</span></span>
+    </div>
+    <div class="weather-meta">
+      <span class="weather-condition">{conditionLabel}</span>
+      <span class="weather-secondary">
+        {#if today}<span>↑{today.tempMax}°</span><span>↓{today.tempMin}°</span>{/if}
+        {#if data.feelsLike != null}<span>Feels like {data.feelsLike}°</span>{/if}
+      </span>
+    </div>
 
-    {#if (size === 'L' || size === 'XL') && data.forecast.length > 0}
-      <div class="forecast">
-        {#each data.forecast.slice(0, 5) as day (day.date)}
-          <div class="forecast-day">
-            <span class="forecast-date">{formatForecastDate(day.date)}</span>
-            <Icon name={wmoIcon(day.conditionCode)} size={14} />
-            <span class="forecast-temps mono">
-              {Math.round(day.tempMin)}° / {Math.round(day.tempMax)}°
-            </span>
-          </div>
-        {/each}
+  {:else if size === 'L'}
+    <div class="widget-header">
+      <span class="widget-category-label">WEATHER</span>
+      <Icon name={weatherIcon} size={18} class="widget-icon" />
+    </div>
+    <div class="weather-hero">
+      <span class="weather-temp hero-glow">{currentTemp}<span class="weather-unit">°C</span></span>
+    </div>
+    <div class="weather-meta">
+      <span class="weather-condition">{conditionLabel}</span>
+      <span class="weather-secondary">
+        {#if today}<span>↑{today.tempMax}°</span><span>↓{today.tempMin}°</span>{/if}
+        {#if data.feelsLike != null}<span>Feels like {data.feelsLike}°</span>{/if}
+      </span>
+    </div>
+    <div class="weather-divider"></div>
+    <div class="weather-stat-grid">
+      <div class="weather-stat">
+        <span class="weather-stat-label">FEELS LIKE</span>
+        <span class="weather-stat-value">{data.feelsLike != null ? data.feelsLike + '°' : '—'}</span>
       </div>
-    {/if}
+      <div class="weather-stat">
+        <span class="weather-stat-label">HUMIDITY</span>
+        <span class="weather-stat-value">{data.humidity}%</span>
+      </div>
+      <div class="weather-stat">
+        <span class="weather-stat-label">WIND</span>
+        <span class="weather-stat-value">{data.windSpeed} <span class="weather-stat-unit">km/h</span></span>
+      </div>
+      <div class="weather-stat">
+        <span class="weather-stat-label">UV INDEX</span>
+        <span class="weather-stat-value">{data.uvIndex != null ? data.uvIndex : '—'}</span>
+      </div>
+    </div>
+    <div class="weather-divider"></div>
+    <div class="weather-forecast">
+      {#each data.forecast.slice(1, 4) as day (day.date)}
+        <div class="weather-forecast-row">
+          <span class="weather-forecast-day">{formatDay(day.date)}</span>
+          <Icon name={conditionToIcon(day.conditionCode)} size={14} class="weather-forecast-icon" />
+          <span class="weather-forecast-temp">↑{day.tempMax}°</span>
+          <span class="weather-forecast-temp-low">↓{day.tempMin}°</span>
+        </div>
+      {/each}
+    </div>
   {/if}
 </div>
 
@@ -90,6 +130,7 @@
     position: relative;
   }
 
+  /* Gradient atmosphere overlay */
   .weather-bg {
     position: absolute;
     inset: 0;
@@ -99,88 +140,149 @@
     border-radius: inherit;
   }
 
-  .s-row {
+  /* S-size */
+  .weather-s {
     display: flex;
+    flex-direction: column;
     align-items: center;
-    gap: var(--space-2);
+    justify-content: center;
+    height: 100%;
+    gap: var(--space-1);
     position: relative;
   }
 
-  .current-row {
+  .weather-s-hero {
     display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
+    align-items: baseline;
+  }
+
+  .weather-s-temp {
+    font-size: 32px;
+    font-weight: 700;
+    color: var(--color-primary-fixed);
+    line-height: 1;
+  }
+
+  .weather-s-unit {
+    font-size: 14px;
+    font-weight: 300;
+    color: var(--color-on-surface-variant);
+  }
+
+  /* M/L hero */
+  .weather-hero {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-1);
+    margin-bottom: var(--space-2);
     position: relative;
   }
 
-  .current-temp {
+  .weather-temp {
+    font-size: var(--font-size-hero);
+    font-weight: 700;
+    color: var(--color-primary-fixed);
+    line-height: 1;
+  }
+
+  .weather-unit {
+    font-size: 28px;
+    font-weight: 300;
+    color: var(--color-on-surface-variant);
+  }
+
+  /* M/L meta */
+  .weather-meta {
     display: flex;
     flex-direction: column;
     gap: var(--space-1);
-  }
-
-  .temp {
-    font-size: 2.5rem;
-    font-weight: 700;
-    line-height: 1;
-    color: var(--color-on-surface);
-  }
-
-  .unit {
-    font-size: 1.25rem;
-    font-weight: 400;
-    color: var(--color-outline);
-    margin-left: 2px;
-  }
-
-  .metric-value {
-    font-size: 20px;
-    font-weight: 700;
-    color: var(--color-on-surface);
-    line-height: 1;
-  }
-
-  .condition {
-    font-size: 0.875rem;
-    color: var(--color-on-surface-variant);
-  }
-
-  .city-label {
-    font-size: 11px;
-    color: var(--color-outline);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
+    margin-bottom: var(--space-3);
     position: relative;
   }
 
-  :global(.weather-icon) {
-    color: var(--color-primary-fixed);
+  .weather-condition {
+    font-size: var(--font-size-sm);
+    color: var(--color-on-surface-variant);
   }
 
-  .forecast {
+  .weather-secondary {
+    display: flex;
+    gap: var(--space-3);
+    font-size: var(--font-size-xs);
+    color: var(--color-outline);
+  }
+
+  /* L-only */
+  .weather-divider {
+    height: 1px;
+    background: color-mix(in srgb, var(--color-outline-variant) 15%, transparent);
+    margin: var(--space-2) 0;
+    position: relative;
+  }
+
+  .weather-stat-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-2);
+    margin-bottom: var(--space-2);
+    position: relative;
+  }
+
+  .weather-stat {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .weather-stat-label {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--color-outline);
+  }
+
+  .weather-stat-value {
+    font-size: var(--font-size-sm);
+    color: var(--color-on-surface);
+  }
+
+  .weather-stat-unit {
+    font-size: var(--font-size-xs);
+    color: var(--color-outline);
+  }
+
+  .weather-forecast {
     display: flex;
     flex-direction: column;
     gap: var(--space-2);
-    padding-top: var(--space-2);
-    border-top: 1px solid color-mix(in srgb, var(--color-outline-variant) 15%, transparent);
     position: relative;
   }
 
-  .forecast-day {
+  .weather-forecast-row {
     display: flex;
     align-items: center;
-    gap: var(--space-2);
+    gap: var(--space-3);
   }
 
-  .forecast-date {
-    font-size: 11px;
+  .weather-forecast-day {
+    font-size: var(--font-size-xs);
+    font-weight: 700;
     color: var(--color-on-surface-variant);
-    min-width: 100px;
+    width: 28px;
   }
 
-  .forecast-temps {
-    font-size: 12px;
+  :global(.weather-forecast-icon) {
+    color: var(--color-outline);
+  }
+
+  .weather-forecast-temp {
+    font-size: var(--font-size-xs);
     color: var(--color-on-surface-variant);
-    margin-left: auto;
+  }
+
+  .weather-forecast-temp-low {
+    font-size: var(--font-size-xs);
+    color: var(--color-outline);
   }
 </style>
