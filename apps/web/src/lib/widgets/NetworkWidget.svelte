@@ -44,7 +44,7 @@
   </div>
 {:else if size === 'M'}
   <div class="net-m">
-    <div class="net-header widget-header">
+    <div class="widget-header">
       <div>
         <span class="widget-category-label">LIVE TRAFFIC</span>
         <h3 class="net-title">Network Throughput</h3>
@@ -62,7 +62,7 @@
   </div>
 {:else}
   <div class="net-l">
-    <div class="net-header widget-header">
+    <div class="widget-header">
       <div>
         <span class="widget-category-label">LIVE TRAFFIC</span>
         <h3 class="net-title">Network Throughput</h3>
@@ -173,7 +173,7 @@
       var(--color-secondary)
     );
     border-radius: 4px 4px 0 0;
-    transition: height 0.5s ease;
+    transition: height var(--motion-component);
   }
 
   /* ── L-size layout ──────────────────────────────────────────────────── */
@@ -239,7 +239,7 @@
     height: 100%;
     background: var(--color-secondary);
     border-radius: 9999px;
-    transition: width 0.5s ease;
+    transition: width var(--motion-component);
   }
 
   .net-bar-value {
