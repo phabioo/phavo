@@ -9,6 +9,8 @@ const OpenMeteoResponseSchema = z.object({
     weather_code: z.number(),
     wind_speed_10m: z.number(),
     relative_humidity_2m: z.number(),
+    apparent_temperature: z.number().optional(),
+    uv_index: z.number().optional(),
   }),
   daily: z.object({
     time: z.array(z.string()),
@@ -24,7 +26,7 @@ export async function getWeather(latitude: number, longitude: number): Promise<W
   url.searchParams.set('longitude', String(longitude));
   url.searchParams.set(
     'current',
-    'temperature_2m,weather_code,wind_speed_10m,relative_humidity_2m',
+    'temperature_2m,weather_code,wind_speed_10m,relative_humidity_2m,apparent_temperature,uv_index',
   );
   url.searchParams.set('daily', 'temperature_2m_min,temperature_2m_max,weather_code');
   url.searchParams.set('forecast_days', '5');
@@ -56,6 +58,10 @@ export async function getWeather(latitude: number, longitude: number): Promise<W
     conditionCode: data.current.weather_code,
     windSpeed: data.current.wind_speed_10m,
     humidity: data.current.relative_humidity_2m,
+    ...(data.current.apparent_temperature !== undefined && {
+      feelsLike: data.current.apparent_temperature,
+    }),
+    ...(data.current.uv_index !== undefined && { uvIndex: data.current.uv_index }),
     forecast,
   };
 }

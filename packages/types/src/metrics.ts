@@ -88,6 +88,8 @@ export interface WeatherMetrics {
   conditionCode: number;
   windSpeed: number;
   humidity: number;
+  feelsLike?: number;
+  uvIndex?: number;
   forecast: WeatherForecastDay[];
   /** True when falling back to default Berlin coordinates (no location configured). */
   locationDefault?: boolean;
