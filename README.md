@@ -139,7 +139,7 @@ CI/CD:      GitHub Actions
 
 No telemetry is sent from the local app.
 
-To report a vulnerability, see [SECURITY.md](SECURITY.md) or email **security@phavo.net**.
+To report a vulnerability, see [SECURITY.md](SECURITY.md) or email **fabio@phabio.net**.
 
 ---
 
