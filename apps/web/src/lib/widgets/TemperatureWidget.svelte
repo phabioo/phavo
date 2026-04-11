@@ -213,7 +213,7 @@
   }
 
   .temp-status-warm {
-    color: var(--color-warning);
+    color: var(--color-primary-fixed);
   }
 
   .temp-status-hot {
