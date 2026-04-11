@@ -157,7 +157,7 @@
   }
 
   .weather-s-temp {
-    font-size: 32px;
+    font-size: var(--font-size-s-hero);
     font-weight: 700;
     color: var(--color-primary-fixed);
     line-height: 1;
@@ -186,7 +186,7 @@
   }
 
   .weather-unit {
-    font-size: 28px;
+    font-size: var(--font-size-2xl);
     font-weight: 300;
     color: var(--color-on-surface-variant);
   }
@@ -235,7 +235,7 @@
   }
 
   .weather-stat-label {
-    font-size: 9px;
+    font-size: var(--font-size-xs);
     font-weight: 700;
     letter-spacing: 0.1em;
     text-transform: uppercase;
