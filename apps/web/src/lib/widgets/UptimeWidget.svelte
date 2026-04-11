@@ -81,7 +81,7 @@
     align-items: center;
     justify-content: center;
     height: 100%;
-    gap: 4px;
+    gap: var(--space-1);
   }
 
   .uptime-s-value {
