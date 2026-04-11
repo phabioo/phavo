@@ -183,13 +183,14 @@
     display: flex;
     flex-direction: column;
     justify-content: center;
+    align-items: center;
     height: 100%;
     padding: var(--space-4);
     gap: var(--space-1);
   }
 
   .speed-s-value {
-    font-size: 32px;
+    font-size: var(--font-size-s-hero);
     font-weight: 700;
     color: var(--color-primary-fixed);
     letter-spacing: -0.02em;

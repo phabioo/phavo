@@ -47,7 +47,7 @@ interface Props {
   showControls?: boolean;
   /** Whether to apply overflow:hidden on the inner card (disable in drawer to allow nebula bleed). */
   clipContent?: boolean;
-  /** Index for staggered entrance animation delay (multiplied by 40ms). */
+  /** Index for staggered entrance animation delay (multiplied by 60ms). */
   staggerIndex?: number;
 }
 
@@ -448,11 +448,11 @@ function isSizeAvailable(s: WidgetSize): boolean {
   }
 
   .ctrl-close:hover {
-    color: var(--color-danger);
+    color: var(--color-error);
   }
 
   .ctrl-confirm {
-    color: var(--color-danger);
+    color: var(--color-error);
   }
 
   .confirm-label {
@@ -509,7 +509,7 @@ function isSizeAvailable(s: WidgetSize): boolean {
     align-items: center;
     justify-content: center;
     gap: var(--space-2);
-    color: var(--color-danger);
+    color: var(--color-error);
     font-size: var(--font-size-md);
     height: 100%;
     text-align: center;

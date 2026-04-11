@@ -104,13 +104,13 @@
     display: flex;
     flex-direction: column;
     justify-content: center;
-    align-items: flex-start;
+    align-items: center;
     height: 100%;
     gap: var(--space-1);
   }
 
   .disk-value-s {
-    font-size: 32px;
+    font-size: var(--font-size-s-hero);
     font-weight: 700;
     color: var(--color-primary-fixed);
     letter-spacing: -0.02em;
@@ -185,7 +185,7 @@
     min-width: 6px;
     background: linear-gradient(90deg, var(--color-secondary), var(--color-primary-fixed));
     border-radius: 0 9999px 9999px 0;
-    transition: width 0.5s ease;
+    transition: width var(--motion-component);
   }
 
   /* ── L-size layout ──────────────────────────────────────────────────── */

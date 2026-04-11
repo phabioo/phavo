@@ -100,7 +100,7 @@
   }
 
   .temp-s-value {
-    font-size: 32px;
+    font-size: var(--font-size-s-hero);
     font-weight: 700;
     color: var(--color-primary-fixed);
     line-height: 1;
@@ -189,7 +189,7 @@
   .temp-sensor-bar-fill {
     height: 100%;
     border-radius: 9999px;
-    transition: width 0.5s ease;
+    transition: width var(--motion-component);
   }
 
   .temp-sensor-value {
