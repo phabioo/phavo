@@ -230,25 +230,24 @@ function isSizeAvailable(s: WidgetSize): boolean {
     </div>
   </div>
 
-  <!-- WishStar drag handle (outside inner, so glow isn't clipped) -->
-  {#if showControls && draggable}
-    <!-- svelte-ignore a11y_no_static_element_interactions -->
-    <div
-      class="wishstar-drag-handle"
-      role="button"
-      aria-label="Drag to reorder"
-      draggable="true"
-      ondragstart={handleDragStart}
-      ondragend={handleDragEnd}
-      onmousedown={(e) => e.stopPropagation()}
-    >
-      <WishStar size={20} />
-    </div>
-  {/if}
-
   <!-- Hover controls (Stitch pattern) — absolute positioned pill -->
   {#if showControls}
   <div class="widget-controls">
+    {#if draggable && !confirmingRemoval}
+      <!-- svelte-ignore a11y_no_static_element_interactions -->
+      <div
+        class="ctrl-drag"
+        role="button"
+        aria-label="Drag to reorder"
+        draggable="true"
+        ondragstart={handleDragStart}
+        ondragend={handleDragEnd}
+        onmousedown={(e) => e.stopPropagation()}
+      >
+        <WishStar size={14} />
+      </div>
+      <span class="ctrl-divider" aria-hidden="true"></span>
+    {/if}
     {#if confirmingRemoval}
       <span class="confirm-label">Remove?</span>
       <button
@@ -357,30 +356,24 @@ function isSizeAvailable(s: WidgetSize): boolean {
     overflow: hidden;
   }
 
-  /* ── WishStar drag handle ────────────────────────────────────────────── */
-  .wishstar-drag-handle {
-    position: absolute;
-    top: var(--space-3);
-    left: var(--space-3);
-    z-index: 10;
-    cursor: grab;
-    opacity: 0.4;
-    transition: opacity var(--motion-micro);
-    pointer-events: all;
-    width: 20px;
-    height: 20px;
-    display: flex;
+  /* ── WishStar drag handle (inside pill) ──────────────────────────────── */
+  .ctrl-drag {
+    display: inline-flex;
     align-items: center;
     justify-content: center;
+    width: 20px;
+    height: 22px;
+    cursor: grab;
+    color: var(--color-outline);
+    transition: color var(--motion-micro);
   }
 
-  .wishstar-drag-handle:hover {
-    opacity: 0.9;
+  .ctrl-drag:hover {
+    color: var(--color-primary-fixed);
   }
 
-  .wishstar-drag-handle:active {
+  .ctrl-drag:active {
     cursor: grabbing;
-    opacity: 1;
   }
 
   /* ── Hover controls (Stitch pattern) ─────────────────────────────────── */
