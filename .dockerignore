@@ -20,8 +20,7 @@ node_modules/
 
 # ─── Secrets / environment ───────────────────────────────────────────────────
 .env
-.env.*
-*.pem
+.env.*!.env.example*.pem
 *.key
 secret.key
 
@@ -36,7 +35,20 @@ docs/superpowers/
 docs/
 *.md
 !packages/db/src/migrations/
+# ─── Test files ──────────────────────────────────────────────────────────
+playwright-report/
+test-results/
+coverage/
+**/*.test.ts
+**/*.spec.ts
 
+# ─── CI/CD ────────────────────────────────────────────────────────────────
+.github/
+
+# ─── Legacy planning docs ──────────────────────────────────────────────
+phavo_*.md
+phavo_*.html
+phavo_*.json
 # ─── OS / editor ─────────────────────────────────────────────────────────────
 .DS_Store
 Thumbs.db

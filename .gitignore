@@ -39,13 +39,27 @@ secret.key
 
 # ─── Build outputs ───────────────────────────────────────────────────────────
 dist/
+apps/web/.svelte-kit/
+
+# ─── Test outputs ────────────────────────────────────────────────────────────
 coverage/
+playwright-report/
+test-results/
 
 # ─── Logs ────────────────────────────────────────────────────────────────────
 *.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+bun-error.log*
 
 # ─── OS files ────────────────────────────────────────────────────────────────
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
 Thumbs.db
 desktop.ini
 $RECYCLE.BIN/
@@ -54,9 +68,11 @@ $RECYCLE.BIN/
 .idea/
 *.swp
 *.swo
+*~
 # Ignore all VS Code user-specific files; keep shared extension recommendations
 .vscode/*
 !.vscode/extensions.json
+!.vscode/mcp.json
 
 # ─── Old AI context docs ─────────────────────────────────────────────────────
 CLAUDE_v*.txt
