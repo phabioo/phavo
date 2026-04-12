@@ -12,7 +12,8 @@ If you discover a security vulnerability, please report it responsibly.
 
 **Do not open a public GitHub issue for security vulnerabilities.**
 
-Instead, please email: **fabio@phabio.net**
+Please report via GitHub Security Advisories:
+**https://github.com/phabioo/phavo/security/advisories/new**
 
 ## Scope
 

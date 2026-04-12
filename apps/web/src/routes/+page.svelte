@@ -1,16 +1,14 @@
 <script lang="ts">
-import { onMount } from 'svelte';
 import { page } from '$app/state';
 import {
   type WidgetDefinition,
   type WidgetManifestEntry,
   type WidgetSize,
 } from '@phavo/types';
-import { BentoGrid, Button, Icon, Modal, WidgetCard, WidgetDrawer } from '@phavo/ui';
+import { BentoGrid, Button, Icon, WidgetCard, WidgetDrawer } from '@phavo/ui';
 import en from '$lib/i18n/en.json';
-import { getConfig, updateConfig } from '$lib/stores/config.svelte';
+import { getConfig } from '$lib/stores/config.svelte';
 import { getSession } from '$lib/stores/session.svelte';
-import { fetchWithCsrf } from '$lib/utils/api';
 import { relativeTime } from '$lib/utils/time';
 import {
   addWidget,
@@ -35,7 +33,6 @@ import {
 } from '$lib/stores/widgets.svelte';
 import { getWidgetComponent, getWidgetHeading } from '$lib/widgets/widget-rendering';
 
-let telemetryOpen = $state(false);
 let gridDragOver = $state(false);
 let isDrawerDragging = $state(false);
 let editingPageName = $state(false);
@@ -44,16 +41,6 @@ let pageNameInput = $state<HTMLInputElement | null>(null);
 
 const config = $derived(getConfig());
 const session = $derived(getSession());
-
-async function handleTelemetryChoice(enabled: boolean) {
-  telemetryOpen = false;
-  updateConfig({ telemetryAsked: true, telemetryEnabled: enabled });
-  await fetchWithCsrf('/api/v1/config', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ telemetryAsked: true, telemetryEnabled: enabled }),
-  });
-}
 
 function getDef(widgetId: string): WidgetDefinition | undefined {
   return getWidgetManifest().find((widget) => widget.id === widgetId);
@@ -157,19 +144,6 @@ $effect(() => {
     pageNameInput?.focus();
     pageNameInput?.select();
   }
-});
-
-onMount(() => {
-  return $effect.root(() => {
-    $effect(() => {
-      if (
-        config.setupComplete &&
-        !config.telemetryAsked
-      ) {
-        telemetryOpen = true;
-      }
-    });
-  });
 });
 </script>
 
@@ -442,21 +416,6 @@ onMount(() => {
     removeConfirm: en.dashboard.removeConfirm,
   }}
 />
-
-<Modal bind:open={telemetryOpen}>
-  <div class="telemetry-modal">
-    <Icon name="bar-chart-3" size={32} class="text-accent" />
-    <h2 class="telemetry-title">Help improve Phavo</h2>
-    <p class="telemetry-body">
-      Share anonymous usage data so we can prioritize features and fix bugs faster.
-      No personal information is collected. You can change this anytime in Settings.
-    </p>
-    <div class="telemetry-actions">
-      <Button variant="secondary" onclick={() => handleTelemetryChoice(false)}>No thanks</Button>
-      <Button variant="primary" onclick={() => handleTelemetryChoice(true)}>Enable telemetry</Button>
-    </div>
-  </div>
-</Modal>
 
 <style>
   .dashboard-content {
@@ -815,36 +774,6 @@ onMount(() => {
     flex-shrink: 0;
   }
 
-  .telemetry-modal {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: var(--space-4);
-    text-align: center;
-    padding: var(--space-4);
-  }
-
-  .telemetry-title {
-    font-size: 1.25rem;
-    font-weight: 700;
-    color: var(--color-text-primary);
-    margin: 0;
-  }
-
-  .telemetry-body {
-    font-size: 0.875rem;
-    color: var(--color-text-secondary);
-    margin: 0;
-    max-width: 36ch;
-    line-height: 1.5;
-  }
-
-  .telemetry-actions {
-    display: flex;
-    gap: var(--space-3);
-    margin-top: var(--space-2);
-  }
-
   @media (max-width: 639px) {
     .grid-shell {
       padding: 0 var(--space-4) calc(var(--space-8) + env(safe-area-inset-bottom));
@@ -860,9 +789,5 @@ onMount(() => {
       align-items: flex-start;
     }
 
-    .telemetry-actions {
-      width: 100%;
-      flex-direction: column;
-    }
   }
 </style>

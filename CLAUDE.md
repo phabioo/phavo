@@ -27,7 +27,7 @@ Third digit .PATCH only for urgent hotfixes (e.g. v1.0.1)
 - v1.0 — First public release (MA + MB + MC complete)
 - v1.x — Post-release feature milestones
 
-Current version: 0.8.2
+Current version: 0.8.3
 
 ---
 
@@ -44,7 +44,7 @@ phavo/
 │   └── agent/        ← @phavo/agent — metrics collectors, integrations
 ├── docs/             ← All project documentation
 │   ├── prd.md
-│   ├── archspec.html
+│   ├── archspec.md
 │   ├── roadmap.html
 │   ├── design.md     ← Celestial Wish Design System (authoritative)
 │   └── rules.md
@@ -250,7 +250,7 @@ Secrets: `credentials` table, keyed by widget instance path.
 | File | Purpose |
 |---|---|
 | `docs/prd.md` | Product Requirements Document |
-| `docs/archspec.html` | Architecture Specification |
+| `docs/archspec.md` | Architecture Specification |
 | `docs/roadmap.html` | Development roadmap to v1.0 |
 | `docs/design.md` | Celestial Wish Design System (full spec) |
 | `docs/rules.md` | Development rules and anti-patterns |
@@ -281,8 +281,7 @@ See `docs/rules.md` for engineering rules.
 ## Dev Commands
 
 ```bash
-PHAVO_DEV_MOCK_AUTH=true PHAVO_SECRET=dev-secret PHAVO_ENV=development \
-  PHAVO_PORT=3000 PHAVO_DATA_DIR=./apps/web/.dev-data \
+PHAVO_SECRET=dev-secret PHAVO_PORT=3000 PHAVO_DATA_DIR=./apps/web/.dev-data \
   ~/.bun/bin/bun run --cwd apps/web dev -- --host 0.0.0.0
 ```
 

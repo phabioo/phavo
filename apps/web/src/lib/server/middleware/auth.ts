@@ -7,7 +7,6 @@ import { err } from '@phavo/types';
 import { eq } from 'drizzle-orm';
 import type { MiddlewareHandler } from 'hono';
 import { db } from '$lib/server/db';
-import { DEV_MOCK_AUTH_ENABLED, getMockSession } from '$lib/server/mock-auth';
 
 export type SessionRecord = typeof schema.sessions.$inferSelect;
 
@@ -29,20 +28,6 @@ function parseCookieValue(header: string, name: string): string | undefined {
 export const authMiddleware: MiddlewareHandler<{ Variables: AppVariables }> = async (c, next) => {
   // Public routes bypass session validation entirely.
   if (PUBLIC_PATHS.has(c.req.path)) {
-    return next();
-  }
-
-  // Dev auth bypass — only allowed outside production.
-  if (DEV_MOCK_AUTH_ENABLED) {
-    const mockSession = getMockSession();
-    const devSession: SessionRecord = {
-      id: 'dev',
-      userId: mockSession.userId,
-      authMode: mockSession.authMode,
-      validatedAt: mockSession.validatedAt,
-      expiresAt: Date.now() + 7 * 24 * 60 * 60 * 1000,
-    };
-    c.set('session', devSession);
     return next();
   }
 

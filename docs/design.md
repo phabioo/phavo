@@ -6,7 +6,7 @@
 > Every agent working on PHAVO UI must follow this document exactly.
 > When in doubt: this document wins over any other reference.
 
-> Updated for v0.8.2 UI shell polish: header scroll-state styling and sidebar
+> Updated for v0.8.3 UI shell polish: header scroll-state styling and sidebar
 > page-delete affordances are now part of the baseline implementation.
 
 ---

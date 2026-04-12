@@ -21,9 +21,6 @@ export default defineConfig(({ mode }) => {
   // Inject env vars that SSR code reads via process.env at dev/build time.
   // Vite does not polyfill process.env for SSR bundles — these must be explicit.
   const processEnvDefines: Record<string, string> = {
-    'process.env.PHAVO_DEV_MOCK_AUTH': JSON.stringify(
-      viteEnv.PHAVO_DEV_MOCK_AUTH ?? process.env.PHAVO_DEV_MOCK_AUTH ?? '',
-    ),
     PHAVO_VERSION: JSON.stringify(rootPkg.version),
   };
 

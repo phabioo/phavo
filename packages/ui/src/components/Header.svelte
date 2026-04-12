@@ -6,7 +6,6 @@ import type { SearchEntry, AiProviders } from './HeaderSearch.svelte';
 
 interface Props {
   dashboardName?: string;
-  tierLabel?: string;
   weather?: { temp: number; condition: string } | undefined;
   scrolled?: boolean;
   notificationCount?: number;
@@ -24,7 +23,6 @@ interface Props {
 
 let {
   dashboardName = 'PHAVO',
-  tierLabel = 'CELESTIAL EDITION',
   scrolled = false,
   notificationCount,
   unreadCount = 0,

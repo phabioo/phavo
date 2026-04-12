@@ -9,7 +9,6 @@ import { db } from '$lib/server/db.js';
 import type { AppVariables } from '$lib/server/middleware/auth.js';
 import { requireSession } from '$lib/server/middleware/auth.js';
 import { getClientIp } from '$lib/server/middleware/rate-limit.js';
-import { DEV_MOCK_AUTH_ENABLED } from '$lib/server/mock-auth.js';
 import {
   clearSessionCookies,
   generateSessionToken,
@@ -42,13 +41,6 @@ export function registerAuthRoutes(app: Hono<{ Variables: AppVariables }>): void
    * Handles local authentication.
    */
   app.post('/auth/login', async (c) => {
-    // In dev mode, always succeed without real credentials.
-    if (DEV_MOCK_AUTH_ENABLED) {
-      const response = c.json(ok(null));
-      await setSessionCookies(response, 'dev', 7 * 24 * 60 * 60);
-      return response;
-    }
-
     const ip = getClientIp(c.req);
 
     const rateCheck = checkRateLimit(ip);
@@ -181,7 +173,7 @@ export function registerAuthRoutes(app: Hono<{ Variables: AppVariables }>): void
   /** POST /api/v1/auth/logout — invalidates current session and clears cookies. */
   app.post('/auth/logout', requireSession(), async (c) => {
     const session = c.get('session');
-    if (session && !DEV_MOCK_AUTH_ENABLED) {
+    if (session) {
       await db.delete(schema.sessions).where(eq(schema.sessions.id, session.id));
     }
     const response = c.json(ok(null));
@@ -257,7 +249,7 @@ export function registerAuthRoutes(app: Hono<{ Variables: AppVariables }>): void
   app.post('/auth/logout-all', requireSession(), async (c) => {
     try {
       const session = c.get('session');
-      if (session && !DEV_MOCK_AUTH_ENABLED) {
+      if (session) {
         await db.delete(schema.sessions).where(eq(schema.sessions.userId, session.userId));
       }
       const response = c.json(ok(null));

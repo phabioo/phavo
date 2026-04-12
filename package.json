@@ -1,6 +1,6 @@
 {
   "name": "phavo",
-  "version": "0.8.2",
+  "version": "0.8.3",
   "private": true,
   "workspaces": [
     "apps/*",
@@ -8,7 +8,6 @@
   ],
   "scripts": {
     "dev": "node ./node_modules/turbo/bin/turbo run dev",
-    "dev:mock": "PHAVO_DEV_MOCK_AUTH=true PHAVO_SECRET=dev-secret PHAVO_ENV=development PHAVO_PORT=3000 PHAVO_DATA_DIR=./apps/web/.dev-data ~/.bun/bin/bun run --cwd apps/web dev -- --host 0.0.0.0",
     "build": "node ./node_modules/turbo/bin/turbo run build",
     "lint": "node ./node_modules/@biomejs/biome/bin/biome check .",
     "format": "node ./node_modules/@biomejs/biome/bin/biome format --write .",

@@ -4,7 +4,6 @@ import type { DashboardConfig } from '@phavo/types';
 import { redirect, type ServerLoadEvent } from '@sveltejs/kit';
 import { eq } from 'drizzle-orm';
 import { db, dbReady } from '$lib/server/db';
-import { DEV_MOCK_AUTH_ENABLED, getMockSession } from '$lib/server/mock-auth';
 
 const SETUP_PATH = '/setup';
 const AUTH_PREFIX = '/auth';
@@ -48,8 +47,6 @@ export const load = async ({ cookies, url }: ServerLoadEvent) => {
               longitude: Number(entries.location_longitude),
             }
           : undefined,
-      telemetryAsked: entries.telemetry_asked === 'true' ? true : undefined,
-      telemetryEnabled: entries.telemetry_enabled === 'true' ? true : undefined,
     };
   } catch {
     // DB not yet initialised (first launch) — treat as incomplete
@@ -57,11 +54,8 @@ export const load = async ({ cookies, url }: ServerLoadEvent) => {
   }
 
   // ── 2. Resolve session ──────────────────────────────────────────────────
-  let session: ReturnType<typeof getMockSession> | null = null;
-  if (DEV_MOCK_AUTH_ENABLED) {
-    // Dev bypass: synthetic mock-auth session
-    session = getMockSession();
-  } else {
+  let session: { userId: string; authMode: string; validatedAt: number } | null = null;
+  {
     const sessionId = cookies.get('phavo_session');
     if (sessionId) {
       const rows = await db.select().from(schema.sessions).where(eq(schema.sessions.id, sessionId));
@@ -105,7 +99,6 @@ export const load = async ({ cookies, url }: ServerLoadEvent) => {
   return {
     session,
     setupComplete,
-    devMode: DEV_MOCK_AUTH_ENABLED,
     config,
     dashboardName: config.dashboardName,
     hostname: hostname(),

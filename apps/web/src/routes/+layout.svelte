@@ -504,7 +504,6 @@ function handleNotificationClick(n: Notification) {
     <main class="main-content" class:sidebar-collapsed={sidebarCollapsed}>
       <Header
         dashboardName={getConfig().dashboardName ?? data.dashboardName ?? 'PHAVO'}
-        tierLabel="CELESTIAL"
         weather={headerWeather}
         scrolled={headerScrolled}
         unreadCount={getUnreadCount()}

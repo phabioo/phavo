@@ -27,21 +27,13 @@ async function shutdown(signal: string): Promise<void> {
   process.exit(0);
 }
 
-// Reject the default placeholder secret in production.
-if (env.nodeEnv === 'production' && process.env.PHAVO_SECRET === 'change-me') {
-  console.error(
-    '[phavo] PHAVO_SECRET is still set to the default "change-me". Set a strong random value and restart.',
-  );
-  process.exit(1);
-}
-
 // Eagerly initialise the encryption secret on startup: reads PHAVO_SECRET env var,
 // falls back to the persisted data/secret.key, or auto-generates one on first start.
 dbReady
   .then(() => loadOrCreateSecret())
   .then(() => {
     console.log(`[phavo] Phavo v${PHAVO_VERSION} starting`);
-    console.log(`[phavo] Platform: ${env.platform}`);
+    console.log(`[phavo] Runtime: ${env.isDocker ? 'Docker' : 'Bun'}`);
     console.log(`[phavo] Port: ${env.port}`);
     console.log(`[phavo] Data dir: ${env.dataDir}`);
     console.log(`[phavo] DB: ${paths.db}`);

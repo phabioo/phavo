@@ -1,6 +1,5 @@
 /**
- * Shared auth helpers used by auth routes and license routes.
- * Extracted from the monolithic API file during the route split.
+ * Shared auth helpers extracted from the monolithic API file during the route split.
  */
 
 import { env } from '@phavo/types/env';

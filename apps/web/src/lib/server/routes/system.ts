@@ -20,7 +20,7 @@ type UpdateInfo = {
 let updateCache: { data: UpdateInfo; ts: number } | null = null;
 
 async function fetchUpdateInfo(fallback: UpdateInfo): Promise<UpdateInfo> {
-  const res = await fetch('https://api.github.com/repos/getphavo/phavo/releases/latest', {
+  const res = await fetch('https://api.github.com/repos/phabioo/phavo/releases/latest', {
     headers: { 'User-Agent': 'Phavo Dashboard' },
     signal: AbortSignal.timeout(8000),
   });
@@ -53,7 +53,7 @@ export function registerSystemRoutes(app: Hono<{ Variables: AppVariables }>): vo
     } catch {
       return c.json(err('Database unreachable'), 503);
     }
-    return c.json(ok({ version: PHAVO_VERSION, platform: process.env.PHAVO_ENV ?? 'docker' }));
+    return c.json(ok({ version: PHAVO_VERSION }));
   });
 
   app.get('/about', requireSession(), async (c) => {

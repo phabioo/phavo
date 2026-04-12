@@ -122,7 +122,7 @@ body{font-family:var(--font-ui);background:var(--bg);color:var(--text);font-size
 <div class="doc-header">
   <div>
     <h1>Phavo — Road to v1.0</h1>
-    <div class="sub">S0–S9 + Audit + Infra + MA + MB complete · MC remaining · Updated 2026-04-12 · Runtime aligned to v0.8.2 · PRD v5.0 · Arch Spec v3.2 · Design: Celestial Wish</div>
+    <div class="sub">S0–S9 + Audit + Infra + MA + MB complete · MC remaining · Updated 2026-04-12 · Runtime aligned to v0.8.3 · PRD v5.0 · Arch Spec v3.2 · Design: Celestial Wish</div>
   </div>
   <div class="legend">
     <div class="leg-item"><div class="leg-dot" style="background:#3fc8a0"></div>Done</div>
@@ -265,9 +265,9 @@ body{font-family:var(--font-ui);background:var(--bg);color:var(--text);font-size
 <div class="session done" id="infra">
   <div class="session-header"><span class="session-num">INFRA</span><span class="session-title">Infrastructure — Docker CI, Version Management, Mail</span><span class="session-subtitle">complete</span></div>
   <div class="session-body"><div class="tasks">
-    <div class="task task-done"><div class="task-icon">✅</div><div class="task-text">Docker Hub — getphavo/phavo public, multi-arch (amd64 + arm64), GitHub Secrets set</div></div>
+    <div class="task task-done"><div class="task-icon">✅</div><div class="task-text">Docker Hub — phabioo/phavo public, multi-arch (amd64 + arm64), GitHub Secrets set</div></div>
     <div class="task task-done"><div class="task-icon">✅</div><div class="task-text">Version management — release:patch/minor/major scripts, Docker CI on tag push</div></div>
-    <div class="task task-done"><div class="task-icon">✅</div><div class="task-text">Hetzner Mail — MX + SPF + DKIM via Cloudflare · GitHub Org getphavo/phavo</div></div>
+    <div class="task task-done"><div class="task-icon">✅</div><div class="task-text">GitHub — phabioo/phavo</div></div>
   </div></div>
 </div>
 
@@ -349,12 +349,11 @@ body{font-family:var(--font-ui);background:var(--bg);color:var(--text);font-size
 <!-- LAUNCH CHECKLIST -->
 <div class="launch-box" id="launch">
   <div class="launch-title">v1.0 Launch Checklist</div>
-  <div class="launch-item done">Docker Hub — getphavo/phavo public + GitHub Secrets set</div>
-  <div class="launch-item done">Hetzner Mail — MX + SPF + DKIM in Cloudflare</div>
-  <div class="launch-item done">GitHub Org — getphavo/phavo</div>
+  <div class="launch-item done">Docker Hub — phabioo/phavo public + GitHub Secrets set</div>
+  <div class="launch-item done">GitHub — phabioo/phavo</div>
   <div class="launch-item done">Version management — release scripts + Docker CI working</div>
   <div class="launch-item">MA–MC milestones complete</div>
-  <div class="launch-item"><code>bun run release:minor</code> → v1.0.0 → Docker CI → getphavo/phavo:1.0.0 on Docker Hub</div>
+  <div class="launch-item"><code>bun run release:minor</code> → v1.0.0 → Docker CI → phabioo/phavo:1.0.0 on Docker Hub</div>
   <div class="launch-item">Raspberry Pi 4/5 arm64 smoke test — fresh docker compose up, all 14 widgets, full setup</div>
   <div class="launch-item">phavo.net landing page live — hero screenshot, open-source messaging, Docker one-liner</div>
   <div class="launch-item">README.md final — screenshots, quick start, badges</div>

@@ -16,7 +16,7 @@ import type { AppVariables } from '$lib/server/middleware/auth.js';
 import { requireSession } from '$lib/server/middleware/auth.js';
 
 export function registerMetricsRoutes(app: Hono<{ Variables: AppVariables }>): void {
-  // System metrics — free+ (requireSession)
+  // System metrics (requireSession)
   app.get('/cpu', requireSession(), async (c) => {
     try {
       const data = await cached('cpu', 5000, getCpu);
@@ -71,7 +71,7 @@ export function registerMetricsRoutes(app: Hono<{ Variables: AppVariables }>): v
     }
   });
 
-  // Integration widgets — weather is free+
+  // Integration widgets — weather
   app.get('/weather', requireSession(), async (c) => {
     try {
       const rows = await db.query.config.findMany();

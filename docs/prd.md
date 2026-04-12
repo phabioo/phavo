@@ -2,8 +2,8 @@
 
 **Version:** 5.0
 **Date:** 2026-04-11
-**Status:** Active — targeting v1.0 from the v0.8.2 baseline
-**Owner:** getphavo
+**Status:** Active — targeting v1.0 from the v0.8.3 baseline
+**Owner:** phabioo
 
 **Changelog v5.0:** Open source transition. Single free edition
 (Celestial Edition). MIT license. Desktop/mobile/cloud removed from versioned roadmap
@@ -35,7 +35,7 @@ There are no subscriptions, no tiers, no feature gates. One edition, fully featu
 ### Open Source Strategy
 
 PHAVO is released under the MIT license. The codebase is public at
-`github.com/getphavo/phavo`. All widgets, AI assistant, multi-page support,
+`github.com/phabioo/phavo`. All widgets, AI assistant, multi-page support,
 and plugin system are available to every user.
 
 ---
@@ -437,11 +437,11 @@ Static (no animation) for Pi 3 performance.
 
 ### 6.6 Docker
 
-Target: `docker run -p 3000:3000 -v phavo-data:/data getphavo/phavo`
+Target: `docker run -p 3000:3000 -v phavo-data:/data phabioo/phavo`
 
 - Single-container
 - Multi-arch: amd64 + arm64 (Raspberry Pi 3/4/5)
-- Docker Hub: `getphavo/phavo` — tagged `:VERSION` + `:latest`
+- Docker Hub: `phabioo/phavo` — tagged `:VERSION` + `:latest`
 - Volume `phavo-data` persists database, config, and plugins
 - Runs as non-root user
 - Read-only filesystem except for `phavo-data` volume
@@ -459,7 +459,7 @@ All server code uses environment variables — no hardcoded paths or ports.
 | `PHAVO_DB_PATH` | `/data/phavo.db` | libSQL location |
 | `PHAVO_DATA_DIR` | `/data` | Parent for all data |
 | `PHAVO_PORT` | `3000` | HTTP port |
-| `PHAVO_ENV` | `docker` | Platform identifier |
+| `PHAVO_SECRET` | auto-generated | AES key source. Optional — auto-generated and persisted on first start if not set. |
 
 **Iron rule:** Never use `/data/` as a literal string. Always `process.env.PHAVO_DATA_DIR`.
 
@@ -557,12 +557,12 @@ Dev env only — not available in production builds.
 
 ## 11. Launch Checklist (v1.0)
 
-- [x] Docker Hub — `getphavo/phavo` public + GitHub Secrets set
+- [x] Docker Hub — `phabioo/phavo` public + GitHub Secrets set
 - [x] Hetzner Mail — MX + SPF + DKIM in Cloudflare
-- [x] GitHub Org — `getphavo/phavo`
+- [x] GitHub — `phabioo/phavo`
 - [x] Version management — release scripts + Docker CI working
 - [ ] MA–MC milestones complete
-- [ ] `bun run release:minor` → v1.0.0 → Docker CI → `getphavo/phavo:1.0.0`
+- [ ] `bun run release:minor` → v1.0.0 → Docker CI → `phabioo/phavo:1.0.0`
 - [ ] Pi 4/5 arm64 smoke test — fresh docker compose up, all 14 widgets
 - [ ] phavo.net landing page live (hero screenshot from MA)
 - [ ] Launch channels: r/selfhosted, r/homelab, Product Hunt, Hacker News Show HN
@@ -588,4 +588,4 @@ Dev env only — not available in production builds.
 
 ---
 
-*Phavo · phavo.net · github.com/getphavo/phavo*
+*Phavo · phavo.net · github.com/phabioo/phavo*

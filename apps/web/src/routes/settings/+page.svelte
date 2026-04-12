@@ -117,7 +117,7 @@ const sessionTimeoutOptions = [
 ];
 
 const DOCS_URL = 'https://docs.phavo.net';
-const GITHUB_URL = 'https://github.com/getphavo/phavo';
+const GITHUB_URL = 'https://github.com/phabioo/phavo';
 const dashboardNameInputId = 'settings-dashboard-name';
 const weatherLocationInputId = 'settings-weather-location';
 const searchEngineSelectId = 'settings-search-engine';
@@ -312,14 +312,6 @@ onMount(() => {
     });
   });
 });
-
-function tierVariant(_tier: string) {
-  return 'accent';
-}
-
-function tierLabel(_tier: string) {
-  return 'Celestial';
-}
 
 function formatTimestamp(value?: number | null) {
   if (!value) return '—';

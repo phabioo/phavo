@@ -18,7 +18,5 @@ export function parseConfigEntries(rows: Array<{ key: string; value: string }>) 
             longitude: Number(entries.location_longitude),
           }
         : undefined,
-    telemetryAsked: entries.telemetry_asked === 'true' ? true : undefined,
-    telemetryEnabled: entries.telemetry_enabled === 'true' ? true : undefined,
   };
 }

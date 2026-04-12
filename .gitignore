@@ -69,6 +69,5 @@ CLAUDE_v*.md
 
 # ─── Generated / ephemeral docs ──────────────────────────────────────────────
 docs/ui-audit-report.md
-docs/archspec.md
 docs/screenshots/
 docs/superpowers/

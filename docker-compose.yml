@@ -1,7 +1,7 @@
 version: '3.8'
 services:
   phavo:
-    image: getphavo/phavo:latest
+    image: phabioo/phavo:latest
     build: .
     ports:
       - "${PHAVO_PORT:-3000}:3000"

@@ -34,14 +34,11 @@ export async function deriveInstallMethod(): Promise<InstallMethod> {
   const existing = rows[0];
   if (existing) return existing.value as InstallMethod;
 
-  const method: InstallMethod =
-    env.platform === 'tauri'
-      ? 'tauri'
-      : env.platform === 'bun'
-        ? 'bun-direct'
-        : isDockerCompose()
-          ? 'docker-compose'
-          : 'docker-run';
+  const method: InstallMethod = env.isDocker
+    ? isDockerCompose()
+      ? 'docker-compose'
+      : 'docker-run'
+    : 'bun-direct';
 
   await db
     .insert(schema.config)

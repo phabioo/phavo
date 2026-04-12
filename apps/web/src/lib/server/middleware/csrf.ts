@@ -5,14 +5,13 @@
 //  1. After login/auth, the client receives a phavo_csrf cookie (not HttpOnly).
 //  2. Client-side JS reads the cookie and sends it as X-CSRF-Token header.
 //  3. This middleware re-derives the expected token from the session ID using
-//     HMAC-SHA256 (keyed via HKDF from PHAVO_SECRET) and compares to the header.
+//     HMAC-SHA256 (keyed via HKDF from the resolved secret) and compares to the header.
 //
 // Public paths and safe-method requests (GET/HEAD/OPTIONS) are exempt.
 
+import { loadOrCreateSecret } from '@phavo/db';
 import { err } from '@phavo/types';
-import { env } from '@phavo/types/env';
 import type { MiddlewareHandler } from 'hono';
-import { DEV_MOCK_AUTH_ENABLED } from '$lib/server/mock-auth';
 import type { AppVariables } from './auth.js';
 
 const CSRF_EXEMPT_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
@@ -20,17 +19,12 @@ const CSRF_EXEMPT_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 // Must mirror PUBLIC_PATHS in auth.ts — these have no session, so CSRF is N/A.
 const PUBLIC_PATHS = new Set(['/api/v1/system/health', '/api/v1/auth/login', '/api/v1/auth/totp']);
 
-// Cached CSRF HMAC key (derived once from PHAVO_SECRET via HKDF).
+// Cached CSRF HMAC key (derived once from the resolved secret via HKDF).
 let _csrfKey: CryptoKey | null = null;
-
-if (env.nodeEnv === 'production' && !process.env.PHAVO_SECRET) {
-  console.error('[phavo] PHAVO_SECRET is required in production');
-  process.exit(1);
-}
 
 async function getCsrfKey(): Promise<CryptoKey> {
   if (_csrfKey) return _csrfKey;
-  const secret = process.env.PHAVO_SECRET ?? 'phavo-dev-secret-change-in-production';
+  const secret = await loadOrCreateSecret();
   const raw = new TextEncoder().encode(secret);
   const master = await crypto.subtle.importKey('raw', raw, 'HKDF', false, ['deriveKey']);
   _csrfKey = await crypto.subtle.deriveKey(
@@ -65,9 +59,6 @@ export const csrfMiddleware: MiddlewareHandler<{ Variables: AppVariables }> = as
 
   // Public routes have no session — CSRF does not apply.
   if (PUBLIC_PATHS.has(c.req.path)) return next();
-
-  // Dev mock auth bypasses CSRF in non-production environments.
-  if (DEV_MOCK_AUTH_ENABLED) return next();
 
   const session = c.get('session');
   // authMiddleware already rejected unauthenticated requests for non-public paths.

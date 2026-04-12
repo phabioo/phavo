@@ -28,9 +28,7 @@ PHAVO is free and open source under the MIT license. All features are available 
 ```bash
 docker run -p 3000:3000 \
   -v phavo-data:/data \
-  -e PHAVO_SECRET=your-secret-here \
-  -e PHAVO_ENV=production \
-  getphavo/phavo
+  phabioo/phavo
 ```
 
 Then open [http://localhost:3000](http://localhost:3000). The setup wizard guides you through the rest.
@@ -40,21 +38,22 @@ Then open [http://localhost:3000](http://localhost:3000). The setup wizard guide
 ```yaml
 services:
   phavo:
-    image: getphavo/phavo:latest
+    image: phabioo/phavo:latest
     ports:
       - "3000:3000"
     volumes:
       - phavo-data:/data
-    environment:
-      - PHAVO_SECRET=change-me-to-a-random-string   # required — min 32 chars
-      - PHAVO_ENV=production
+    # Optional: set explicitly for Kubernetes or multi-instance deployments.
+    # If unset, Phavo auto-generates and persists a secret on first start.
+    # environment:
+    #   - PHAVO_SECRET=your-random-string-here
     restart: unless-stopped
 
 volumes:
   phavo-data:
 ```
 
-> **Important:** `PHAVO_SECRET` must be set to a random string of at least 32 characters. The server exits on startup in production if this is missing or left as the default value.
+> **Note:** `PHAVO_SECRET` is optional. If not set, Phavo auto-generates a secret and persists it in the data volume on first start. Set it explicitly for Kubernetes or when migrating between machines.
 
 ---
 
@@ -170,17 +169,12 @@ phavo/
 # Install dependencies
 bun install
 
-# Quick start dashboard in dev mock auth mode (Windows)
-bun run dev:mock
-
 # Start dev server (Windows PowerShell)
-$env:PHAVO_DEV_MOCK_AUTH="true"; $env:PHAVO_SECRET="dev-secret"
-$env:PHAVO_PORT="3000"; $env:PHAVO_ENV="development"
+$env:PHAVO_SECRET="dev-secret"; $env:PHAVO_PORT="3000"
 $env:PHAVO_DATA_DIR="./apps/web/.dev-data"; bun run dev
 
 # Start dev server (macOS/Linux)
-PHAVO_DEV_MOCK_AUTH=true PHAVO_SECRET=dev-secret \
-  PHAVO_PORT=3000 PHAVO_ENV=development \
+PHAVO_SECRET=dev-secret PHAVO_PORT=3000 \
   PHAVO_DATA_DIR=./apps/web/.dev-data bun run dev
 
 # Typecheck
@@ -190,7 +184,7 @@ bun run typecheck
 bun run lint
 ```
 
-With `PHAVO_DEV_MOCK_AUTH=true`, you are automatically logged in as a dev user.
+PHAVO_SECRET is optional — if not set, auto-generated on first start. Set it for reproducible crypto keys across restarts.
 
 ---
 
@@ -204,8 +198,8 @@ Phavo is open source under the [MIT License](LICENSE).
 
 - Website: [phavo.net](https://phavo.net)
 - Docs: [docs.phavo.net](https://docs.phavo.net)
-- Issues: [github.com/getphavo/phavo/issues](https://github.com/getphavo/phavo/issues)
+- Issues: [github.com/phabioo/phavo/issues](https://github.com/phabioo/phavo/issues)
 
 ---
 
-*Phavo · phavo.net · github.com/getphavo/phavo*
+*Phavo · phavo.net · github.com/phabioo/phavo*

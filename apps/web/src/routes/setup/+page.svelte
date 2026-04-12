@@ -12,9 +12,7 @@ import { goto } from '$app/navigation';
 import en from '$lib/i18n/en.json';
 
 interface Props {
-  data: {
-    devMode?: boolean;
-  };
+  data: Record<string, unknown>;
 }
 
 let { data }: Props = $props();
