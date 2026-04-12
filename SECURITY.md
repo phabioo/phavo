@@ -14,9 +14,6 @@ If you discover a security vulnerability, please report it responsibly.
 
 Instead, please email: **fabio@phabio.net**
 
-You should receive an acknowledgment within 48 hours. We will work with you to
-understand the issue and coordinate a fix before any public disclosure.
-
 ## Scope
 
 PHAVO is a self-hosted dashboard that runs on your local network. Security
