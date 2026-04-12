@@ -196,10 +196,8 @@ Phavo is open source under the [MIT License](LICENSE).
 
 ## 🔗 Links
 
-- Website: [phavo.net](https://phavo.net)
-- Docs: [docs.phavo.net](https://docs.phavo.net)
 - Issues: [github.com/phabioo/phavo/issues](https://github.com/phabioo/phavo/issues)
 
 ---
 
-*Phavo · phavo.net · github.com/phabioo/phavo*
+*Phavo · github.com/phabioo/phavo*
