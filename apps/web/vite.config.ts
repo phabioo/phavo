@@ -58,6 +58,11 @@ export default defineConfig(({ mode }) => {
   return {
     plugins: [...excludeSvelteStylesFromTailwind(tailwindcss()), sveltekit()],
     define: processEnvDefines,
+    build: {
+      commonjsOptions: {
+        ignoreDynamicRequires: true,
+      },
+    },
     server: {
       port: env.port,
       strictPort: true,
