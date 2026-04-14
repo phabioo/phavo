@@ -243,10 +243,10 @@ function parseICalEvents(
 
   for (const match of xmlText.matchAll(calDataRegex)) {
     const ical = (match[1] ?? '')
-      .replace(/&amp;/g, '&')
       .replace(/&lt;/g, '<')
       .replace(/&gt;/g, '>')
-      .replace(/&quot;/g, '"');
+      .replace(/&quot;/g, '"')
+      .replace(/&amp;/g, '&');
 
     // Parse individual VEVENTs
     const veventRegex = /BEGIN:VEVENT([\s\S]*?)END:VEVENT/g;
