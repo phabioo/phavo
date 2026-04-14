@@ -1,5 +1,31 @@
 # Changelog
 
+## [0.8.8] - 2026-04-14
+
+### Fixed
+- **Docker:** Remove `rm -rf node_modules` before the production reinstall step — native binary packages (e.g. `@libsql/linux-x64-musl`) built in the builder stage are preserved, preventing Alpine runtime failures from missing platform binaries.
+- **Security:** `SpeedtestWidget` POST now uses `fetchWithCsrf()` instead of a bare `fetch()`, restoring CSRF protection on the speedtest trigger endpoint.
+- **Data integrity:** Deleting a widget instance now runs in a transaction that also removes all matching `credentials` rows, eliminating orphaned encrypted credential records.
+- **Middleware:** `csrf.ts` `PUBLIC_PATHS` now includes `/api/v1/auth/setup-status`, keeping it in sync with `auth.ts`.
+
+### Improved
+- **Performance:** Tab creation now computes `nextOrder` via a single `max()` SQL aggregate instead of loading the full tabs table.
+- **Validation:** `POST /api/v1/notifications` body is now validated with a Zod schema instead of manual field guards.
+- **Observability:** Widget config parse failures in the RSS, Links, Service Health, and Calendar routes now emit a `console.warn` with the instance ID.
+- **Design system:** Pi 3/4 performance fallback extended to disable `transform: scale()` in `Button`, `NotificationPanel`, `WidgetDrawer`, and `Sidebar` (was only resetting `backdrop-filter`).
+- **Build:** `vite.config.ts` `build.commonjsOptions.ignoreDynamicRequires: true` silences Rollup CJS-transform warnings from `@libsql/*` native loaders.
+
+### Docs
+- `CHANGELOG.md` introduced.
+- `CLAUDE.md`: removed stale `docs/svelte-audit.md` Docs Index entry; version bumped to 0.8.8.
+- `docs/widget-guide.md`: runtime version reference updated to v0.8.8.
+
+### Housekeeping
+- `.gitignore` / `.dockerignore`: added `apps/web/data/`, `*.db`/`*.db-wal`/`*.db-shm`; fixed malformed `.env.*` pattern in `.dockerignore`.
+- All workspace `package.json` versions aligned to `0.8.8`.
+
+---
+
 ## [0.8.7] - 2026-04-14
 
 ### Bug Fixes

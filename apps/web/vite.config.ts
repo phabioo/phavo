@@ -66,9 +66,6 @@ export default defineConfig(({ mode }) => {
       commonjsOptions: {
         ignoreDynamicRequires: true,
       },
-      rollupOptions: {
-        external: (id) => id.startsWith('@libsql/'),
-      },
     },
     ssr: {
       // Workspace packages export raw TypeScript source (.ts files).
