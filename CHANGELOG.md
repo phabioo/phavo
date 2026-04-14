@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.8.6] - 2026-04-14
+
+### Bug Fixes
+
+- **Alpine Docker build fixed** — marked `@libsql/client` as SSR-external in `vite.config.ts`. Vite/Rollup was attempting to bundle the package and failing on its dynamic `require()` of the platform-specific native binary (`@libsql/linux-x64-musl`). Bun now resolves it at runtime instead.
+
+---
+
 ## [0.8.5] - 2026-04-14
 
 ### Infrastructure
