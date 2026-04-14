@@ -114,9 +114,88 @@ export function registerAuthRoutes(app: Hono<{ Variables: AppVariables }>): void
 
     recordLoginAttempt(ip, true);
     console.log(`[phavo] Login success: userId=${user.id} ip=${ip}`);
-    const response = c.json(ok(null));
+    const response = c.json(ok({}));
     await setSessionCookies(response, token, SESSION_MAX_AGE);
     return response;
+  });
+
+  /**
+   * GET /api/v1/auth/setup-status — public, no session required.
+   * Returns whether any local users exist so the setup page can decide
+   * whether to show the register form or a recovery login form.
+   */
+  app.get('/auth/setup-status', async (c) => {
+    const users = await db.select({ id: schema.users.id }).from(schema.users).limit(1);
+    return c.json(ok({ hasUsers: users.length > 0 }));
+  });
+
+  /**
+   * POST /api/v1/auth/register — public, first-run only.
+   * Creates the initial local user account and opens a session.
+   * Returns 403 if any user already exists (setup already completed).
+   */
+  app.post('/auth/register', async (c) => {
+    const ip = getClientIp(c.req);
+
+    const rateCheck = checkRateLimit(ip);
+    if (!rateCheck.allowed) {
+      return c.json(err(`Too many attempts. Try again in ${rateCheck.retryAfter}s`), 429);
+    }
+
+    let rawBody: unknown;
+    try {
+      rawBody = await c.req.json();
+    } catch {
+      return c.json(err('Invalid request body'), 400);
+    }
+
+    const RegisterSchema = z.object({
+      authMode: z.literal('local'),
+      username: z.string().min(1),
+      password: z.string().min(8, 'Password must be at least 8 characters'),
+    });
+
+    const parsed = RegisterSchema.safeParse(rawBody);
+    if (!parsed.success) {
+      recordLoginAttempt(ip, false);
+      const msg = parsed.error.issues[0]?.message ?? 'Validation failed';
+      return c.json(err(msg), 400);
+    }
+
+    const { username, password } = parsed.data;
+
+    // First-run guard — refuse if any user already exists.
+    const existing = await db.select().from(schema.users).limit(1);
+    if (existing.length > 0) {
+      return c.json(err('Registration is not available'), 403);
+    }
+
+    try {
+      const passwordHash = await hashPassword(password);
+      const userId = crypto.randomUUID();
+      await db
+        .insert(schema.users)
+        .values({ id: userId, email: username, passwordHash, authMode: 'local' });
+
+      const SESSION_MAX_AGE = 7 * 24 * 60 * 60;
+      const token = generateSessionToken();
+      await db.insert(schema.sessions).values({
+        id: token,
+        userId,
+        authMode: 'local',
+        validatedAt: Date.now(),
+        expiresAt: Date.now() + SESSION_MAX_AGE * 1000,
+      });
+
+      recordLoginAttempt(ip, true);
+      console.log(`[phavo] Register+login success: userId=${userId} ip=${ip}`);
+      const response = c.json(ok({}));
+      await setSessionCookies(response, token, SESSION_MAX_AGE);
+      return response;
+    } catch (e) {
+      console.error('[phavo] Register failed:', e);
+      return c.json(err('Failed to create account. Please try again.'), 500);
+    }
   });
 
   /** POST /api/v1/auth/totp — completes 2FA flow after partial token issued by login. */

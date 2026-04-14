@@ -171,11 +171,11 @@ bun install
 
 # Start dev server (Windows PowerShell)
 $env:PHAVO_SECRET="dev-secret"; $env:PHAVO_PORT="3000"
-$env:PHAVO_DATA_DIR="./apps/web/.dev-data"; bun run dev
+$env:PHAVO_DATA_DIR="./data"; & "$env:USERPROFILE\.bun\bin\bun.exe" run --cwd apps/web dev -- --host 0.0.0.0
 
 # Start dev server (macOS/Linux)
-PHAVO_SECRET=dev-secret PHAVO_PORT=3000 \
-  PHAVO_DATA_DIR=./apps/web/.dev-data bun run dev
+PHAVO_SECRET=dev-secret PHAVO_PORT=3000 PHAVO_DATA_DIR=./data \
+  ~/.bun/bin/bun run --cwd apps/web dev -- --host 0.0.0.0
 
 # Typecheck
 bun run typecheck

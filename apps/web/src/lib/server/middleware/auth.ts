@@ -15,7 +15,13 @@ export type AppVariables = {
 };
 
 // Routes that bypass session validation entirely (no auth required).
-const PUBLIC_PATHS = new Set(['/api/v1/system/health', '/api/v1/auth/login', '/api/v1/auth/totp']);
+const PUBLIC_PATHS = new Set([
+  '/api/v1/system/health',
+  '/api/v1/auth/login',
+  '/api/v1/auth/totp',
+  '/api/v1/auth/register',
+  '/api/v1/auth/setup-status',
+]);
 
 function parseCookieValue(header: string, name: string): string | undefined {
   return header

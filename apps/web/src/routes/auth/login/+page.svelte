@@ -5,7 +5,7 @@ import { fetchWithCsrf } from '$lib/utils/api';
 
 type AuthStep = 'local' | 'totp';
 let step = $state<AuthStep>('local');
-let email = $state('');
+let username = $state('');
 let password = $state('');
 let totpCode = $state('');
 let partialToken = $state<string | null>(null);
@@ -19,7 +19,7 @@ async function handleLocalLogin() {
   try {
     const res = await fetchWithCsrf('/api/v1/auth/login', {
       method: 'POST',
-      body: JSON.stringify({ authMode: 'local', username: email, password }),
+      body: JSON.stringify({ authMode: 'local', username, password }),
     });
 
     const json = (await res.json()) as { ok: boolean; data?: { requiresTotp?: boolean; partialToken?: string }; error?: string };
@@ -78,10 +78,10 @@ async function handleTotpVerify() {
 
         <form class="flex flex-col gap-4" onsubmit={(e) => { e.preventDefault(); handleLocalLogin(); }}>
           <Input
-            label={en.setup.auth.email}
-            type="email"
-            placeholder={en.auth.emailPlaceholder}
-            bind:value={email}
+            label={en.setup.auth.username}
+            type="text"
+            placeholder={en.setup.auth.username}
+            bind:value={username}
           />
           <Input
             label={en.setup.auth.password}

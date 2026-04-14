@@ -27,7 +27,7 @@ Third digit .PATCH only for urgent hotfixes (e.g. v1.0.1)
 - v1.0 — First public release (MA + MB + MC complete)
 - v1.x — Post-release feature milestones
 
-Current version: 0.8.3
+Current version: 0.8.4
 
 ---
 
@@ -281,7 +281,7 @@ See `docs/rules.md` for engineering rules.
 ## Dev Commands
 
 ```bash
-PHAVO_SECRET=dev-secret PHAVO_PORT=3000 PHAVO_DATA_DIR=./apps/web/.dev-data \
+PHAVO_SECRET=dev-secret PHAVO_PORT=3000 PHAVO_DATA_DIR=./data \
   ~/.bun/bin/bun run --cwd apps/web dev -- --host 0.0.0.0
 ```
 

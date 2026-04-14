@@ -10,7 +10,7 @@ credential encryption keys change each time the dev-data directory is fresh).
 ## macOS / Linux
 
 ```bash
-PHAVO_SECRET=dev-secret PHAVO_PORT=3000 PHAVO_DATA_DIR=./apps/web/.dev-data ~/.bun/bin/bun run --cwd apps/web dev -- --host 0.0.0.0
+PHAVO_SECRET=dev-secret PHAVO_PORT=3000 PHAVO_DATA_DIR=./data ~/.bun/bin/bun run --cwd apps/web dev -- --host 0.0.0.0
 ```
 
 ---
@@ -18,13 +18,13 @@ PHAVO_SECRET=dev-secret PHAVO_PORT=3000 PHAVO_DATA_DIR=./apps/web/.dev-data ~/.b
 ## Windows (PowerShell)
 
 ```powershell
-$env:PHAVO_SECRET="dev-secret"; $env:PHAVO_PORT="3000"; $env:PHAVO_DATA_DIR="./apps/web/.dev-data"; & "$env:USERPROFILE\.bun\bin\bun.exe" run --cwd apps/web dev -- --host 0.0.0.0
+$env:PHAVO_SECRET="dev-secret"; $env:PHAVO_PORT="3000"; $env:PHAVO_DATA_DIR="./data"; & "$env:USERPROFILE\.bun\bin\bun.exe" run --cwd apps/web dev -- --host 0.0.0.0
 ```
 
 ## Windows (CMD)
 
 ```cmd
-set PHAVO_SECRET=dev-secret && set PHAVO_PORT=3000 && set PHAVO_DATA_DIR=./apps/web/.dev-data && %USERPROFILE%\.bun\bin\bun.exe run --cwd apps/web dev -- --host 0.0.0.0
+set PHAVO_SECRET=dev-secret && set PHAVO_PORT=3000 && set PHAVO_DATA_DIR=./data && %USERPROFILE%\.bun\bin\bun.exe run --cwd apps/web dev -- --host 0.0.0.0
 ```
 
 ---

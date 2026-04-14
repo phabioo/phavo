@@ -1,6 +1,6 @@
 # Phavo — Technical Architecture Spec
 
-**Version:** 3.2 · **Date:** 2026-04-11 · **PRD:** v5.0 · **Roadmap:** v5.0 · **Runtime:** v0.8.3 · **Design:** Celestial Wish
+**Version:** 3.3 · **Date:** 2026-04-14 · **PRD:** v5.0 · **Roadmap:** v5.0 · **Runtime:** v0.8.4 · **Design:** Celestial Wish
 
 ---
 
@@ -186,23 +186,37 @@ async function fetchWithCsrf(url: string, options: RequestInit) {
 
 > **Local-only auth.** Runtime uses local username/password (Argon2id) and local session enforcement only.
 
+### First-run registration
+
+```
+POST /api/v1/auth/register  { authMode: 'local', username, password }  — public, no session
+
+1. Guard: if any user already exists → 403 (first-run only)
+2. hashPassword(password)  → Argon2id encoded string
+3. INSERT users { email: username, passwordHash, authMode: 'local' }
+4. INSERT sessions { id: randomBytes(32), userId, authMode, validatedAt, expiresAt: +7days }
+5. Set-Cookie: phavo_session=<token>; HttpOnly; SameSite=Strict; Secure
+6. Return { ok: true, data: {} }
+```
+
 ### Login flow
 
 ```
-POST /api/v1/auth/login  { username, password }
+POST /api/v1/auth/login  { authMode: 'local', username, password }
 
-1. SELECT user WHERE username = ?
-2. argon2id.verify(storedHash, password)  → 401 on fail
-3. INSERT sessions { id: randomBytes(32), userId, expiresAt: +7days }
-4. Set-Cookie: phavo_session=<sessionId>; HttpOnly; SameSite=Strict; Secure
-5. Return { ok: true, data: { loggedIn: true } }
+1. SELECT user WHERE authMode = 'local' AND email = username
+2. verifyPassword(storedHash, password)  → 401 on fail
+3. If TOTP enabled → return { requiresTotp: true, partialToken }
+4. INSERT sessions { id: randomBytes(32), userId, authMode, validatedAt, expiresAt: +7days }
+5. Set-Cookie: phavo_session=<token>; HttpOnly; SameSite=Strict; Secure
+6. Return { ok: true, data: {} }
 ```
 
 ### TOTP (optional 2FA)
 
 ```
-POST /api/v1/auth/totp/setup   → returns QR code + backup codes (AES-encrypted at rest)
-POST /api/v1/auth/totp/verify  { token }  → validates TOTP before completing login
+POST /api/v1/auth/totp  { partialToken, code }
+→ verifies TOTP, exchanges partial token for a full session cookie
 ```
 
 ---
@@ -217,8 +231,9 @@ Single-user system. One row expected at all times after setup.
 | Column | Type | Null | Notes |
 |---|---|---|---|
 | `id` | text PK | NOT NULL | UUID v4 |
-| `username` | text | NOT NULL UNIQUE | 1–40 chars, case-insensitive |
-| `passwordHash` | text | NOT NULL | Argon2id encoded string |
+| `email` | text | UNIQUE | Username stored in this field |
+| `passwordHash` | text | nullable | Argon2id encoded string. Local auth only. |
+| `authMode` | text | NOT NULL | Always `'local'` |
 | `totpSecret` | text | nullable | AES-256-GCM encrypted. Set only if TOTP enabled. |
 | `totpBackupCodes` | text | nullable | AES-256-GCM encrypted JSON array. 8 one-time codes. |
 | `createdAt` | integer | NOT NULL | Unix ms |
@@ -230,8 +245,9 @@ Active session tokens. Sessions carry identity and expiry only.
 |---|---|---|---|
 | `id` | text PK | NOT NULL | 32-byte random base64url — the cookie value |
 | `userId` | text FK | NOT NULL | → users.id |
+| `authMode` | text | NOT NULL | Always `'local'` |
+| `validatedAt` | integer | NOT NULL | Unix ms. Last successful auth timestamp. |
 | `expiresAt` | integer | NOT NULL | Unix ms. Hard expiry — 7 days from creation. |
-| `createdAt` | integer | NOT NULL | Unix ms |
 
 ### `config`
 Key-value store for dashboard settings.
@@ -368,7 +384,7 @@ const secret = process.env.PHAVO_SECRET
 
 ## Migrations
 
-Drizzle migrations run automatically on server start via `runMigrations()` in `hooks.server.ts`. Each migration is a pure SQL file. Always additive — no destructive DDL on existing columns.
+Migrations run automatically on server start via a custom `runMigrations()` in `packages/db/src/client.ts`. It reads `meta/_journal.json`, compares timestamps against `__drizzle_migrations`, and applies new migrations using `client.executeMultiple()` — which calls the underlying `db.exec()` path and avoids a bug in `@libsql/client` where `SQLITE_OK` is incorrectly returned for DDL statements in the prepare→run path. Each migration is a pure SQL file; always additive — no destructive DDL on existing columns.
 
 | File | Change |
 |---|---|
@@ -379,6 +395,8 @@ Drizzle migrations run automatically on server start via `runMigrations()` in `h
 | `0005_local_auth_offline_license.sql` | Local-only auth normalization (rebuild sessions) |
 | `0006_plugin_data.sql` | Add plugin_data table (Speedtest history) |
 | `0007_remove_tier.sql` | Remove tier column from sessions and drop the obsolete activation table |
+| `0008_remove_telemetry_config.sql` | Remove telemetry config keys |
+| `0009_fix_sessions_tier.sql` | Fix sessions schema after tier removal |
 
 ---
 

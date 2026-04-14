@@ -1,5 +1,35 @@
 # Changelog
 
+## [0.8.4] - 2026-04-14
+
+### Bug Fixes
+
+- **Setup registration fixed** — first-run setup now calls `POST /api/v1/auth/register` (new endpoint) instead of `/auth/login`. Register is public, first-run-only (returns 403 if any user already exists), creates the user + session in one request
+- **DB migration crash on fresh install fixed** — replaced Drizzle's built-in `migrate()` with a custom `runMigrations()` that uses `client.executeMultiple()` (`db.exec()` path), bypassing a bug in `@libsql/client` where DDL statements incorrectly return `SQLITE_OK` through the prepare→run path
+- **Migration 0005 `RENAME TO` fixed** — replaced all `ALTER TABLE … RENAME TO` statements with DROP/CREATE/INSERT/DROP patterns to avoid the libsql DDL error on fresh installs
+- **Login/register response shape fixed** — success responses now return `ok({})` instead of `ok(null)`, preventing a `TypeError` in the client that caused a spurious "network error" and triggered the user-already-exists guard on retry
+- **`@tailwindcss/vite` "Invalid declaration" overlay fixed** — configured the Tailwind generate plugins in `vite.config.ts` to skip Svelte component `<style>` blocks (`?svelte&type=style&lang.css`). The scanner was tokenising TypeScript type-import identifiers (e.g. `UptimeMetrics`, `WidgetSize`) as CSS class candidates
+
+### Infrastructure
+
+- Upgrade `@libsql/client` to `^0.15.0`
+- Add `drizzle-orm` workspace override (`0.45.1`) to prevent duplicate package instances from conflicting type definitions
+- Dev data directory corrected: `PHAVO_DATA_DIR=./data` resolves to `apps/web/data` when using `--cwd apps/web` (was double-nesting to `apps/web/apps/web/.dev-data`)
+
+---
+
+## [0.8.3] - 2026-04-12
+
+### Repository & Open-Source Cleanup
+
+- Migrate repository to `github.com/phabioo/phavo`
+- Update copyright from Fabio to phabioo across source files
+- Update `.gitignore` and `.dockerignore` for public release (exclude AI planning artifacts, screenshots, generated folders)
+- Update vulnerability reporting instructions in `SECURITY.md`
+- Update all links in `README.md` to point to the new repository
+
+---
+
 ## [0.8.2] - 2026-04-12
 
 ### Docs & Release Hygiene

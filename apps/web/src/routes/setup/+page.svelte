@@ -79,6 +79,9 @@ let authUsername = $state('');
 let authPassword = $state('');
 let authError = $state('');
 let authLoading = $state(false);
+// True when a user already exists in the DB but setup was never completed.
+// In this case the auth step shows a login form instead of register.
+let hasExistingUser = $state(false);
 
 // ── FIELD DATA ─────────────────────────────────────────────────────────────
 let dashboardName = $state('My Dashboard');
@@ -245,7 +248,8 @@ async function submitLocalAuth(nextMode: 'quick' | 'full') {
   authLoading = true;
   authError = '';
   try {
-    const resp = await apiRequest<LoginSuccess>('/api/v1/auth/login', {
+    const endpoint = hasExistingUser ? '/api/v1/auth/login' : '/api/v1/auth/register';
+    const resp = await apiRequest<LoginSuccess>(endpoint, {
       method: 'POST',
       body: {
         authMode: 'local',
@@ -636,6 +640,12 @@ onMount(() => {
   // Restore FIELD DATA only — mode and step never come from sessionStorage
   restoreFieldData();
 
+  // Check whether a user already exists so we show login instead of register
+  // when setup was interrupted after account creation.
+  apiRequest<{ hasUsers: boolean }>('/api/v1/auth/setup-status').then((resp) => {
+    if (resp.ok) hasExistingUser = resp.data.hasUsers;
+  });
+
   // Mode comes from the URL — the sole source of truth for navigation state
   const params = new URLSearchParams(window.location.search);
   const urlMode = params.get('mode');
@@ -699,7 +709,8 @@ onMount(() => {
       </div>
 
       {#if quickStep === 'auth'}
-        <h2 class="text-xl font-semibold text-text">{en.setup.steps.auth}</h2>
+        <h2 class="text-xl font-semibold text-text">{hasExistingUser ? en.auth.loginTitle : en.setup.steps.auth}</h2>
+        {#if hasExistingUser}<p class="text-text-muted text-sm">{en.setup.auth.resumeSetup}</p>{/if}
 
         <div class="flex flex-col gap-3">
           <Input label={en.setup.auth.username} placeholder={en.setup.auth.username} bind:value={authUsername} />
@@ -708,7 +719,7 @@ onMount(() => {
           <div class="flex justify-end gap-3 flex-wrap mt-2">
             <Button variant="tertiary" onclick={backToWelcome}>{en.common.back}</Button>
             <Button onclick={() => submitLocalAuth('quick')} disabled={authLoading}>
-              {authLoading ? en.common.loading : en.auth.login}
+              {authLoading ? en.common.loading : hasExistingUser ? en.auth.login : en.auth.register}
             </Button>
           </div>
         </div>
@@ -777,7 +788,8 @@ onMount(() => {
       </div>
 
       {#if fullStep === 'auth'}
-        <h2 class="text-xl font-semibold text-text">{en.setup.steps.auth}</h2>
+        <h2 class="text-xl font-semibold text-text">{hasExistingUser ? en.auth.loginTitle : en.setup.steps.auth}</h2>
+        {#if hasExistingUser}<p class="text-text-muted text-sm">{en.setup.auth.resumeSetup}</p>{/if}
         <div class="flex flex-col gap-3">
           <Input label={en.setup.auth.username} placeholder={en.setup.auth.username} bind:value={authUsername} />
           <Input label={en.setup.auth.password} type="password" placeholder={en.auth.passwordPlaceholder} bind:value={authPassword} />
@@ -785,7 +797,7 @@ onMount(() => {
           <div class="flex justify-end gap-3 flex-wrap mt-2">
             <Button variant="tertiary" onclick={prevFullStep}>{en.common.back}</Button>
             <Button onclick={() => submitLocalAuth('full')} disabled={authLoading}>
-              {authLoading ? en.common.loading : en.auth.login}
+              {authLoading ? en.common.loading : hasExistingUser ? en.auth.login : en.auth.register}
             </Button>
           </div>
         </div>

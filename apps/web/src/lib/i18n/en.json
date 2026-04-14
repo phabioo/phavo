@@ -9,7 +9,7 @@
     "quickSetupDescription": "Get started in seconds with sensible defaults.",
     "fullSetupDescription": "Customise every detail from the start.",
     "steps": {
-      "auth": "Authentication",
+      "auth": "Create Account",
       "location": "Weather Location",
       "done": "All Set",
       "dashboardName": "Name Your Dashboard",
@@ -24,7 +24,8 @@
       "username": "Username",
       "password": "Password",
       "confirmPassword": "Confirm password",
-      "email": "Email"
+      "email": "Email",
+      "resumeSetup": "An account was created previously. Sign in to continue setup."
     },
     "location": {
       "title": "Set your weather location",
