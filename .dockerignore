@@ -17,10 +17,18 @@ node_modules/
 **/.dev-data/
 **/.phavo-data/
 /data/
+apps/web/data/
+
+# ─── Database ────────────────────────────────────────────────────────────────
+*.db
+*.db-wal
+*.db-shm
 
 # ─── Secrets / environment ───────────────────────────────────────────────────
 .env
-.env.*!.env.example*.pem
+.env.*
+!.env.example
+*.pem
 *.key
 secret.key
 

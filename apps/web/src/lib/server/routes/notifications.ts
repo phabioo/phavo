@@ -3,10 +3,21 @@ import type { Notification } from '@phavo/types';
 import { err, ok } from '@phavo/types';
 import { desc, eq } from 'drizzle-orm';
 import type { Hono } from 'hono';
+import { z } from 'zod';
 import { db, dbReady } from '$lib/server/db.js';
 import type { AppVariables } from '$lib/server/middleware/auth.js';
 import { requireSession } from '$lib/server/middleware/auth.js';
 import { drainQueue } from '$lib/server/notifier.js';
+
+const CreateNotificationSchema = z.object({
+  type: z.string().min(1),
+  title: z.string().min(1),
+  message: z.string().min(1),
+  actionLabel: z.string().optional(),
+  actionUrl: z.string().optional(),
+  widgetId: z.string().optional(),
+  progress: z.number().min(0).max(100).optional(),
+});
 
 /** Map a DB row to the API Notification shape. */
 function toApi(row: typeof schema.notifications.$inferSelect): Notification {
@@ -62,24 +73,18 @@ export function registerNotificationRoutes(app: Hono<{ Variables: AppVariables }
   // POST /notifications — create a notification
   app.post('/notifications', requireSession(), async (c) => {
     await dbReady;
-    let body: {
-      type: string;
-      title: string;
-      message: string;
-      actionLabel?: string;
-      actionUrl?: string;
-      widgetId?: string;
-      progress?: number;
-    };
+    let rawBody: unknown;
     try {
-      body = await c.req.json();
+      rawBody = await c.req.json();
     } catch {
       return c.json(err('Invalid request body'), 400);
     }
 
-    if (!body.type || !body.title || !body.message) {
-      return c.json(err('type, title, and message are required'), 400);
+    const parsed = CreateNotificationSchema.safeParse(rawBody);
+    if (!parsed.success) {
+      return c.json(err('Invalid notification data'), 400);
     }
+    const body = parsed.data;
 
     const id = crypto.randomUUID();
     await db.insert(schema.notifications).values({

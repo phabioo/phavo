@@ -615,5 +615,8 @@
       backdrop-filter: none;
       background: color-mix(in srgb, var(--color-surface-dim) 80%, transparent);
     }
+    .drawer-tile:hover {
+      transform: none;
+    }
   }
 </style>

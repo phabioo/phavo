@@ -548,5 +548,8 @@
       backdrop-filter: none;
       background: var(--color-surface-dim);
     }
+    .notif-action-btn:active {
+      transform: none;
+    }
   }
 </style>

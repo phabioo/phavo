@@ -883,5 +883,8 @@ const mobileNavItems = $derived([{ id: 'home', label: 'Dashboard', icon: 'layout
       -webkit-backdrop-filter: none;
       background: var(--color-surface-card);
     }
+    .nav-card:active {
+      transform: none;
+    }
   }
 </style>
