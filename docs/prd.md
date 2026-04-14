@@ -2,7 +2,7 @@
 
 **Version:** 5.0
 **Date:** 2026-04-11
-**Status:** Active — targeting v1.0 from the v0.8.4 baseline
+**Status:** Active — targeting v1.0 from the v0.8.5 baseline
 **Owner:** phabioo
 
 **Changelog v5.0:** Open source transition. Single free edition

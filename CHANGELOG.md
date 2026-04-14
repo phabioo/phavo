@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.8.5] - 2026-04-14
+
+### Infrastructure
+
+- **Docker workflow secret names corrected** — renamed `DOCKERHUB_USERNAME`/`DOCKERHUB_TOKEN` to `DOCKER_HUB_USERNAME`/`DOCKER_HUB_TOKEN` to match the configured repository secrets
+- **Release workflow permissions fixed** — added `permissions: contents: write` so `softprops/action-gh-release` can create releases without a 403 error
+
+---
+
 ## [0.8.4] - 2026-04-14
 
 ### Bug Fixes

@@ -1,6 +1,6 @@
 # Phavo — Technical Architecture Spec
 
-**Version:** 3.3 · **Date:** 2026-04-14 · **PRD:** v5.0 · **Roadmap:** v5.0 · **Runtime:** v0.8.4 · **Design:** Celestial Wish
+**Version:** 3.3 · **Date:** 2026-04-14 · **PRD:** v5.0 · **Roadmap:** v5.0 · **Runtime:** v0.8.5 · **Design:** Celestial Wish
 
 ---
 
