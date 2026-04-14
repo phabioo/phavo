@@ -67,11 +67,13 @@ export default defineConfig(({ mode }) => {
       // Vite/esbuild must transform them — Node's native ESM resolver
       // cannot resolve `.js` imports to `.ts` files on its own.
       noExternal: ['@phavo/types', '@phavo/db', '@phavo/agent', '@phavo/ui'],
-      // @libsql/client uses a dynamic require() to load a platform-specific native
-      // binary (e.g. @libsql/linux-x64-musl on Alpine). Rollup cannot statically
-      // analyse that call and will fail the build. Mark it external so Vite leaves
-      // the require() alone and lets Bun resolve it at runtime.
-      external: ['@libsql/client'],
+      // @libsql/* packages use dynamic require() to load platform-specific native
+      // binaries (e.g. @libsql/linux-x64-musl on Alpine). Rollup cannot statically
+      // analyse those calls and will fail the build. Mark the entire @libsql scope
+      // external so Vite leaves the require() calls alone and lets Bun resolve them
+      // at runtime. Vite prefix-matches entries that end with '/', so '@libsql/'
+      // covers @libsql/client, @libsql/linux-x64-musl, and any other sub-packages.
+      external: ['@libsql/'],
     },
   };
 });

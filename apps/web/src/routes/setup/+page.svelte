@@ -10,6 +10,11 @@ import { Button, Icon, Input, ProgressBar, Select } from '@phavo/ui';
 import { onMount } from 'svelte';
 import { goto } from '$app/navigation';
 import en from '$lib/i18n/en.json';
+import {
+  LinksWidgetConfigSchema,
+  PiholeWidgetConfigSchema,
+  RssWidgetConfigSchema,
+} from '$lib/widgets/config-schemas';
 
 interface Props {
   data: Record<string, unknown>;
@@ -585,11 +590,20 @@ async function createWidgetInstances(resolvedTabs: Tab[]): Promise<WidgetInstanc
     instances.push(created.data);
 
     if (CONFIGURABLE_WIDGET_IDS.has(widgetId) && widgetId !== 'weather') {
-      const cfg = await apiRequest<{ saved: boolean }>(
-        `/api/v1/widgets/${encodeURIComponent(created.data.id)}/config`,
-        { method: 'POST', body: { config: widgetConfigs[widgetId] ?? {} } },
-      );
-      if (!cfg.ok) throw new Error(cfg.error);
+      const configData = widgetConfigs[widgetId] ?? {};
+      const schemaMap: Record<string, { safeParse: (v: unknown) => { success: boolean } }> = {
+        pihole: PiholeWidgetConfigSchema,
+        rss: RssWidgetConfigSchema,
+        links: LinksWidgetConfigSchema,
+      };
+      const schema = schemaMap[widgetId];
+      if (schema?.safeParse(configData).success) {
+        const cfg = await apiRequest<{ saved: boolean }>(
+          `/api/v1/widgets/${encodeURIComponent(created.data.id)}/config`,
+          { method: 'POST', body: { config: configData } },
+        );
+        if (!cfg.ok) throw new Error(cfg.error);
+      }
     }
   }
 

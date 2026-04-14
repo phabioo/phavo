@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.8.7] - 2026-04-14
+
+### Bug Fixes
+
+- **Setup "Invalid url" on Launch Dashboard fixed** — `createWidgetInstances` now validates widget configs against their Zod schemas client-side before posting to the API. Widgets with incomplete/empty setup configs (default empty URLs for Pi-hole, RSS, Links) are left in unconfigured state rather than aborting the entire setup flow with "Invalid url"
+- **Welcome message shows UUID instead of username fixed** — the layout server now fetches the user's `email` from the `users` table and returns it as `username`; the dashboard welcome heading reads the actual login name instead of the internal user ID
+- **CalDAV double-escaping bug fixed** — reordered HTML entity decoding in `parseICalEvents` so `&amp;` → `&` runs last, preventing `&amp;lt;` from being double-decoded into `<`
+- **`@libsql/` SSR external scope widened** — `vite.config.ts` now externalises the entire `@libsql/` package scope (prefix match) instead of only `@libsql/client`, covering platform-specific native sub-packages on Alpine/musl builds
+
+---
+
 ## [0.8.6] - 2026-04-14
 
 ### Bug Fixes

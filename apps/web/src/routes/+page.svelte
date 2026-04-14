@@ -161,7 +161,7 @@ $effect(() => {
       <div class="welcome-section">
         <div class="welcome-copy">
           <h1 class="welcome-heading">
-            Welcome Back, <span class="welcome-name">{session?.userId ?? ''}</span>
+            Welcome Back, <span class="welcome-name">{((page.data as Record<string, unknown>).username as string | undefined) ?? ''}</span>
           </h1>
           <p class="welcome-sub">{config.dashboardName} is humming quietly.</p>
         </div>

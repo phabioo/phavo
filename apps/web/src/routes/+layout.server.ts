@@ -55,6 +55,7 @@ export const load = async ({ cookies, url }: ServerLoadEvent) => {
 
   // ── 2. Resolve session ──────────────────────────────────────────────────
   let session: { userId: string; authMode: string; validatedAt: number } | null = null;
+  let username = '';
   {
     const sessionId = cookies.get('phavo_session');
     if (sessionId) {
@@ -77,6 +78,13 @@ export const load = async ({ cookies, url }: ServerLoadEvent) => {
         authMode: row.authMode,
         validatedAt: row.validatedAt,
       };
+
+      const userRows = await db
+        .select({ email: schema.users.email })
+        .from(schema.users)
+        .where(eq(schema.users.id, row.userId))
+        .limit(1);
+      username = userRows[0]?.email ?? '';
     }
   }
 
@@ -102,6 +110,6 @@ export const load = async ({ cookies, url }: ServerLoadEvent) => {
     config,
     dashboardName: config.dashboardName,
     hostname: hostname(),
-    username: session?.userId ?? '',
+    username,
   };
 };
