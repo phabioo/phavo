@@ -62,6 +62,14 @@ export default defineConfig(({ mode }) => {
       port: env.port,
       strictPort: true,
     },
+    build: {
+      commonjsOptions: {
+        ignoreDynamicRequires: true,
+      },
+      rollupOptions: {
+        external: (id) => id.startsWith('@libsql/'),
+      },
+    },
     ssr: {
       // Workspace packages export raw TypeScript source (.ts files).
       // Vite/esbuild must transform them — Node's native ESM resolver
