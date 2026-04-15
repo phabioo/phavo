@@ -67,11 +67,6 @@ export default defineConfig(({ mode }) => {
       port: env.port,
       strictPort: true,
     },
-    build: {
-      commonjsOptions: {
-        ignoreDynamicRequires: true,
-      },
-    },
     ssr: {
       // Workspace packages export raw TypeScript source (.ts files).
       // Vite/esbuild must transform them — Node's native ESM resolver

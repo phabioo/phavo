@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.8.10] - 2026-04-15
+
+### Added
+- **README:** Added "Built with AI" transparency section explaining the project's AI-assisted development approach.
+
+### Fixed
+- **Build:** Removed duplicate `build` key in `apps/web/vite.config.ts` introduced in v0.8.7 — caused a TypeScript duplicate property error.
+- **Dependencies:** Confirmed `drizzle-orm` and `@libsql/client` are correctly in `dependencies` (not `devDependencies`) in `packages/db/package.json`.
+
+### Docs
+- `CLAUDE.md`: version bumped to 0.8.10.
+- `docs/widget-guide.md`: runtime version reference updated to v0.8.10.
+
+### Housekeeping
+- All workspace `package.json` versions aligned to `0.8.10`.
+
+---
+
 ## [0.8.9] - 2026-04-15
 
 ### Fixed

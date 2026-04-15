@@ -3,7 +3,7 @@
 > This document is the authoritative reference for building widgets.
 > Every agent and contributor must follow it exactly.
 > A widget built correctly from this guide requires zero visual bugfixes.
-> Updated for runtime v0.8.9 and current WidgetCard behavior.
+> Updated for runtime v0.8.10 and current WidgetCard behavior.
 
 ---
 

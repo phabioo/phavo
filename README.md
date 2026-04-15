@@ -10,6 +10,18 @@ PHAVO is free and open source under the MIT license. All features are available 
 
 ---
 
+## 🤖 Built with AI — and I'm upfront about it
+
+I want to be transparent right from the start: **I did not write this code myself.** Phavo was built almost entirely using AI coding tools — primarily [Claude Code](https://claude.ai/code) (Anthropic) alongside a few other AI models.
+
+My background is in IT systems integration — I completed a formal vocational IT apprenticeship (the German *Fachinformatiker Systemintegration*, roughly equivalent to an IT systems specialist qualification) focused on infrastructure, networks, and systems. In other words: I know my way around servers and configs, but I'm not a programmer. Phavo started as a personal hobby project born out of two things coming together: I'd been looking at the existing self-hosted dashboard options for a while and none of them quite clicked for me — not because they're bad projects (they're not, and the people behind them are doing great work), but they just didn't match what I personally wanted from a dashboard. At the same time, I was curious about AI coding tools and wanted to find out for myself how far you can actually get with them if you know what you want to build. A dashboard felt like the perfect test case. Turns out, pretty far.
+
+My contribution was everything around the code: defining what to build, designing the architecture, writing the specs and documentation, making product decisions, and testing the result. The actual code was written by AI, directed by me. Think of it less like "I coded this" and more like "I planned and supervised this."
+
+I'm telling you this because you deserve to know what you're running. The code is all here, fully auditable. If something looks like it was written by a very capable but occasionally overly verbose language model — that's because it was. Feel free to refactor, improve, or raise issues as you would with any open source project. I welcome it.
+
+---
+
 ## ✨ Features
 
 - **Command Palette** — `Cmd+K` / `Ctrl+K` to search widgets, navigate settings, run actions, search the web, or ask an AI assistant (Ollama, OpenAI, Claude)
