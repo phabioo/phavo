@@ -22,6 +22,7 @@ const PUBLIC_PATHS = new Set([
   '/api/v1/auth/login',
   '/api/v1/auth/totp',
   '/api/v1/auth/register',
+  '/api/v1/auth/setup-status',
 ]);
 
 // Cached CSRF HMAC key (derived once from the resolved secret via HKDF).

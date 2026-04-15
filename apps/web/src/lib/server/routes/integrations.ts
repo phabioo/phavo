@@ -465,7 +465,10 @@ export function registerIntegrationRoutes(app: Hono<{ Variables: AppVariables }>
           instance.configEncrypted,
           RssWidgetConfigSchema,
         );
-        if (!config) continue;
+        if (!config) {
+          console.warn(`[phavo] Failed to parse widget config for instance ${instance.id}`);
+          continue;
+        }
 
         const credentials = await loadInstanceCredentialMap(instance.id);
 
@@ -525,7 +528,10 @@ export function registerIntegrationRoutes(app: Hono<{ Variables: AppVariables }>
           instance.configEncrypted,
           LinksWidgetConfigSchema,
         );
-        if (!config) continue;
+        if (!config) {
+          console.warn(`[phavo] Failed to parse widget config for instance ${instance.id}`);
+          continue;
+        }
         groups.push(...config.groups);
       }
 
@@ -588,7 +594,10 @@ export function registerIntegrationRoutes(app: Hono<{ Variables: AppVariables }>
           instance.configEncrypted,
           ServiceHealthWidgetConfigSchema,
         );
-        if (!config) continue;
+        if (!config) {
+          console.warn(`[phavo] Failed to parse widget config for instance ${instance.id}`);
+          continue;
+        }
 
         for (const svc of config.services) {
           try {
@@ -724,7 +733,10 @@ export function registerIntegrationRoutes(app: Hono<{ Variables: AppVariables }>
           instance.configEncrypted,
           CalendarWidgetConfigSchema,
         );
-        if (!config) continue;
+        if (!config) {
+          console.warn(`[phavo] Failed to parse widget config for instance ${instance.id}`);
+          continue;
+        }
 
         const username = await loadDecryptedCredential(
           credentialStorageKey(instance.id, 'username'),

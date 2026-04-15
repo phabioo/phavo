@@ -65,6 +65,13 @@ const variantClasses: Record<string, string> = {
     transform: scale(0.98);
   }
 
+  /* Pi 3/4 performance fallback */
+  @media (prefers-reduced-motion: reduce), (max-resolution: 1.5dppx) {
+    .phavo-btn:active:not(:disabled) {
+      transform: none;
+    }
+  }
+
   .phavo-btn:focus-visible {
     outline: 2px solid var(--color-secondary);
     outline-offset: 2px;

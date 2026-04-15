@@ -1,6 +1,6 @@
 import { encrypt, schema } from '@phavo/db';
 import { err, ok, type WidgetSize } from '@phavo/types';
-import { eq } from 'drizzle-orm';
+import { eq, like } from 'drizzle-orm';
 import type { Hono } from 'hono';
 import { z } from 'zod';
 import { db } from '$lib/server/db.js';
@@ -154,7 +154,12 @@ export function registerWidgetRoutes(app: Hono<{ Variables: AppVariables }>): vo
   app.delete('/widget-instances/:id', requireSession(), async (c) => {
     try {
       const instanceId = c.req.param('id');
-      await db.delete(schema.widgetInstances).where(eq(schema.widgetInstances.id, instanceId));
+      await db.transaction(async (tx) => {
+        await tx.delete(schema.widgetInstances).where(eq(schema.widgetInstances.id, instanceId));
+        await tx
+          .delete(schema.credentials)
+          .where(like(schema.credentials.key, `widget:${instanceId}:%`));
+      });
       return c.json(ok(null));
     } catch (e) {
       console.error('[phavo]', e);

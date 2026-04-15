@@ -1,6 +1,6 @@
 import { schema } from '@phavo/db';
 import { err, ok, type WidgetSize } from '@phavo/types';
-import { asc, eq } from 'drizzle-orm';
+import { asc, eq, sql } from 'drizzle-orm';
 import type { Hono } from 'hono';
 import { z } from 'zod';
 import { db } from '$lib/server/db.js';
@@ -52,8 +52,10 @@ export function registerTabRoutes(app: Hono<{ Variables: AppVariables }>): void 
       const body = CreateTabBodySchema.safeParse(rawBody);
       if (!body.success) return c.json(err('Invalid tab data'), 400);
 
-      const allTabs = await db.select().from(schema.tabs);
-      const nextOrder = allTabs.length > 0 ? Math.max(...allTabs.map((t) => t.order)) + 1 : 0;
+      const result = await db
+        .select({ maxOrder: sql<number | null>`max(${schema.tabs.order})` })
+        .from(schema.tabs);
+      const nextOrder = (result[0]?.maxOrder ?? -1) + 1;
 
       const id = crypto.randomUUID();
       await db.insert(schema.tabs).values({

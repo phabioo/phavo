@@ -27,7 +27,7 @@ Third digit .PATCH only for urgent hotfixes (e.g. v1.0.1)
 - v1.0 — First public release (MA + MB + MC complete)
 - v1.x — Post-release feature milestones
 
-Current version: 0.8.7
+Current version: 0.8.9
 
 ---
 
@@ -255,7 +255,6 @@ Secrets: `credentials` table, keyed by widget instance path.
 | `docs/design.md` | Celestial Wish Design System (full spec) |
 | `docs/rules.md` | Development rules and anti-patterns |
 | `docs/widget-guide.md` | Widget development guide |
-| `docs/svelte-audit.md` | Svelte audit report |
 | `docs/dev-commands.md` | Cross-platform dev commands |
 | `CLAUDE.md` | This file — agent entry point |
 

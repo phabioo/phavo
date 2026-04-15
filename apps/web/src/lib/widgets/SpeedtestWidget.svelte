@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { SpeedtestMetrics, WidgetSize } from '@phavo/types';
   import { Icon } from '@phavo/ui';
+  import { fetchWithCsrf } from '$lib/utils/api';
 
   interface Props {
     data: SpeedtestMetrics;
@@ -19,7 +20,7 @@
     running = true;
     lastError = null;
     try {
-      const res = await fetch('/api/v1/integrations/speedtest', {
+      const res = await fetchWithCsrf('/api/v1/integrations/speedtest', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
       });

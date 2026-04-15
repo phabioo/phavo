@@ -23,6 +23,8 @@ apps/web/apps/
 
 # Container / production data dir (never committed)
 /data/
+# App runtime data directory (created by server at PHAVO_DATA_DIR)
+apps/web/data/
 
 # ─── Database ────────────────────────────────────────────────────────────────
 *.db

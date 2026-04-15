@@ -3,6 +3,7 @@ FROM oven/bun:1-alpine AS builder
 WORKDIR /app
 COPY . .
 RUN bun install --frozen-lockfile
+RUN bun add @libsql/linux-x64-musl @libsql/linux-arm64-musl
 # NODE_ENV=production is required so that SvelteKit's vite plugin builds the
 # server bundle without SSR module evaluation (which would execute module-level
 # DB code and potentially call process.exit() under QEMU arm64 emulation).
@@ -12,7 +13,7 @@ ENV NODE_ENV=$NODE_ENV
 RUN cd apps/web && bunx svelte-kit sync
 RUN bun run build
 # Re-install without devDependencies for a slimmer production image.
-RUN rm -rf node_modules && bun install --frozen-lockfile --production
+RUN bun install --frozen-lockfile --production
 
 # Stage 2: production
 FROM oven/bun:1-alpine AS runner
