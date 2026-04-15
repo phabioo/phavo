@@ -1,6 +1,6 @@
 {
   "name": "@phavo/web",
-  "version": "0.8.10",
+  "version": "0.8.11",
   "type": "module",
   "scripts": {
     "dev": "node ./node_modules/vite/bin/vite.js dev",

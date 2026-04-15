@@ -13,7 +13,8 @@ ENV NODE_ENV=$NODE_ENV
 RUN cd apps/web && bunx svelte-kit sync
 RUN bun run build
 # Re-install without devDependencies for a slimmer production image.
-RUN bun install --frozen-lockfile --production
+RUN bun install --frozen-lockfile --production --ignore-scripts \
+    && bun add drizzle-orm @libsql/client --production
 
 # Stage 2: production
 FROM oven/bun:1-alpine AS runner

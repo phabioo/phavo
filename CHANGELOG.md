@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.8.11] - 2026-04-15
+
+### Fixed
+- **Docker:** Production reinstall step now uses `--ignore-scripts` and explicitly adds `drizzle-orm` and `@libsql/client` to guarantee runtime-critical packages are available in the final stage regardless of workspace hoisting behavior.
+
+### Docs
+- `CLAUDE.md`: version bumped to 0.8.11.
+- `docs/widget-guide.md`: runtime version reference updated to v0.8.11.
+
+### Housekeeping
+- All workspace `package.json` versions aligned to `0.8.11`.
+
+---
+
 ## [0.8.10] - 2026-04-15
 
 ### Added
