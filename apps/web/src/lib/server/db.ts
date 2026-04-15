@@ -1,6 +1,7 @@
 import { mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { createDb, runMigrations } from '@phavo/db';
+import { building } from '$app/environment';
 import { paths } from './paths.js';
 
 // Ensure the data directory exists before opening the database.
@@ -13,7 +14,9 @@ export const db = createDb(`file:${paths.db}`);
  * Await this before the first DB query to ensure the schema exists.
  * Migration files: packages/db/src/migrations/
  */
-export const dbReady: Promise<void> = runMigrations(db).catch((err: unknown) => {
-  console.error('[phavo] DB migration failed — cannot start:', err);
-  process.exit(1);
-});
+export const dbReady: Promise<void> = building
+  ? Promise.resolve()
+  : runMigrations(db).catch((err: unknown) => {
+      console.error('[phavo] DB migration failed — cannot start:', err);
+      process.exit(1);
+    });

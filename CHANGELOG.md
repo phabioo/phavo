@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.8.9] - 2026-04-15
+
+### Fixed
+- **Build:** Added `building` guard in `apps/web/src/lib/server/db.ts` so `runMigrations()` is skipped during the Vite build step, preventing migration errors at build time.
+
+### Docs
+- `CLAUDE.md`: version bumped to 0.8.9.
+- `docs/widget-guide.md`: runtime version reference updated to v0.8.9.
+
+### Housekeeping
+- All workspace `package.json` versions aligned to `0.8.9`.
+
+---
+
 ## [0.8.8] - 2026-04-14
 
 ### Fixed
